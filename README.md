@@ -1,3 +1,30 @@
+# OxiDiviner: The Fortune Teller for Your Time Series
+
+**OxiDiviner, the fortune teller, can help you gaze into the future of your data.** By leveraging the power of statistical and component-based models, OxiDiviner aims to provide robust tools for understanding temporal patterns, forecasting future values, and making data-driven decisions.
+
+Whether you're tracking business KPIs, analyzing scientific measurements, or monitoring system metrics, OxiDiviner seeks to equip you with the insights needed to navigate the currents of time.
+
+## What is OxiDiviner?
+
+OxiDiviner is a, 
+1. comprehensive Rust toolkit for time series analysis and forecasting.
+2. Rust library implementing a selection of powerful time series models
+3. An educational project exploring time series models in Rust.
+
+It is designed to be, "efficient, easy-to-use, and extensible", providing building blocks and complete solutions for your forecasting needs within the Rust ecosystem.
+
+This project draws inspiration from a rich history of statistical methods and aims to make them accessible and performant.
+
+## Features
+
+* **Diverse Model Support:** Implementations of ETS, ARIMA family models, and insights from Prophet-style approaches." or "A flexible framework for building and comparing various time series models.
+* **Rust Powered:** Leveraging Rust's performance, safety, and concurrency features for efficient computation.
+* **Extensible Design:** Easily add custom models or components.
+* **Data Preprocessing Utilities:** Tools for cleaning, transforming, and preparing time series data.
+* **Clear API:** Designed for ease of integration into your Rust applications.
+
+## Getting Started
+
 # Statistical and Component-Based Models for Time Series Analysis and Forecasting
 
 This document provides an overview of common models used for analyzing and forecasting time series data. These models leverage the temporal dependencies inherent in such data, employing various techniques to capture patterns like trend, seasonality, autocorrelation, and the impact of special events.
