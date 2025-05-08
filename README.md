@@ -1,5 +1,9 @@
 # OxiDiviner: The Fortune Teller for Your Time Series
 
+<p align="center">
+  <img src="OxiDiviner_250px.JPG" alt="OxiDiviner Logo">
+</p>
+
 **OxiDiviner, the fortune teller, can help you gaze into the future of your data.** By leveraging the power of statistical and component-based models, OxiDiviner aims to provide robust tools for understanding temporal patterns, forecasting future values, and making data-driven decisions.
 
 Whether you're tracking business KPIs, analyzing scientific measurements, or monitoring system metrics, OxiDiviner seeks to equip you with the insights needed to navigate the currents of time.
