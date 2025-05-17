@@ -1,0 +1,40 @@
+[package]
+name = "oxidiviner"
+version = "0.1.0"
+edition = "2021"
+description = "OxiDiviner: Time Series Analysis and Forecasting Library"
+license = "MIT"
+authors = ["OxiDiviner Team"]
+readme = "README.md"
+repository = "https://github.com/OxiDiviner/oxdiviner"
+homepage = "https://github.com/OxiDiviner/oxdiviner"
+documentation = "https://docs.rs/oxidiviner"
+keywords = ["time-series", "forecasting", "statistics", "analysis", "data"]
+categories = ["science", "mathematics", "algorithms", "finance"]
+# Exclude files and directories from being included in the published package
+exclude = [
+    "tests/*",
+    "examples/*",
+    "target/*",
+]
+
+[dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+rand = "0.8"
+statrs = "0.16"
+plotters = { version = "0.3", optional = true }
+csv = "1.2"
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
+ndarray = { version = "0.16", optional = true }
+polars = { version = "0.30", features = ["parquet"], optional = true }
+
+[features]
+default = []
+plotting = ["plotters"]
+polars_integration = ["polars"]
+ndarray_support = ["ndarray"]
+
+[[example]]
+name = "ets_demo"
+path = "examples/ets_demo.rs"

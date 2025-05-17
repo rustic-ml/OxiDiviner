@@ -1,113 +1,133 @@
-# OxiDiviner: The Fortune Teller for Your Time Series
+# OxiDiviner
 
-<p align="center">
-  <img src="OxiDiviner_250px.JPG" alt="OxiDiviner Logo">
-</p>
-
-**OxiDiviner, the fortune teller, can help you gaze into the future of your data.** By leveraging the power of statistical and component-based models, OxiDiviner aims to provide robust tools for understanding temporal patterns, forecasting future values, and making data-driven decisions.
-
-Whether you're tracking business KPIs, analyzing scientific measurements, or monitoring system metrics, OxiDiviner seeks to equip you with the insights needed to navigate the currents of time.
-
-## What is OxiDiviner?
-
-OxiDiviner is a, 
-1. comprehensive Rust toolkit for time series analysis and forecasting.
-2. Rust library implementing a selection of powerful time series models
-3. An educational project exploring time series models in Rust.
-
-It is designed to be, "efficient, easy-to-use, and extensible", providing building blocks and complete solutions for your forecasting needs within the Rust ecosystem.
-
-This project draws inspiration from a rich history of statistical methods and aims to make them accessible and performant.
+OxiDiviner is a Rust library for time series analysis and forecasting, specializing in financial market data. It provides tools for analyzing stock price data, detecting patterns, and making predictions using various statistical models.
 
 ## Features
 
-* **Diverse Model Support:** Implementations of ETS, ARIMA family models, and insights from Prophet-style approaches." or "A flexible framework for building and comparing various time series models.
-* **Rust Powered:** Leveraging Rust's performance, safety, and concurrency features for efficient computation.
-* **Extensible Design:** Easily add custom models or components.
-* **Data Preprocessing Utilities:** Tools for cleaning, transforming, and preparing time series data.
-* **Clear API:** Designed for ease of integration into your Rust applications.
+- **Data Handling**: Import and manage OHLCV (Open-High-Low-Close-Volume) stock data
+- **Time Series Processing**: Tools for manipulating and analyzing time series data
+- **Forecasting Models**: Implementation of various statistical forecasting methods
+  - Error-Trend-Seasonality (ETS) models
+  - Simple Exponential Smoothing
+  - Holt's Linear Trend
+  - Holt-Winters Seasonal Model
+- **Flexible Analysis**: Support for both daily and minute-level data
+- **Model Evaluation**: Tools for assessing forecast accuracy and model fit
 
-## Getting Started
+## Installation
 
-# Statistical and Component-Based Models for Time Series Analysis and Forecasting
+Add OxiDiviner to your Cargo.toml:
 
-This document provides an overview of common models used for analyzing and forecasting time series data. These models leverage the temporal dependencies inherent in such data, employing various techniques to capture patterns like trend, seasonality, autocorrelation, and the impact of special events.
+```toml
+[dependencies]
+oxdiviner = "0.1.0"
+```
 
-## 1. Exponential Smoothing (ETS) Models
+## Usage Examples
 
-These models produce forecasts based on weighted averages of past observations, with weights decreasing exponentially for older data. They explicitly model components like level, trend, and seasonality.
+### Basic Time Series Analysis
 
-* **Simple/Single Exponential Smoothing (SES):** Models the *level* for data with no clear trend or seasonality.
-* **Holt's Linear Trend Method (Double Exponential Smoothing):** Models *level* and *trend* for data with a trend but no seasonality.
-* **Holt-Winters' Seasonal Method (Triple Exponential Smoothing):** Models *level*, *trend*, and *seasonality*.
-    * *Additive Seasonality:* Assumes constant seasonal fluctuations.
-    * *Multiplicative Seasonality:* Assumes seasonal fluctuations proportional to the level.
-* **ETS Framework (Error, Trend, Seasonality):** A general state-space framework covering various combinations of error, trend, and seasonality types (None, Additive, Multiplicative, Damped).
+```rust
+use chrono::Utc;
+use oxdiviner::{OHLCVData, TimeSeriesData};
 
-## 2. ARIMA Family Models (Autoregressive Integrated Moving Average)
+// Create or load OHLCV data
+let data = OHLCVData::new("AAPL");
 
-These models focus on capturing autocorrelations in stationary (or differenced to become stationary) data.
+// Or load from a CSV file (with `polars_integration` feature)
+#[cfg(feature = "polars_integration")]
+let data = OHLCVData::from_csv("path/to/aapl_data.csv").unwrap();
 
-* **Autoregressive (AR) Models (`AR(p)`):** The current value depends linearly on `p` previous values.
-* **Moving Average (MA) Models (`MA(q)`):** The current value depends linearly on `q` past random error terms.
-* **Autoregressive Moving Average (ARMA) Models (`ARMA(p, q)`):** Combines AR and MA components for stationary series.
-* **Autoregressive Integrated Moving Average (ARIMA) Models (`ARIMA(p, d, q)`):** Extends ARMA to non-stationary data using `d` degrees of differencing to achieve stationarity.
-* **Seasonal ARIMA (SARIMA) Models (`SARIMA(p, d, q)(P, D, Q)m`):** Extends ARIMA for seasonality with seasonal orders `(P, D, Q)` and seasonal frequency `m`.
-* **ARIMA/SARIMA with Exogenous Regressors (ARIMAX / SARIMAX):** Includes external predictor variables in the model.
-* **Fractional ARIMA (ARFIMA / FARIMA):** Allows fractional differencing (`d` can be non-integer) for modeling long-range dependence (long memory).
+// Convert to a time series for analysis
+let time_series = data.to_time_series(false);  // false = use regular close, not adjusted
 
-## 3. Decomposition Methods
+// Split into training and testing sets
+let (train, test) = time_series.train_test_split(0.8).unwrap();
+```
 
-These methods break down a time series into its constituent components, typically trend, seasonality, and a remainder/residual term.
+### Using ETS Models
 
-* **Classical Decomposition:** Simple additive/multiplicative separation using moving averages. Primarily useful for analysis.
-* **STL Decomposition (Seasonal and Trend decomposition using Loess):** A versatile and robust decomposition method using locally weighted regression.
-* **SEATS (Seasonal Extraction in ARIMA Time Series):** Primarily used for seasonal adjustment, often in conjunction with ARIMA models.
-* **X-11 / X-12-ARIMA / X-13-ARIMA-SEATS:** Sophisticated decomposition and seasonal adjustment methods developed and used by statistical agencies.
+```rust
+use oxdiviner::models::ets::{ETSComponent, DailyETSModel};
 
-## 4. Regression Models Adapted for Time Series
+// Create a Holt-Winters seasonal model
+let mut model = DailyETSModel::new(
+    ETSComponent::Additive,  // Error type
+    ETSComponent::Additive,  // Trend type
+    ETSComponent::Additive,  // Seasonal type
+    0.3,                     // alpha (level smoothing)
+    Some(0.1),               // beta (trend smoothing)
+    Some(0.1),               // gamma (seasonal smoothing)
+    None,                    // phi (damping factor, None = no damping)
+    Some(7),                 // Seasonal period (7 = weekly)
+    None,                    // Target column (None = use Close price)
+).unwrap();
 
-These models incorporate regression techniques while accounting for time series characteristics.
+// Fit the model to data
+model.fit(&train_data).unwrap();
 
-* **Time Series Regression:** Uses standard linear regression with time-based predictors (e.g., time trend, seasonal dummy variables) and potentially external variables. Standard assumptions (like independent errors) often need careful checking.
-* **Dynamic Regression Models:** Combines regression with time series error structures (e.g., ARIMA errors, essentially forming ARIMAX/SARIMAX) to handle autocorrelation in the residuals.
+// Generate forecasts
+let horizon = 30;  // 30-day forecast
+let forecasts = model.forecast(horizon).unwrap();
 
-## 5. State Space Models (SSM)
+// Evaluate the model
+let evaluation = model.evaluate(&test_data).unwrap();
+println!("MAE: {:.4}", evaluation.mae);
+println!("RMSE: {:.4}", evaluation.rmse);
+println!("MAPE: {:.2}%", evaluation.mape);
+```
 
-A highly general framework representing time series models using unobserved 'state' variables that evolve over time according to probabilistic rules. Many ETS and ARIMA models can be expressed in this form.
+### Working with Minute Data
 
-* **Kalman Filter:** The primary algorithm for estimation, signal extraction, and forecasting in linear Gaussian state-space models.
-* **Structural Time Series Models (STSM):** Explicitly models components like level, trend, and seasonality as unobserved states within the SSM framework (e.g., Basic Structural Model - BSM). Often estimated using the Kalman Filter.
+```rust
+use oxdiviner::models::ets::{ETSComponent, MinuteETSModel};
 
-## 6. Volatility Models (Commonly used in Finance)
+// Create a model for minute-level data with 5-minute aggregation
+let mut model = MinuteETSModel::new(
+    ETSComponent::Additive,  // Error type
+    ETSComponent::None,      // No trend
+    ETSComponent::Additive,  // Additive seasonality
+    0.3,                     // alpha
+    None,                    // No beta (no trend)
+    Some(0.1),               // gamma
+    None,                    // No phi (no damping)
+    Some(60),                // Seasonal period = 60 minutes (hourly pattern)
+    None,                    // Default to Close price
+    Some(5),                 // 5-minute aggregation
+).unwrap();
 
-These models focus specifically on forecasting the changing variance (volatility) of a time series, rather than just its level.
+// Fit and forecast as with daily models
+model.fit(&minute_data).unwrap();
+let forecasts = model.forecast(12).unwrap();  // Next hour forecast (12 x 5 minutes)
+```
 
-* **ARCH (Autoregressive Conditional Heteroskedasticity):** Models current variance based on past squared error terms.
-* **GARCH (Generalized ARCH):** Extends ARCH by also including past variances in the model for current variance. Many variants exist (e.g., EGARCH, GJR-GARCH).
+## Running the Demo
 
-## 7. Multivariate Time Series Models
+The package includes a comprehensive demo that showcases ETS models with detailed interpretations:
 
-Used for modeling and forecasting multiple interdependent time series simultaneously.
+```bash
+cargo run --example ets_demo -- AAPL daily
+```
 
-* **Vector Autoregression (VAR):** Multivariate extension of AR models where each variable depends on its own lags and the lags of other variables in the system.
-* **Vector Autoregression Moving-Average (VARMA):** Multivariate extension of ARMA models.
-* **Vector Error Correction Model (VECM):** A variant of VAR used specifically for cointegrated time series (non-stationary series that have a stable, long-run relationship).
+Options:
+- First argument: Stock ticker (e.g., AAPL, MSFT) or SYNTHETIC for synthetic data
+- Second argument: Data type - 'daily' or 'minute'
 
-## 8. Prophet (Developed by Meta/Facebook)
+## Features
 
-Prophet is a modern forecasting procedure designed for forecasting time series data based on an additive model where non-linear trends are fit along with yearly, weekly, and daily seasonality, plus holiday effects. While using statistical concepts, it's often considered distinct from the classical ETS or ARIMA families.
+OxiDiviner has several optional features that can be enabled:
 
-* **Modeling Approach:** Implemented as an additive regression model: `y(t) = g(t) + s(t) + h(t) + εt`, where `g(t)` is the trend, `s(t)` is seasonality, `h(t)` represents holiday effects, and `εt` is the error term.
-* **Key Features:**
-    * **Trend:** Models trend using either a piecewise linear model (detecting *changepoints* automatically) or a logistic growth model for saturating forecasts.
-    * **Seasonality:** Uses Fourier series to model periodic effects (yearly, weekly, daily, or custom).
-    * **Holidays/Events:** Easily incorporates customizable lists of past and future holidays or events with significant impact.
-    * **Robustness:** Designed to handle outliers, missing data, and shifts in the trend gracefully.
-    * **Ease of Use:** Offers an intuitive API (primarily in R and Python) designed for analysts, often requiring less manual tuning than models like ARIMA for good baseline results.
+- `plotting`: Enables visualization capabilities using the `plotters` crate
+- `polars_integration`: Adds support for loading data from CSV and Parquet files
+- `ndarray_support`: Adds integration with the `ndarray` library for numerical computing
 
-* **Usage Context:** Prophet is frequently used as a powerful baseline or **alternative** to traditional models like ARIMA or ETS, especially for business time series with strong seasonal patterns, multiple seasonality periods, and holiday effects. It's common practice to **compare its forecasting accuracy against traditional models** on specific datasets to select the best approach for a given forecasting task.
+Enable features in your Cargo.toml:
 
----
+```toml
+[dependencies]
+oxdiviner = { version = "0.1.0", features = ["plotting", "polars_integration"] }
+```
 
-*Note: The selection of the most appropriate model (whether from the traditional statistical families like ETS/ARIMA or newer procedures like Prophet) depends heavily on the specific characteristics of the time series data, the forecast horizon, the presence of external factors, and the analyst's goals (e.g., accuracy vs. interpretability).*
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details. 
