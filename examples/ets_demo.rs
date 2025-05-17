@@ -3,8 +3,8 @@ use rand::Rng;
 use std::error::Error;
 use std::path::Path;
 use std::env;
-use oxdiviner::ModelsOHLCVData;
-use oxdiviner::models::ets::{ETSComponent, DailyETSModel, MinuteETSModel};
+use oxidiviner::ModelsOHLCVData;
+use oxidiviner::models::exponential_smoothing::ets::{ETSComponent, DailyETSModel, MinuteETSModel};
 
 // Generate synthetic daily OHLCV data
 fn generate_synthetic_daily_data() -> ModelsOHLCVData {

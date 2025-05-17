@@ -98,7 +98,7 @@ impl HoltWintersModel {
     ///
     /// # Examples
     /// ```
-    /// use oxdiviner::models::holt_winters::{HoltWintersModel, SeasonalType};
+    /// use oxidiviner::models::exponential_smoothing::holt_winters::{HoltWintersModel, SeasonalType};
     ///
     /// // Create a Holt-Winters Seasonal model with weekly seasonality
     /// let model = HoltWintersModel::new(

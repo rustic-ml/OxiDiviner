@@ -81,7 +81,7 @@ impl ETSModel {
     /// # Examples
     ///
     /// ```
-    /// use oxdiviner::models::ets::{ETSComponent, DailyETSModel};
+    /// use oxidiviner::models::exponential_smoothing::ets::{ETSComponent, DailyETSModel};
     ///
     /// // Create a simple exponential smoothing model (ETS(A,N,N))
     /// let model = DailyETSModel::new(
@@ -223,11 +223,17 @@ impl ETSModel {
     /// # Examples
     ///
     /// ```
-    /// use oxdiviner::models::ets::{ETSComponent, DailyETSModel};
-    /// use oxdiviner::ModelsOHLCVData;
+    /// use oxidiviner::models::exponential_smoothing::ets::{ETSComponent, DailyETSModel};
+    /// use oxidiviner::ModelsOHLCVData;
     ///
     /// // Assume we have some data
-    /// let data = ModelsOHLCVData::new(...);
+    /// # let timestamps = vec![chrono::Utc::now()];
+    /// # let open = vec![100.0];
+    /// # let high = vec![105.0];
+    /// # let low = vec![95.0];
+    /// # let close = vec![102.0];
+    /// # let volume = vec![1000.0];
+    /// # let data = ModelsOHLCVData::new(timestamps, open, high, low, close, volume, "TEST").unwrap();
     ///
     /// // Create and fit a model
     /// let mut model = DailyETSModel::new(
@@ -337,7 +343,20 @@ impl ETSModel {
     /// # Examples
     ///
     /// ```
-    /// // Continuing from the fit example above:
+    /// # use oxidiviner::models::exponential_smoothing::ets::{ETSComponent, DailyETSModel};
+    /// # use oxidiviner::ModelsOHLCVData;
+    /// # let timestamps = vec![chrono::Utc::now()];
+    /// # let open = vec![100.0];
+    /// # let high = vec![105.0];
+    /// # let low = vec![95.0];
+    /// # let close = vec![102.0];
+    /// # let volume = vec![1000.0];
+    /// # let data = ModelsOHLCVData::new(timestamps, open, high, low, close, volume, "TEST").unwrap();
+    /// # let mut model = DailyETSModel::new(
+    /// #    ETSComponent::Additive, ETSComponent::None, ETSComponent::None,
+    /// #    0.3, None, None, None, None, None
+    /// # ).unwrap();
+    /// # model.fit(&data).unwrap();
     /// let forecasts = model.forecast(30).unwrap(); // 30-day forecast
     /// ```
     pub fn forecast(&self, horizon: usize) -> Result<Vec<f64>, String> {
@@ -606,9 +625,21 @@ impl ETSModel {
     /// # Examples
     ///
     /// ```
-    /// // Continuing from previous examples:
-    /// let (train_data, test_data) = data.train_test_split(0.8).unwrap();
-    /// 
+    /// # use oxidiviner::models::exponential_smoothing::ets::{ETSComponent, DailyETSModel};
+    /// # use oxidiviner::ModelsOHLCVData;
+    /// # let timestamps = vec![chrono::Utc::now(), chrono::Utc::now() + chrono::Duration::days(1), 
+    /// #                      chrono::Utc::now() + chrono::Duration::days(2), chrono::Utc::now() + chrono::Duration::days(3)];
+    /// # let open = vec![100.0, 101.0, 102.0, 103.0];
+    /// # let high = vec![105.0, 106.0, 107.0, 108.0];
+    /// # let low = vec![95.0, 96.0, 97.0, 98.0];
+    /// # let close = vec![102.0, 103.0, 104.0, 105.0];
+    /// # let volume = vec![1000.0, 1100.0, 1200.0, 1300.0];
+    /// # let data = ModelsOHLCVData::new(timestamps, open, high, low, close, volume, "TEST").unwrap();
+    /// # let (train_data, test_data) = data.train_test_split(0.5).unwrap();
+    /// # let mut model = DailyETSModel::new(
+    /// #    ETSComponent::Additive, ETSComponent::None, ETSComponent::None,
+    /// #    0.3, None, None, None, None, None
+    /// # ).unwrap();
     /// model.fit(&train_data).unwrap();
     /// let eval = model.evaluate(&test_data).unwrap();
     /// 

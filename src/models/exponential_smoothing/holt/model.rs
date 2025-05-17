@@ -67,7 +67,7 @@ impl HoltModel {
     ///
     /// # Examples
     /// ```
-    /// use oxdiviner::models::holt::HoltModel;
+    /// use oxidiviner::models::exponential_smoothing::holt::HoltModel;
     ///
     /// // Create a Holt's Linear Trend model with alpha = 0.3, beta = 0.1
     /// let model = HoltModel::new(0.3, 0.1, None, None).unwrap();

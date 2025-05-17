@@ -55,7 +55,7 @@ impl SESModel {
     ///
     /// # Examples
     /// ```
-    /// use oxdiviner::models::ses::SESModel;
+    /// use oxidiviner::models::exponential_smoothing::simple::SESModel;
     ///
     /// // Create a Simple Exponential Smoothing model with alpha = 0.3
     /// let model = SESModel::new(0.3, None).unwrap();

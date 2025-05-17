@@ -1,5 +1,5 @@
 use chrono::{Duration, Utc};
-use oxdiviner::ModelsOHLCVData;
+use oxidiviner::ModelsOHLCVData;
 
 #[test]
 fn test_ohlcv_data_creation() {
