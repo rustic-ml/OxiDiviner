@@ -1,6 +1,77 @@
 # OxiDiviner
 
-OxiDiviner is a Rust library for time series analysis and forecasting, specializing in financial market data. It provides tools for analyzing stock price data, detecting patterns, and making predictions using various statistical models.
+OxiDiviner is a Rust library for time series analysis and forecasting, designed to be a comprehensive toolkit for traders and data scientists.
+
+## Standardized Model Interface
+
+OxiDiviner provides a consistent, standardized interface for all forecasting models through the `Forecaster` trait. This standardization ensures that:
+
+1. Every model has **one public entry point** via the `predict()` method
+2. All models return a **standardized output format** via the `ModelOutput` struct
+
+### Benefits of the Standardized Interface
+
+- **Consistency**: Use any model with the same method calls and output format
+- **Interoperability**: Easily switch between models or compare their performance
+- **Extensibility**: Add new models that seamlessly integrate with the existing ecosystem
+- **Accessibility**: Learn one interface to use all available models
+
+### Example Usage
+
+```rust
+use chrono::{DateTime, TimeZone, Utc};
+use oxidiviner::prelude::*;
+use oxidiviner::models::Forecaster;
+
+// Create and train different model types
+let mut ses_model = SESModel::new(0.3, None)?;
+let mut ma_model = MAModel::new(5)?;
+    
+// Train models using the standardized interface
+ses_model.fit(&time_series)?;
+ma_model.fit(&time_series)?;
+    
+// Forecast using the standardized interface  
+let horizon = 10;
+let ses_output = ses_model.predict(horizon, Some(&time_series))?;
+let ma_output = ma_model.predict(horizon, Some(&time_series))?;
+
+// Both outputs have the same format and can be processed uniformly
+println!("SES forecast: {:?}", ses_output.forecasts);
+println!("MA forecast: {:?}", ma_output.forecasts);
+
+// Access evaluation metrics in a standardized way
+if let Some(ses_eval) = ses_output.evaluation {
+    println!("SES Model MAE: {}", ses_eval.mae);
+}
+
+if let Some(ma_eval) = ma_output.evaluation {
+    println!("MA Model MAE: {}", ma_eval.mae);
+}
+```
+
+## Features
+
+- Time series forecasting models including:
+  - Simple Exponential Smoothing (SES)
+  - Moving Average (MA)
+  - More models coming soon!
+
+- Standardized model interface via the `Forecaster` trait
+- Consistent output format via the `ModelOutput` struct
+- Comprehensive model evaluation metrics
+- Utilities for data loading, preprocessing, and visualization
+
+## Getting Started
+
+Add OxiDiviner to your Cargo.toml:
+
+```toml
+[dependencies]
+oxidiviner = "0.1.0"
+```
+
+See the examples directory for complete usage examples.
 
 ## Features
 

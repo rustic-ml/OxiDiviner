@@ -1,10 +1,11 @@
-use chrono::{Duration, Utc, TimeZone, NaiveDateTime};
+use chrono::{Duration, Utc, TimeZone, NaiveDateTime, DateTime};
 use rand::Rng;
 use std::error::Error;
 use std::path::Path;
 use std::env;
 use oxidiviner::ModelsOHLCVData;
 use oxidiviner::models::exponential_smoothing::ets::{ETSComponent, DailyETSModel, MinuteETSModel};
+use oxidiviner::prelude::*;
 
 // Generate synthetic daily OHLCV data
 fn generate_synthetic_daily_data() -> ModelsOHLCVData {
@@ -744,488 +745,109 @@ fn generate_trading_summary(
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    println!("OxiDiviner ETS Model Demo");
-    println!("========================\n");
+    println!("OxiDiviner - Time Series Forecasting Demo");
+    println!("==========================================\n");
+
+    // Generate synthetic time series data for demonstration
+    let (time_series, true_trend) = generate_demo_data();
     
-    // Parse command line arguments
-    let args: Vec<String> = env::args().collect();
+    println!("Using standardized model interface for different models");
+    println!("------------------------------------------------------\n");
     
-    // Default settings
-    let mut ticker = "SYNTHETIC";
-    let mut data_type = "daily";
+    // Create various models
+    let mut ses_model = SESModel::new(0.3, None)?;
+    let mut ma_model = MAModel::new(5)?;
     
-    // Process arguments if provided
-    if args.len() > 1 {
-        ticker = &args[1];
+    // Import the Forecaster trait to enable trait methods
+    use oxidiviner::models::Forecaster;
+    
+    // Train each model on the data
+    ses_model.fit(&time_series)?;
+    ma_model.fit(&time_series)?;
+    
+    // Forecast with each model using the standardized interface
+    let horizon = 10;
+    let ses_output = ses_model.predict(horizon, Some(&time_series))?;
+    let ma_output = ma_model.predict(horizon, Some(&time_series))?;
+    
+    // Print forecasts
+    println!("Forecasts from Simple Exponential Smoothing (SES):");
+    println!("--------------------------------------------------");
+    print_model_output(&ses_output);
+    
+    println!("\nForecasts from Moving Average (MA):");
+    println!("----------------------------------");
+    print_model_output(&ma_output);
+    
+    println!("\nComparing model evaluation metrics:");
+    println!("----------------------------------");
+    if let Some(ses_eval) = ses_output.evaluation {
+        println!("SES Model ({}): MAE = {:.4}, RMSE = {:.4}", 
+                 ses_eval.model_name, ses_eval.mae, ses_eval.rmse);
     }
     
-    if args.len() > 2 {
-        data_type = &args[2];
-        if data_type != "daily" && data_type != "minute" {
-            println!("Invalid data type: {}. Using 'daily' instead.", data_type);
-            data_type = "daily";
+    if let Some(ma_eval) = ma_output.evaluation {
+        println!("MA Model ({}): MAE = {:.4}, RMSE = {:.4}", 
+                 ma_eval.model_name, ma_eval.mae, ma_eval.rmse);
+    }
+    
+    Ok(())
+}
+
+// Print the model output in a nicely formatted way
+fn print_model_output(output: &oxidiviner::models::data::ModelOutput) {
+    println!("Model: {}", output.model_name);
+    println!("Forecast:");
+    
+    for (i, value) in output.forecasts.iter().enumerate() {
+        println!("  t+{}: {:.4}", i+1, value);
+    }
+    
+    if let Some(intervals) = &output.confidence_intervals {
+        println!("Confidence Intervals:");
+        for (i, (lower, upper)) in intervals.iter().enumerate() {
+            println!("  t+{}: [{:.4}, {:.4}]", i+1, lower, upper);
         }
     }
     
-    // Help message
-    if ticker == "-h" || ticker == "--help" {
-        println!("Usage: ets_demo [TICKER] [DATA_TYPE]");
-        println!("  TICKER    - Stock ticker symbol (e.g., AAPL, MSFT) or SYNTHETIC for synthetic data");
-        println!("  DATA_TYPE - Type of data to use: 'daily' or 'minute' (default: 'daily')");
-        println!("\nAvailable tickers:");
-        println!("  SYNTHETIC - Uses synthetic data generated with known patterns");
-        println!("  AAPL, AMZN, GOOGL, META, MSFT, NVDA, TSLA, TSM - Real stock data");
-        println!("\nExamples:");
-        println!("  ets_demo AAPL daily    - Analyze Apple daily stock data");
-        println!("  ets_demo MSFT minute   - Analyze Microsoft minute stock data");
-        println!("  ets_demo SYNTHETIC     - Use synthetic data with known patterns");
-        return Ok(());
+    if !output.metadata.is_empty() {
+        println!("Metadata:");
+        for (key, value) in &output.metadata {
+            println!("  {}: {}", key, value);
+        }
     }
+}
+
+// Generate synthetic demo data
+fn generate_demo_data() -> (TimeSeriesData, Vec<f64>) {
+    let now = Utc::now();
+    let n = 100;
     
-    let data = if ticker == "SYNTHETIC" {
-        println!("Generating synthetic {} data...", data_type);
+    // Create timestamps (daily intervals)
+    let timestamps: Vec<DateTime<Utc>> = (0..n)
+        .map(|i| Utc.timestamp_opt(now.timestamp() + i as i64 * 86400, 0).unwrap())
+        .collect();
+    
+    // Create a trend with some noise
+    let mut values = Vec::with_capacity(n);
+    let mut trend = Vec::with_capacity(n);
+    
+    let mut rng = rand::thread_rng();
+    for i in 0..n {
+        // Trend component: linear trend
+        let t = 10.0 + 0.5 * (i as f64);
+        trend.push(t);
         
-        if data_type == "minute" {
-            generate_synthetic_minute_data()
-        } else {
-            generate_synthetic_daily_data()
-        }
-    } else {
-        println!("Loading {} {} data from CSV...", ticker, data_type);
-        match load_stock_data_from_csv(ticker, data_type) {
-            Ok(data) => {
-                println!("Successfully loaded {} data points", data.len());
-                data
-            },
-            Err(e) => {
-                println!("Error loading data: {}", e);
-                println!("Falling back to synthetic data");
-                
-                if data_type == "minute" {
-                    generate_synthetic_minute_data()
-                } else {
-                    generate_synthetic_daily_data()
-                }
-            }
-        }
-    };
-    
-    // Create directory for CSV output if it doesn't exist
-    let csv_dir = Path::new("examples").join("csv");
-    if !csv_dir.exists() {
-        std::fs::create_dir_all(&csv_dir)?;
+        // Add some noise
+        let noise = rng.gen::<f64>() * 5.0 - 2.5;
+        values.push(t + noise);
     }
     
-    // Save data to CSV (useful for verification)
-    let output_filename = format!("{}_{}.csv", ticker.to_lowercase(), data_type);
-    save_to_csv(&data, &output_filename)?;
-    println!("Data saved to {}", csv_dir.join(&output_filename).display());
+    let time_series = TimeSeriesData::new(
+        timestamps,
+        values,
+        "demo_data"
+    ).unwrap();
     
-    // Create train/test splits
-    let (train_data, test_data) = data.train_test_split(0.8)?;
-    
-    println!("\n{} data: {} observations (train: {}, test: {})",
-             if data_type == "daily" { "Daily" } else { "Minute" },
-             data.len(), train_data.len(), test_data.len());
-    
-    println!("\nThis demo will run various ETS (Error-Trend-Seasonality) models");
-    println!("on the data and provide detailed analysis and interpretation.\n");
-    
-    // Run appropriate models based on data type
-    if data_type == "daily" {
-        run_daily_models(&train_data, &test_data, ticker)?;
-    } else {
-        run_minute_models(&train_data, &test_data, ticker)?;
-    }
-    
-    println!("\nDemo completed successfully!");
-    
-    Ok(())
-}
-
-// Function to run and analyze daily models
-fn run_daily_models(train_data: &ModelsOHLCVData, test_data: &ModelsOHLCVData, ticker: &str) 
-    -> Result<(), Box<dyn Error>> {
-    
-    println!("Running ETS models for daily {} data...", ticker);
-    
-    // 1. Simple Exponential Smoothing (ETS(A,N,N))
-    println!("\nModel 1: ETS(A,N,N) - Simple Exponential Smoothing");
-    let mut daily_model1 = DailyETSModel::new(
-        ETSComponent::Additive,  // Error type
-        ETSComponent::None,      // No trend
-        ETSComponent::None,      // No seasonality
-        0.3,                     // alpha = 0.3
-        None,                    // No beta (no trend)
-        None,                    // No gamma (no seasonality)
-        None,                    // No phi (no damping)
-        None,                    // No seasonal period
-        None,                    // Default to Close price
-    )?;
-    
-    daily_model1.fit(train_data)?;
-    let daily_eval1 = daily_model1.evaluate(test_data)?;
-    
-    println!("Model: {}", daily_eval1.model_name);
-    println!("MAE: {:.4}", daily_eval1.mae);
-    println!("RMSE: {:.4}", daily_eval1.rmse);
-    println!("MAPE: {:.4}%\n", daily_eval1.mape);
-    
-    print_model_interpretation(
-        &daily_eval1.model_name,
-        ETSComponent::Additive,     // Error type
-        ETSComponent::None,         // Trend type
-        ETSComponent::None,         // Seasonal type
-        0.3,                        // alpha
-        None,                       // beta
-        None,                       // gamma
-        None,                       // phi
-        None,                       // seasonal_period
-        daily_eval1.mae,
-        daily_eval1.rmse,
-        daily_eval1.mape
-    );
-    
-    // 2. Holt's Linear Trend (ETS(A,A,N))
-    println!("\nModel 2: ETS(A,A,N) - Holt's Linear Trend");
-    let mut daily_model2 = DailyETSModel::new(
-        ETSComponent::Additive,  // Error type
-        ETSComponent::Additive,  // Additive trend
-        ETSComponent::None,      // No seasonality
-        0.3,                     // alpha = 0.3
-        Some(0.1),               // beta = 0.1
-        None,                    // No gamma (no seasonality)
-        None,                    // No phi (no damping)
-        None,                    // No seasonal period
-        None,                    // Default to Close price
-    )?;
-    
-    daily_model2.fit(train_data)?;
-    let daily_eval2 = daily_model2.evaluate(test_data)?;
-    
-    println!("Model: {}", daily_eval2.model_name);
-    println!("MAE: {:.4}", daily_eval2.mae);
-    println!("RMSE: {:.4}", daily_eval2.rmse);
-    println!("MAPE: {:.4}%\n", daily_eval2.mape);
-    
-    print_model_interpretation(
-        &daily_eval2.model_name,
-        ETSComponent::Additive,     // Error type
-        ETSComponent::Additive,     // Trend type
-        ETSComponent::None,         // Seasonal type
-        0.3,                        // alpha
-        Some(0.1),                  // beta
-        None,                       // gamma
-        None,                       // phi
-        None,                       // seasonal_period
-        daily_eval2.mae,
-        daily_eval2.rmse,
-        daily_eval2.mape
-    );
-    
-    // 3. Seasonal Model (ETS(A,N,A))
-    println!("\nModel 3: ETS(A,N,A) - Seasonal without Trend");
-    let mut daily_model3 = DailyETSModel::new(
-        ETSComponent::Additive,  // Error type
-        ETSComponent::None,      // No trend
-        ETSComponent::Additive,  // Additive seasonality
-        0.3,                     // alpha = 0.3
-        None,                    // No beta (no trend)
-        Some(0.1),               // gamma = 0.1
-        None,                    // No phi (no damping)
-        Some(30),                // Seasonal period = 30 days
-        None,                    // Default to Close price
-    )?;
-    
-    daily_model3.fit(train_data)?;
-    let daily_eval3 = daily_model3.evaluate(test_data)?;
-    
-    println!("Model: {}", daily_eval3.model_name);
-    println!("MAE: {:.4}", daily_eval3.mae);
-    println!("RMSE: {:.4}", daily_eval3.rmse);
-    println!("MAPE: {:.4}%\n", daily_eval3.mape);
-    
-    print_model_interpretation(
-        &daily_eval3.model_name,
-        ETSComponent::Additive,     // Error type
-        ETSComponent::None,         // Trend type
-        ETSComponent::Additive,     // Seasonal type
-        0.3,                        // alpha
-        None,                       // beta
-        Some(0.1),                  // gamma
-        None,                       // phi
-        Some(30),                   // seasonal_period
-        daily_eval3.mae,
-        daily_eval3.rmse,
-        daily_eval3.mape
-    );
-    
-    // 4. Holt-Winters (ETS(A,A,A))
-    println!("\nModel 4: ETS(A,A,A) - Holt-Winters");
-    let mut daily_model4 = DailyETSModel::new(
-        ETSComponent::Additive,  // Error type
-        ETSComponent::Additive,  // Additive trend
-        ETSComponent::Additive,  // Additive seasonality
-        0.3,                     // alpha = 0.3
-        Some(0.1),               // beta = 0.1 
-        Some(0.1),               // gamma = 0.1
-        None,                    // No phi (no damping)
-        Some(30),                // Seasonal period = 30 days
-        None,                    // Default to Close price
-    )?;
-    
-    daily_model4.fit(train_data)?;
-    let daily_eval4 = daily_model4.evaluate(test_data)?;
-    
-    println!("Model: {}", daily_eval4.model_name);
-    println!("MAE: {:.4}", daily_eval4.mae);
-    println!("RMSE: {:.4}", daily_eval4.rmse);
-    println!("MAPE: {:.4}%\n", daily_eval4.mape);
-    
-    print_model_interpretation(
-        &daily_eval4.model_name,
-        ETSComponent::Additive,     // Error type
-        ETSComponent::Additive,     // Trend type
-        ETSComponent::Additive,     // Seasonal type
-        0.3,                        // alpha
-        Some(0.1),                  // beta
-        Some(0.1),                  // gamma
-        None,                       // phi
-        Some(30),                   // seasonal_period
-        daily_eval4.mae,
-        daily_eval4.rmse,
-        daily_eval4.mape
-    );
-    
-    // 5. Damped Trend (ETS(A,D,A))
-    println!("\nModel 5: ETS(A,D,A) - Damped Trend with Seasonality");
-    let mut daily_model5 = DailyETSModel::new(
-        ETSComponent::Additive,  // Error type
-        ETSComponent::Damped,    // Damped trend
-        ETSComponent::Additive,  // Additive seasonality
-        0.3,                     // alpha = 0.3
-        Some(0.1),               // beta = 0.1
-        Some(0.1),               // gamma = 0.1
-        Some(0.9),               // phi = 0.9 (damping factor)
-        Some(30),                // Seasonal period = 30 days
-        None,                    // Default to Close price
-    )?;
-    
-    daily_model5.fit(train_data)?;
-    let daily_eval5 = daily_model5.evaluate(test_data)?;
-    
-    println!("Model: {}", daily_eval5.model_name);
-    println!("MAE: {:.4}", daily_eval5.mae);
-    println!("RMSE: {:.4}", daily_eval5.rmse);
-    println!("MAPE: {:.4}%\n", daily_eval5.mape);
-    
-    print_model_interpretation(
-        &daily_eval5.model_name,
-        ETSComponent::Additive,     // Error type
-        ETSComponent::Damped,       // Trend type
-        ETSComponent::Additive,     // Seasonal type
-        0.3,                        // alpha
-        Some(0.1),                  // beta
-        Some(0.1),                  // gamma
-        Some(0.9),                  // phi
-        Some(30),                   // seasonal_period
-        daily_eval5.mae,
-        daily_eval5.rmse,
-        daily_eval5.mape
-    );
-    
-    // Collect results for trading summary
-    let model_evaluations = vec![
-        (daily_eval1.model_name.as_str(), daily_eval1.mae, daily_eval1.rmse, daily_eval1.mape, 
-            ETSComponent::None, ETSComponent::None),
-        (daily_eval2.model_name.as_str(), daily_eval2.mae, daily_eval2.rmse, daily_eval2.mape, 
-            ETSComponent::Additive, ETSComponent::None),
-        (daily_eval3.model_name.as_str(), daily_eval3.mae, daily_eval3.rmse, daily_eval3.mape, 
-            ETSComponent::None, ETSComponent::Additive),
-        (daily_eval4.model_name.as_str(), daily_eval4.mae, daily_eval4.rmse, daily_eval4.mape, 
-            ETSComponent::Additive, ETSComponent::Additive),
-        (daily_eval5.model_name.as_str(), daily_eval5.mae, daily_eval5.rmse, daily_eval5.mape, 
-            ETSComponent::Damped, ETSComponent::Additive),
-    ];
-    
-    // Generate trader summary
-    generate_trading_summary(ticker, "daily", model_evaluations);
-    
-    Ok(())
-}
-
-// Function to run and analyze minute models
-fn run_minute_models(train_data: &ModelsOHLCVData, test_data: &ModelsOHLCVData, ticker: &str) 
-    -> Result<(), Box<dyn Error>> {
-    
-    println!("Running ETS models for minute {} data...", ticker);
-    
-    // 1. Simple Exponential Smoothing (ETS(A,N,N))
-    println!("\nMinute Model 1: ETS(A,N,N) - Simple Exponential Smoothing");
-    let mut minute_model1 = MinuteETSModel::new(
-        ETSComponent::Additive,  // Error type
-        ETSComponent::None,      // No trend
-        ETSComponent::None,      // No seasonality
-        0.3,                     // alpha = 0.3
-        None,                    // No beta (no trend)
-        None,                    // No gamma (no seasonality)
-        None,                    // No phi (no damping)
-        None,                    // No seasonal period
-        None,                    // Default to Close price
-        None,                    // Default aggregation (1 minute)
-    )?;
-    
-    minute_model1.fit(train_data)?;
-    let minute_eval1 = minute_model1.evaluate(test_data)?;
-    
-    println!("Model: {}", minute_eval1.model_name);
-    println!("MAE: {:.4}", minute_eval1.mae);
-    println!("RMSE: {:.4}", minute_eval1.rmse);
-    println!("MAPE: {:.4}%\n", minute_eval1.mape);
-    
-    print_model_interpretation(
-        &minute_eval1.model_name,
-        ETSComponent::Additive,     // Error type
-        ETSComponent::None,         // Trend type
-        ETSComponent::None,         // Seasonal type
-        0.3,                        // alpha
-        None,                       // beta
-        None,                       // gamma
-        None,                       // phi
-        None,                       // seasonal_period
-        minute_eval1.mae,
-        minute_eval1.rmse,
-        minute_eval1.mape
-    );
-    
-    // 2. Aggregated Minute Data (ETS(A,N,N) with 5-minute aggregation)
-    println!("\nMinute Model 2: ETS(A,N,N) with 5-minute aggregation");
-    let mut minute_model2 = MinuteETSModel::new(
-        ETSComponent::Additive,  // Error type
-        ETSComponent::None,      // No trend
-        ETSComponent::None,      // No seasonality
-        0.3,                     // alpha = 0.3
-        None,                    // No beta (no trend)
-        None,                    // No gamma (no seasonality)
-        None,                    // No phi (no damping)
-        None,                    // No seasonal period
-        None,                    // Default to Close price
-        Some(5),                 // 5-minute aggregation
-    )?;
-    
-    minute_model2.fit(train_data)?;
-    let minute_eval2 = minute_model2.evaluate(test_data)?;
-    
-    println!("Model: {}", minute_eval2.model_name);
-    println!("MAE: {:.4}", minute_eval2.mae);
-    println!("RMSE: {:.4}", minute_eval2.rmse);
-    println!("MAPE: {:.4}%\n", minute_eval2.mape);
-    
-    print_model_interpretation(
-        &minute_eval2.model_name,
-        ETSComponent::Additive,     // Error type
-        ETSComponent::None,         // Trend type
-        ETSComponent::None,         // Seasonal type
-        0.3,                        // alpha
-        None,                       // beta
-        None,                       // gamma
-        None,                       // phi
-        None,                       // seasonal_period
-        minute_eval2.mae,
-        minute_eval2.rmse,
-        minute_eval2.mape
-    );
-    
-    // 3. Seasonal Minute Model (ETS(A,N,A) with 60-minute seasonality)
-    println!("\nMinute Model 3: ETS(A,N,A) - Seasonal Model with 60-minute period");
-    let mut minute_model3 = MinuteETSModel::new(
-        ETSComponent::Additive,  // Error type
-        ETSComponent::None,      // No trend
-        ETSComponent::Additive,  // Additive seasonality
-        0.3,                     // alpha = 0.3
-        None,                    // No beta (no trend)
-        Some(0.1),               // gamma = 0.1
-        None,                    // No phi (no damping)
-        Some(60),                // Seasonal period = 60 minutes
-        None,                    // Default to Close price
-        None,                    // Default aggregation (1 minute)
-    )?;
-    
-    minute_model3.fit(train_data)?;
-    let minute_eval3 = minute_model3.evaluate(test_data)?;
-    
-    println!("Model: {}", minute_eval3.model_name);
-    println!("MAE: {:.4}", minute_eval3.mae);
-    println!("RMSE: {:.4}", minute_eval3.rmse);
-    println!("MAPE: {:.4}%\n", minute_eval3.mape);
-    
-    print_model_interpretation(
-        &minute_eval3.model_name,
-        ETSComponent::Additive,     // Error type
-        ETSComponent::None,         // Trend type
-        ETSComponent::Additive,     // Seasonal type
-        0.3,                        // alpha
-        None,                       // beta
-        Some(0.1),                  // gamma
-        None,                       // phi
-        Some(60),                   // seasonal_period
-        minute_eval3.mae,
-        minute_eval3.rmse,
-        minute_eval3.mape
-    );
-    
-    // 4. Holt-Winters for Minute Data (ETS(A,A,A))
-    println!("\nMinute Model 4: ETS(A,A,A) - Holt-Winters with 60-minute seasonality and 15-min aggregation");
-    let mut minute_model4 = MinuteETSModel::new(
-        ETSComponent::Additive,  // Error type
-        ETSComponent::Additive,  // Additive trend
-        ETSComponent::Additive,  // Additive seasonality
-        0.3,                     // alpha = 0.3
-        Some(0.1),               // beta = 0.1
-        Some(0.1),               // gamma = 0.1
-        None,                    // No phi (no damping)
-        Some(60),                // Seasonal period = 60 minutes (adjusted for 15-min aggregation = 4 periods per hour)
-        None,                    // Default to Close price
-        Some(15),                // 15-minute aggregation
-    )?;
-    
-    minute_model4.fit(train_data)?;
-    let minute_eval4 = minute_model4.evaluate(test_data)?;
-    
-    println!("Model: {}", minute_eval4.model_name);
-    println!("MAE: {:.4}", minute_eval4.mae);
-    println!("RMSE: {:.4}", minute_eval4.rmse);
-    println!("MAPE: {:.4}%\n", minute_eval4.mape);
-    
-    print_model_interpretation(
-        &minute_eval4.model_name,
-        ETSComponent::Additive,     // Error type
-        ETSComponent::Additive,     // Trend type
-        ETSComponent::Additive,     // Seasonal type
-        0.3,                        // alpha
-        Some(0.1),                  // beta
-        Some(0.1),                  // gamma
-        None,                       // phi
-        Some(60),                   // seasonal_period
-        minute_eval4.mae,
-        minute_eval4.rmse,
-        minute_eval4.mape
-    );
-    
-    // Collect results for trading summary
-    let model_evaluations = vec![
-        (minute_eval1.model_name.as_str(), minute_eval1.mae, minute_eval1.rmse, minute_eval1.mape, 
-            ETSComponent::None, ETSComponent::None),
-        (minute_eval2.model_name.as_str(), minute_eval2.mae, minute_eval2.rmse, minute_eval2.mape, 
-            ETSComponent::None, ETSComponent::None),
-        (minute_eval3.model_name.as_str(), minute_eval3.mae, minute_eval3.rmse, minute_eval3.mape, 
-            ETSComponent::None, ETSComponent::Additive),
-        (minute_eval4.model_name.as_str(), minute_eval4.mae, minute_eval4.rmse, minute_eval4.mape, 
-            ETSComponent::Additive, ETSComponent::Additive),
-    ];
-    
-    // Generate trader summary
-    generate_trading_summary(ticker, "minute", model_evaluations);
-    
-    Ok(())
+    (time_series, trend)
 } 

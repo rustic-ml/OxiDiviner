@@ -1,49 +1,47 @@
-use rand::Rng;
 use std::error::Error;
 
 // Main function for the demo
 fn main() -> Result<(), Box<dyn Error>> {
-    println!("ETS Model Demo (Simplified)");
-    println!("=========================\n");
+    println!("OxiDiviner - Time Series Forecasting");
+    println!("====================================\n");
 
-    println!("This simplified demo shows how the Exponential Smoothing Time Series (ETS) model works.");
-    println!("The ETS model is a powerful forecasting method that can capture trend and seasonality.");
-    println!("\nIn a complete implementation, the model would:\n");
-    println!("1. Support different error types (Additive, Multiplicative)");
-    println!("2. Support different trend types (None, Additive, Multiplicative, Damped)");
-    println!("3. Support different seasonal types (None, Additive, Multiplicative)");
-    println!("4. Initialize from data, fit parameters, and generate forecasts");
-    println!("\nCheck the full implementation in the OxiDiviner library!");
-    
-    // Generate and display a sample synthetic time series
-    println!("\nSample synthetic time series with trend and seasonality:");
-    
-    // Parameters for the synthetic data
-    const N: usize = 24;  // 2 years of monthly data
-    const TREND: f64 = 0.5;  // Upward trend
-    const SEASON_AMPLITUDE: f64 = 10.0;  // Seasonal amplitude
-    const NOISE_LEVEL: f64 = 3.0;  // Random noise level
-    
-    let mut rng = rand::thread_rng();
-    
-    println!("\n{:<5} {:<10}", "Month", "Value");
-    println!("----------------");
-    
-    for i in 0..N {
-        // Generate value with trend, seasonality, and noise
-        let trend_component = TREND * i as f64;
-        let season_component = SEASON_AMPLITUDE * (2.0 * std::f64::consts::PI * (i % 12) as f64 / 12.0).sin();
-        let noise = NOISE_LEVEL * (rng.gen::<f64>() - 0.5);
-        let value = 100.0 + trend_component + season_component + noise;
-        
-        println!("{:<5} {:<10.2}", i+1, value);
-    }
-    
-    println!("\nA full ETS model would decompose this series into:");
-    println!("- Base level (starting around 100)");
-    println!("- Trend component (increasing by ~0.5 per period)");
-    println!("- Seasonal component (amplitude ~10, period 12 months)");
-    println!("- Random noise component");
-    
+    println!("This demo showcases the standardized model interface in OxiDiviner.\n");
+    println!("Each model in OxiDiviner now has:");
+    println!("1. One standard public entry point via the `predict()` method");
+    println!("2. Standardized output via the `ModelOutput` struct\n");
+
+    println!("The standardized interface helps traders by:");
+    println!("- Providing consistent access to forecasts from any model");
+    println!("- Including confidence intervals when available");
+    println!("- Including evaluation metrics to assess forecast quality");
+    println!("- Offering additional metadata useful for trading decisions\n");
+
+    println!("Example ModelOutput contains:");
+    println!("- Model name:            Simple string identifier");
+    println!("- Forecasts:             Vector of predicted values");
+    println!("- Confidence intervals:  Optional lower/upper bounds");
+    println!("- Evaluation metrics:    MAE, MSE, RMSE, MAPE, etc.");
+    println!("- Metadata:              Custom key-value pairs for trader info\n");
+
+    println!("To use any model with the standardized interface:");
+    println!("```rust");
+    println!("// 1. Create and fit the model");
+    println!("let mut model = SomeModel::new(params);");
+    println!("model.fit(&training_data)?;");
+    println!("");
+    println!("// 2. Generate standardized predictions");
+    println!("let output = model.predict(horizon, Some(&test_data))?;");
+    println!("");
+    println!("// 3. Use the standardized output");
+    println!("println!(\"Model: {{}}\", output.model_name);");
+    println!("println!(\"Forecast: {{:?}}\", output.forecasts);");
+    println!("if let Some(eval) = &output.evaluation {{");
+    println!("    println!(\"RMSE: {{}}\", eval.rmse);");
+    println!("}}");
+    println!("```\n");
+
+    println!("This standardization ensures all models provide consistent output");
+    println!("that can be easily integrated into trading systems and strategies.");
+
     Ok(())
 }

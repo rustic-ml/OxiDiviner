@@ -13,27 +13,28 @@ keywords = ["time-series", "forecasting", "statistics", "analysis", "data"]
 categories = ["science", "mathematics", "algorithms", "finance"]
 # Exclude files and directories from being included in the published package
 exclude = [
+    ".cursor/*",
     "tests/*",
     "examples/*",
     "target/*",
+    "Cargo.lock"
 ]
 
 [dependencies]
-chrono = { version = "0.4", features = ["serde"] }
-rand = "0.8"
-statrs = "0.16"
-plotters = { version = "0.3", optional = true }
-csv = "1.2"
-serde = { version = "1.0", features = ["derive"] }
-thiserror = "1.0"
-ndarray = { version = "0.16", optional = true }
-polars = { version = "0.30", features = ["parquet"], optional = true }
+chrono = { version = ">=0.4.41", features = ["serde"] }
+rand = ">=0.9.1"
+statrs = ">=0.18.0"
+plotters = { version = ">=0.3.7", optional = true }
+polars = { version = ">=0.47.1", optional = true, features = ["lazy", "dtype-full"] }
+thiserror = ">=2.0.12"
+ndarray = { version = ">=0.16.1", optional = true }
+serde = { version = ">=1.0.219", features = ["derive"] }
 
 [features]
 default = []
 plotting = ["plotters"]
-polars_integration = ["polars"]
 ndarray_support = ["ndarray"]
+polars_integration = ["polars"]
 
 [[example]]
 name = "ets_demo"

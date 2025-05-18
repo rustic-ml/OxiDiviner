@@ -2,12 +2,14 @@
 
 pub mod data;
 pub mod error;
+pub mod indicators;
 pub mod models;
 pub mod utils;
 
 // Re-exports
 pub use data::TimeSeriesData;
 pub use error::*;
+pub use indicators::*;
 pub use models::data::OHLCVData as ModelsOHLCVData;
 pub use models::*;
 pub use utils::*;
@@ -15,15 +17,18 @@ pub use utils::*;
 pub mod prelude {
     pub use crate::data::TimeSeriesData;
     pub use crate::error::{OxiError, Result};
+    pub use crate::indicators::*;
     pub use crate::models::data::OHLCVData as ModelsOHLCVData;
     pub use crate::models::exponential_smoothing::ets::{ETSComponent, DailyETSModel, MinuteETSModel};
     pub use crate::models::exponential_smoothing::simple::SESModel;
     pub use crate::models::exponential_smoothing::holt::HoltModel;
     pub use crate::models::exponential_smoothing::holt_winters::{HoltWintersModel, SeasonalType};
+    pub use crate::models::moving_average::MAModel;
 }
 
 // Re-export common types
 pub use models::exponential_smoothing::ets::{ETSComponent, DailyETSModel, MinuteETSModel};
 pub use models::exponential_smoothing::simple::SESModel;
 pub use models::exponential_smoothing::holt::HoltModel;
-pub use models::exponential_smoothing::holt_winters::{HoltWintersModel, SeasonalType}; 
+pub use models::exponential_smoothing::holt_winters::{HoltWintersModel, SeasonalType};
+pub use models::moving_average::MAModel; 

@@ -149,4 +149,55 @@ impl OHLCVData {
             name: name.to_string(),
         })
     }
+}
+
+/// Standardized output structure for all forecasting models in the library.
+/// This ensures consistent output format regardless of the model type.
+#[derive(Debug, Clone)]
+pub struct ModelOutput {
+    /// Name of the model that generated this output
+    pub model_name: String,
+    
+    /// Forecasted values for the specified horizon
+    pub forecasts: Vec<f64>,
+    
+    /// Confidence intervals for forecasts (optional)
+    /// Format: [(lower_bound, upper_bound), ...] for each forecast point
+    pub confidence_intervals: Option<Vec<(f64, f64)>>,
+    
+    /// Model evaluation metrics (if available)
+    pub evaluation: Option<super::ModelEvaluation>,
+    
+    /// Additional metadata that might be useful for traders
+    pub metadata: std::collections::HashMap<String, String>,
+}
+
+impl ModelOutput {
+    /// Create a new ModelOutput with the specified forecasts
+    pub fn new(model_name: String, forecasts: Vec<f64>) -> Self {
+        ModelOutput {
+            model_name,
+            forecasts,
+            confidence_intervals: None,
+            evaluation: None,
+            metadata: std::collections::HashMap::new(),
+        }
+    }
+    
+    /// Add confidence intervals to the output
+    pub fn with_confidence_intervals(mut self, intervals: Vec<(f64, f64)>) -> Self {
+        self.confidence_intervals = Some(intervals);
+        self
+    }
+    
+    /// Add evaluation metrics to the output
+    pub fn with_evaluation(mut self, evaluation: super::ModelEvaluation) -> Self {
+        self.evaluation = Some(evaluation);
+        self
+    }
+    
+    /// Add a metadata key-value pair
+    pub fn add_metadata(&mut self, key: &str, value: &str) {
+        self.metadata.insert(key.to_string(), value.to_string());
+    }
 } 

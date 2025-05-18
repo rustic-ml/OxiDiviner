@@ -1,13 +1,10 @@
 use chrono::{DateTime, Utc};
 #[cfg(feature = "ndarray_support")]
 use ndarray::{Array1, ArrayView1};
-#[cfg(feature = "polars_integration")]
-use polars::prelude::*;
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "polars_integration")]
 use std::path::Path;
-#[cfg(feature = "polars_integration")]
 use std::fs::File;
+use std::io::{BufRead, BufReader};
 
 use crate::error::{OxiError, Result};
 
@@ -50,112 +47,67 @@ impl OHLCVData {
     }
 
     /// Load OHLCV data from a CSV file
-    #[cfg(feature = "polars_integration")]
-    pub fn from_csv<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let path_str = path.as_ref().to_string_lossy().to_string();
+    pub fn from_csv<P: AsRef<Path>>(path: P, timestamp_format: &str, has_header: bool) -> Result<Self> {
+        let file = File::open(&path).map_err(|e| OxiError::Io(e))?;
+        let reader = BufReader::new(file);
+        let mut lines = reader.lines();
         
-        let df = CsvReader::new(File::open(path.as_ref())
-            .map_err(|e| OxiError::data_error(format!("Failed to open CSV {}: {}", path_str, e)))?)
-            .has_header(true)
-            .finish()
-            .map_err(|e| OxiError::data_error(format!("Failed to parse CSV {}: {}", path_str, e)))?;
-
-        Self::from_dataframe(df)
-    }
-
-    /// Load OHLCV data from a Parquet file
-    #[cfg(feature = "polars_integration")]
-    pub fn from_parquet<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let path_str = path.as_ref().to_string_lossy().to_string();
-        let file = File::open(path.as_ref())
-            .map_err(|e| OxiError::data_error(format!("Failed to open parquet file {}: {}", path_str, e)))?;
-        
-        let df = ParquetReader::new(file)
-            .finish()
-            .map_err(|e| OxiError::data_error(format!("Failed to parse Parquet {}: {}", path_str, e)))?;
-
-        Self::from_dataframe(df)
-    }
-
-    /// Convert a DataFrame to OHLCVData
-    #[cfg(feature = "polars_integration")]
-    fn from_dataframe(df: DataFrame) -> Result<Self> {
-        // Check required columns
-        let column_names = df.get_column_names();
-        let required_cols = ["symbol", "open", "high", "low", "close", "volume"];
-        for col in required_cols.iter() {
-            if !column_names.iter().any(|&name| name == *col) {
-                return Err(OxiError::data_error(format!("Missing required column: {}", col)));
+        // Skip header if needed
+        if has_header {
+            if let Some(Ok(_)) = lines.next() {
+                // Header skipped
             }
         }
-
-        // Extract symbol (assuming all rows have the same symbol)
-        let symbol_col = df.column("symbol").unwrap();
-        let symbol = symbol_col.get(0).unwrap().to_string();
-
-        // Extract timestamp column - assuming it's the second column after symbol
-        let timestamp_col_name = df.get_column_names()[1];
-        let timestamp_col = df.column(timestamp_col_name)
-            .map_err(|e| OxiError::data_error(format!("Failed to get timestamp column: {}", e)))?;
-
-        // Parse timestamps based on column type
-        let timestamps = match timestamp_col.dtype() {
-            DataType::String => {
-                let str_series = timestamp_col.str()
-                    .map_err(|e| OxiError::data_error(format!("Failed to get timestamp strings: {}", e)))?;
-                
-                str_series.into_iter()
-                    .filter_map(|opt_s| {
-                        opt_s.and_then(|s| {
-                            NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S %Z")
-                                .or_else(|_| NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S"))
-                                .map(|ndt| Utc.from_utc_datetime(&ndt))
-                                .ok()
-                        })
-                    })
-                    .collect()
-            },
-            DataType::Datetime(_, _) => {
-                timestamp_col.datetime()
-                    .map_err(|e| OxiError::data_error(format!("Failed to get datetime values: {}", e)))?
-                    .into_iter()
-                    .filter_map(|opt_i64| {
-                        opt_i64.and_then(|i64_val| {
-                            let seconds = i64_val / 1_000_000_000;
-                            let nanos = i64_val % 1_000_000_000;
-                            Utc.timestamp_opt(seconds, nanos as u32).single()
-                        })
-                    })
-                    .collect()
-            },
-            dt => return Err(OxiError::data_error(format!("Unsupported timestamp data type: {:?}", dt))),
-        };
-
-        // Extract other numeric columns
-        let extract_float_vec = |col_name: &str| -> Result<Vec<f64>> {
-            df.column(col_name)
-                .map_err(|e| OxiError::data_error(format!("Failed to get column {}: {}", col_name, e)))?
-                .f64()
-                .map_err(|e| OxiError::data_error(format!("Failed to convert {} to f64: {}", col_name, e)))?
-                .into_iter()
-                .map(|opt_val| opt_val.ok_or_else(|| OxiError::data_error(format!("Missing value in {} column", col_name))))
-                .collect()
-        };
-
-        let open = extract_float_vec("open")?;
-        let high = extract_float_vec("high")?;
-        let low = extract_float_vec("low")?;
-        let close = extract_float_vec("close")?;
-        let volume = extract_float_vec("volume")?;
         
-        // Adjusted close might not be present in all datasets
-        let column_names = df.get_column_names();
-        let adjusted_close = if column_names.iter().any(|name| name == "adjusted_close") {
-            Some(extract_float_vec("adjusted_close")?)
-        } else {
-            None
-        };
-
+        let mut symbol = path.as_ref().file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("unknown")
+            .to_string();
+            
+        let mut timestamps = Vec::new();
+        let mut open = Vec::new();
+        let mut high = Vec::new();
+        let mut low = Vec::new();
+        let mut close = Vec::new();
+        let mut volume = Vec::new();
+        
+        for line in lines {
+            let line = line.map_err(|e| OxiError::Io(e))?;
+            let fields: Vec<&str> = line.split(',').collect();
+            
+            if fields.len() < 6 {
+                return Err(OxiError::Data("CSV file must have at least 6 columns: date,open,high,low,close,volume".to_string()));
+            }
+            
+            // Parse timestamp
+            let timestamp = match chrono::NaiveDateTime::parse_from_str(fields[0], timestamp_format) {
+                Ok(dt) => DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc),
+                Err(e) => return Err(OxiError::Data(format!("Error parsing date '{}': {}", fields[0], e))),
+            };
+            
+            // Parse OHLCV values
+            let open_val = fields[1].parse::<f64>().map_err(|e| OxiError::Data(format!("Error parsing open: {}", e)))?;
+            let high_val = fields[2].parse::<f64>().map_err(|e| OxiError::Data(format!("Error parsing high: {}", e)))?;
+            let low_val = fields[3].parse::<f64>().map_err(|e| OxiError::Data(format!("Error parsing low: {}", e)))?;
+            let close_val = fields[4].parse::<f64>().map_err(|e| OxiError::Data(format!("Error parsing close: {}", e)))?;
+            let volume_val = fields[5].parse::<f64>().map_err(|e| OxiError::Data(format!("Error parsing volume: {}", e)))?;
+            
+            // If we have a 7th column, it might be the symbol or adjusted close
+            if fields.len() > 6 {
+                if symbol == "unknown" {
+                    // Try to use the 7th field as the symbol
+                    symbol = fields[6].trim().to_string();
+                }
+            }
+            
+            timestamps.push(timestamp);
+            open.push(open_val);
+            high.push(high_val);
+            low.push(low_val);
+            close.push(close_val);
+            volume.push(volume_val);
+        }
+        
         Ok(OHLCVData {
             symbol,
             timestamps,
@@ -164,7 +116,7 @@ impl OHLCVData {
             low,
             close,
             volume,
-            adjusted_close,
+            adjusted_close: None,
         })
     }
 
@@ -196,7 +148,7 @@ impl TimeSeriesData {
     /// Create a new time series with given data
     pub fn new(timestamps: Vec<DateTime<Utc>>, values: Vec<f64>, name: &str) -> Result<Self> {
         if timestamps.len() != values.len() {
-            return Err(OxiError::data_error("Timestamps and values must have the same length"));
+            return Err(OxiError::Data("Timestamps and values must have the same length".to_string()));
         }
         
         Ok(TimeSeriesData {
@@ -231,12 +183,12 @@ impl TimeSeriesData {
     /// Split the time series into training and testing sets
     pub fn train_test_split(&self, train_ratio: f64) -> Result<(Self, Self)> {
         if train_ratio <= 0.0 || train_ratio >= 1.0 {
-            return Err(OxiError::invalid_params("Train ratio must be between 0 and 1"));
+            return Err(OxiError::InvalidParams("Train ratio must be between 0 and 1".to_string()));
         }
 
         let split_idx = (self.len() as f64 * train_ratio).round() as usize;
         if split_idx == 0 || split_idx >= self.len() {
-            return Err(OxiError::invalid_params("Invalid split index"));
+            return Err(OxiError::InvalidParams("Invalid split index".to_string()));
         }
 
         let train = TimeSeriesData {
@@ -252,5 +204,19 @@ impl TimeSeriesData {
         };
 
         Ok((train, test))
+    }
+
+    /// Attempt to convert TimeSeriesData to OHLCVData
+    /// Returns None if the data doesn't originate from OHLCV data
+    pub fn as_ohlcv(&self) -> Option<&OHLCVData> {
+        // This is a simplified implementation. In real code, you would 
+        // need to track whether this TimeSeriesData was created from OHLCVData
+        // and store a reference to the original data.
+        None
+    }
+    
+    /// Create a TimeSeriesData from OHLCVData
+    pub fn from_ohlcv(ohlcv: &OHLCVData, use_adjusted_close: bool) -> Self {
+        ohlcv.to_time_series(use_adjusted_close)
     }
 } 
