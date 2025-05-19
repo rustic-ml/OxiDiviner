@@ -15,12 +15,12 @@ description = "Core functionality for OxiDiviner time series analysis library"
 chrono.workspace = true
 thiserror.workspace = true
 serde.workspace = true
-oxidiviner-math = { path = "../oxidiviner-math", version = "0.3.0" }
+oxidiviner-math = { path = "../oxidiviner-math", version = "0.3.3" }
 rand.workspace = true
 ndarray = { workspace = true, optional = true }
 
 [dev-dependencies]
-oxidiviner-math = { path = "../oxidiviner-math", version = "0.3.0" }
+oxidiviner-math = { path = "../oxidiviner-math", version = "0.3.3" }
 # Removed circular dependencies for publishing
 rand = { workspace = true }
 chrono = { workspace = true }

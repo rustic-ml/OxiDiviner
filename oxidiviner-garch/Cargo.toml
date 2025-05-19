@@ -11,9 +11,15 @@ categories.workspace = true
 homepage = "https://github.com/rustic-ml/OxiDiviner"
 description = "GARCH models for volatility forecasting and risk modeling in financial time series"
 
+# Configuration for docs.rs
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+default-target = "x86_64-unknown-linux-gnu"
+
 [dependencies]
-oxidiviner-core = { path = "../oxidiviner-core", version = "0.3.0" }
-oxidiviner-math = { path = "../oxidiviner-math", version = "0.3.0" }
+oxidiviner-core = { path = "../oxidiviner-core", version = "0.3.3" }
+oxidiviner-math = { path = "../oxidiviner-math", version = "0.3.3" }
 thiserror.workspace = true
 chrono.workspace = true
 ndarray.workspace = true

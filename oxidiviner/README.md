@@ -1,5 +1,7 @@
 # OxiDiviner
 
+![OxiDiviner Logo](OxiDiviner_250px.JPG)
+
 OxiDiviner is a Rust library for time series analysis and forecasting, designed to be a comprehensive toolkit for traders and data scientists.
 
 ## Standardized Model Interface
@@ -68,7 +70,7 @@ Add OxiDiviner to your Cargo.toml:
 
 ```toml
 [dependencies]
-oxidiviner = "0.3.0"
+oxidiviner = "0.3.3"
 ```
 
 See the examples directory for complete usage examples.
@@ -91,7 +93,7 @@ Add OxiDiviner to your Cargo.toml:
 
 ```toml
 [dependencies]
-oxdiviner = "0.3.0"
+oxdiviner = "0.3.3"
 ```
 
 ## Usage Examples
@@ -196,7 +198,7 @@ Enable features in your Cargo.toml:
 
 ```toml
 [dependencies]
-oxdiviner = { version = "0.3.0", features = ["plotting", "polars_integration"] }
+oxdiviner = { version = "0.3.3", features = ["plotting", "polars_integration"] }
 ```
 
 ## License

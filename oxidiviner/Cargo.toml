@@ -11,10 +11,16 @@ keywords.workspace = true
 categories.workspace = true
 description = "A comprehensive Rust library for time series analysis and forecasting including moving average, exponential smoothing, autoregressive, and GARCH models"
 
+# Configuration for docs.rs
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+default-target = "x86_64-unknown-linux-gnu"
+
 [dependencies]
-oxidiviner-core = { version = "0.3.0", path = "../oxidiviner-core" }
-oxidiviner-math = { version = "0.3.0", path = "../oxidiviner-math" }
-oxidiviner-moving-average = { version = "0.3.0", path = "../oxidiviner-moving-average" }
-oxidiviner-exponential-smoothing = { version = "0.3.0", path = "../oxidiviner-exponential-smoothing" }
-oxidiviner-autoregressive = { version = "0.3.0", path = "../oxidiviner-autoregressive" }
-oxidiviner-garch = { version = "0.3.0", path = "../oxidiviner-garch" } 
+oxidiviner-core = { version = "0.3.3", path = "../oxidiviner-core" }
+oxidiviner-math = { version = "0.3.3", path = "../oxidiviner-math" }
+oxidiviner-moving-average = { version = "0.3.3", path = "../oxidiviner-moving-average" }
+oxidiviner-exponential-smoothing = { version = "0.3.3", path = "../oxidiviner-exponential-smoothing" }
+oxidiviner-autoregressive = { version = "0.3.3", path = "../oxidiviner-autoregressive" }
+oxidiviner-garch = { version = "0.3.3", path = "../oxidiviner-garch" } 
