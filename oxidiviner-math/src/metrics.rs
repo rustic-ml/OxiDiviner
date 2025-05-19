@@ -5,11 +5,13 @@ pub fn mae(actual: &[f64], predicted: &[f64]) -> f64 {
     if actual.len() != predicted.len() || actual.is_empty() {
         return 0.0;
     }
-    
-    let sum: f64 = actual.iter().zip(predicted.iter())
+
+    let sum: f64 = actual
+        .iter()
+        .zip(predicted.iter())
         .map(|(&a, &p)| (a - p).abs())
         .sum();
-    
+
     sum / actual.len() as f64
 }
 
@@ -18,11 +20,13 @@ pub fn mse(actual: &[f64], predicted: &[f64]) -> f64 {
     if actual.len() != predicted.len() || actual.is_empty() {
         return 0.0;
     }
-    
-    let sum: f64 = actual.iter().zip(predicted.iter())
+
+    let sum: f64 = actual
+        .iter()
+        .zip(predicted.iter())
         .map(|(&a, &p)| (a - p).powi(2))
         .sum();
-    
+
     sum / actual.len() as f64
 }
 
@@ -36,9 +40,11 @@ pub fn mape(actual: &[f64], predicted: &[f64]) -> f64 {
     if actual.len() != predicted.len() || actual.is_empty() {
         return 0.0;
     }
-    
+
     let mut count = 0;
-    let sum: f64 = actual.iter().zip(predicted.iter())
+    let sum: f64 = actual
+        .iter()
+        .zip(predicted.iter())
         .filter_map(|(&a, &p)| {
             if a != 0.0 {
                 count += 1;
@@ -48,7 +54,7 @@ pub fn mape(actual: &[f64], predicted: &[f64]) -> f64 {
             }
         })
         .sum();
-    
+
     if count > 0 {
         sum / count as f64
     } else {
@@ -61,9 +67,11 @@ pub fn smape(actual: &[f64], forecast: &[f64]) -> f64 {
     if actual.len() != forecast.len() || actual.is_empty() {
         return 0.0;
     }
-    
+
     let mut count = 0;
-    let sum: f64 = actual.iter().zip(forecast.iter())
+    let sum: f64 = actual
+        .iter()
+        .zip(forecast.iter())
         .filter_map(|(&a, &f)| {
             let abs_a = a.abs();
             let abs_f = f.abs();
@@ -75,10 +83,10 @@ pub fn smape(actual: &[f64], forecast: &[f64]) -> f64 {
             }
         })
         .sum();
-    
+
     if count > 0 {
         sum / count as f64
     } else {
         0.0
     }
-} 
+}

@@ -21,35 +21,35 @@ use oxidiviner_garch::GARCHModel;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a GARCH(1,1) model
     let mut model = GARCHModel::new(1, 1, None)?;
-    
+
     // Time series data
     let returns = vec![0.01, -0.02, 0.03, -0.01, 0.02, -0.03, 0.01, -0.02, 0.01];
-    
+
     // Fit the model
     model.fit(&returns, None)?;
-    
+
     // Display model parameters
     println!("{}", model);
-    
+
     // Forecast volatility for the next 5 periods
     let forecast = model.forecast_variance(5)?;
     println!("Volatility forecast: {:?}", forecast);
-    
+
     Ok(())
 }
 */
 
+mod egarch;
 mod error;
 mod garch;
-mod egarch;
-mod gjr_garch;
 mod garch_m;
+mod gjr_garch;
 
 // Re-export the public models
-pub use garch::GARCHModel;
 pub use egarch::EGARCHModel;
-pub use gjr_garch::GJRGARCHModel;
+pub use garch::GARCHModel;
 pub use garch_m::{GARCHMModel, RiskPremiumType};
+pub use gjr_garch::GJRGARCHModel;
 
 // Re-export the error types
-pub use error::{GARCHError, Result}; 
+pub use error::{GARCHError, Result};

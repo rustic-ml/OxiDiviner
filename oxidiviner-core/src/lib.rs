@@ -18,7 +18,7 @@ interfaces, and utility traits used across all forecasting models.
 ### Interfaces
 
 * [`Forecaster`] - The central trait implemented by all forecasting models
-* [`ModelEvaluation`] - Common metrics for evaluating forecast accuracy 
+* [`ModelEvaluation`] - Common metrics for evaluating forecast accuracy
 * [`ModelOutput`] - Standard output format for forecasts and evaluations
 
 ## Usage Example
@@ -46,24 +46,24 @@ impl Forecaster for SimpleAverageForecast {
     fn name(&self) -> &str {
         &self.name
     }
-    
+
     fn fit(&mut self, data: &TimeSeriesData) -> Result<()> {
         self.values = data.values().to_vec();
         Ok(())
     }
-    
+
     fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
         if self.values.is_empty() {
             return Err(oxidiviner_core::OxiError::NotFitted);
         }
-        
+
         // Calculate the average of all values
         let avg = self.values.iter().sum::<f64>() / self.values.len() as f64;
-        
+
         // Return the average for each point in the forecast horizon
         Ok(vec![avg; horizon])
     }
-    
+
     fn evaluate(&self, test_data: &TimeSeriesData) -> Result<oxidiviner_core::ModelEvaluation> {
         // Implementation would calculate various error metrics
         // between forecasts and actual test data
@@ -79,16 +79,16 @@ fn example() -> Result<()> {
         Utc.with_ymd_and_hms(2023, 1, 3, 0, 0, 0).unwrap(),
     ];
     let values = vec![1.0, 2.0, 3.0];
-    
+
     let data = TimeSeriesData::new(dates, values)?;
-    
+
     // Create our model
     let mut model = SimpleAverageForecast::new();
-    
+
     // Fit and forecast
     model.fit(&data)?;
     let forecast = model.forecast(2)?;
-    
+
     println!("Forecast: {:?}", forecast);
     Ok(())
 }
@@ -113,7 +113,7 @@ pub use error::{OxiError, Result};
 pub trait Forecaster {
     /// Get the name of the model
     fn name(&self) -> &str;
-    
+
     /// Fit the model to training data
     ///
     /// # Arguments
@@ -124,7 +124,7 @@ pub trait Forecaster {
     ///
     /// * `Result<()>` - Success or an error if fitting fails
     fn fit(&mut self, data: &TimeSeriesData) -> Result<()>;
-    
+
     /// Generate forecasts for the specified horizon
     ///
     /// # Arguments
@@ -135,7 +135,7 @@ pub trait Forecaster {
     ///
     /// * `Result<Vec<f64>>` - The forecasted values or an error
     fn forecast(&self, horizon: usize) -> Result<Vec<f64>>;
-    
+
     /// Evaluate the model on test data
     ///
     /// # Arguments
@@ -146,7 +146,7 @@ pub trait Forecaster {
     ///
     /// * `Result<ModelEvaluation>` - Evaluation metrics or an error
     fn evaluate(&self, test_data: &TimeSeriesData) -> Result<ModelEvaluation>;
-    
+
     /// Generate forecasts and evaluation in a standardized output format
     ///
     /// # Arguments
@@ -160,14 +160,14 @@ pub trait Forecaster {
     fn predict(&self, horizon: usize, test_data: Option<&TimeSeriesData>) -> Result<ModelOutput> {
         // Generate forecasts
         let forecasts = self.forecast(horizon)?;
-        
+
         // If test data is provided, evaluate the model
         let evaluation = if let Some(test_data) = test_data {
             Some(self.evaluate(test_data)?)
         } else {
             None
         };
-        
+
         Ok(ModelOutput {
             model_name: self.name().to_string(),
             forecasts,

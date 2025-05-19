@@ -1,11 +1,11 @@
 //! # OxiDiviner
-//! 
+//!
 //! A comprehensive Rust library for time series analysis and forecasting.
 //!
 //! [![Crates.io](https://img.shields.io/crates/v/oxidiviner.svg)](https://crates.io/crates/oxidiviner)
 //! [![Documentation](https://docs.rs/oxidiviner/badge.svg)](https://docs.rs/oxidiviner)
 //! [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-//! 
+//!
 //! ## Overview
 //!
 //! OxiDiviner is a modular ecosystem of crates for time series analysis and forecasting,
@@ -30,7 +30,7 @@
 //! use oxidiviner::models::moving_average::MAModel;
 //! use oxidiviner::{TimeSeriesData, Forecaster};
 //! use chrono::{Utc, TimeZone};
-//! 
+//!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Create sample time series data
 //! let dates = vec![
@@ -59,7 +59,7 @@
 //! use oxidiviner::models::exponential_smoothing::{SimpleESModel, HoltWintersModel};
 //! use oxidiviner::{TimeSeriesData, Forecaster};
 //! use chrono::{Utc, TimeZone};
-//! 
+//!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Create sample time series data
 //! let dates = vec![
@@ -86,11 +86,11 @@
 //! use oxidiviner::models::autoregressive::{ARModel, ARIMAModel};
 //! use oxidiviner::{TimeSeriesData, Forecaster};
 //! use chrono::{Utc, TimeZone};
-//! 
+//!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Create an AR(2) model
 //! let mut ar_model = ARModel::new(2)?;
-//! 
+//!
 //! // Create an ARIMA(1,1,1) model
 //! let mut arima_model = ARIMAModel::new(1, 1, 1)?;
 //! # Ok(())
@@ -104,17 +104,17 @@
 //! ```rust
 //! use oxidiviner::models::garch::{GARCHModel, EGARCHModel};
 //! use oxidiviner::Forecaster;
-//! 
+//!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Create a GARCH(1,1) model
 //! let mut model = GARCHModel::new(1, 1, None)?;
-//! 
+//!
 //! // Sample financial returns data
 //! let returns = vec![0.01, -0.02, 0.03, -0.01, 0.02, -0.03, 0.01];
-//! 
+//!
 //! // Fit the model
 //! model.fit(&returns, None)?;
-//! 
+//!
 //! // Forecast volatility
 //! let volatility_forecast = model.forecast_variance(5)?;
 //! # Ok(())
@@ -134,7 +134,7 @@
 //! let data = vec![10.5, 11.2, 10.8, 11.5, 12.0];
 //! let differenced = difference(&data, 1);
 //! let log_data = log_transform(&data);
-//! 
+//!
 //! // Calculate forecast accuracy
 //! let actual = vec![10.0, 11.0, 12.0];
 //! let predicted = vec![10.2, 10.8, 11.5];
@@ -170,4 +170,4 @@ pub mod models {
     pub mod garch {
         pub use oxidiviner_garch::*;
     }
-} 
+}

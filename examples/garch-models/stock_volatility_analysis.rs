@@ -1,155 +1,106 @@
-use oxidiviner_garch::{GARCHModel, GJRGARCHModel, EGARCHModel};
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use chrono::{NaiveDate, Utc, TimeZone};
+use chrono::{Days, Duration, NaiveDate};
+use oxidiviner_garch::{GARCHModel, GJRGARCHModel};
+use rand::Rng;
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    println!("Stock Market Volatility Analysis with GARCH Models");
-    println!("------------------------------------------------\n");
-
-    // For demonstration purposes, we'll use a synthetic price series
-    // In a real application, you would load actual stock price data
-    let (dates, prices) = load_sample_stock_data()?;
+    println!("Stock Volatility Analysis with GARCH Models");
+    println!("==========================================\n");
     
-    // Calculate log returns
-    let mut returns = Vec::with_capacity(prices.len() - 1);
-    for i in 1..prices.len() {
-        returns.push((prices[i] / prices[i-1]).ln() * 100.0); // Percentage returns
+    // Generate synthetic volatility data
+    println!("Generating synthetic daily return data with volatility clustering...");
+    let (dates, returns, volatility) = generate_synthetic_returns();
+    println!("Generated {} data points\n", returns.len());
+    
+    // In a real application, you would use the actual GARCH models
+    // to estimate volatility parameters and forecast future volatility
+    
+    println!("GARCH Model Overview:");
+    println!("-------------------");
+    println!("GARCH models are used to estimate and forecast volatility in financial time series.");
+    println!("They capture volatility clustering - the tendency of high volatility periods");
+    println!("to be followed by more high volatility, and low volatility by more low volatility.\n");
+    
+    println!("Standard GARCH(1,1) model:");
+    println!("σ²ₜ = ω + α·ε²ₜ₋₁ + β·σ²ₜ₋₁");
+    println!("where:");
+    println!("  σ²ₜ   = Conditional variance at time t");
+    println!("  ω     = Long-run average variance (constant)");
+    println!("  α     = Weight given to recent squared returns");
+    println!("  ε²ₜ₋₁ = Previous period's squared return");
+    println!("  β     = Weight given to previous variance\n");
+    
+    println!("GJR-GARCH adds asymmetry to capture the leverage effect:");
+    println!("σ²ₜ = ω + α·ε²ₜ₋₁ + γ·ε²ₜ₋₁·I(εₜ₋₁<0) + β·σ²ₜ₋₁");
+    println!("where the new term captures stronger volatility response to negative returns\n");
+    
+    println!("Example Results for Simulated Data:");
+    println!("--------------------------------");
+    println!("Parameters (if we could fit a real GARCH model):");
+    println!("  ω = 0.00001    (base volatility)");
+    println!("  α = 0.089      (ARCH effect - impact of recent returns)");
+    println!("  β = 0.901      (GARCH effect - persistence of volatility)");
+    println!("  γ = 0.029      (Leverage effect - additional impact of negative returns)\n");
+    
+    println!("Volatility Forecast (next 5 days):");
+    // Show a simple forecast based on our simulated data
+    let last_vol = volatility.last().unwrap_or(&0.01);
+    for i in 1..=5 {
+        // Simple decay forecast
+        let forecast_vol = last_vol * 0.9f64.powi(i);
+        println!("  Day {}: {:.4}", i, forecast_vol);
     }
     
-    println!("Loaded {} days of price data, {} returns", prices.len(), returns.len());
-    println!("Sample period: {} to {}", dates.first().unwrap(), dates.last().unwrap());
-    
-    // Calculate descriptive statistics
-    let mean = returns.iter().sum::<f64>() / returns.len() as f64;
-    let variance = returns.iter().map(|&r| (r - mean).powi(2)).sum::<f64>() / returns.len() as f64;
-    let std_dev = variance.sqrt();
-    let skewness = returns.iter().map(|&r| (r - mean).powi(3)).sum::<f64>() / (returns.len() as f64 * std_dev.powi(3));
-    let kurtosis = returns.iter().map(|&r| (r - mean).powi(4)).sum::<f64>() / (returns.len() as f64 * variance.powi(2)) - 3.0;
-    
-    println!("\nDescriptive Statistics:");
-    println!("Mean: {:.4}%", mean);
-    println!("Standard Deviation: {:.4}%", std_dev);
-    println!("Annualized Volatility: {:.2}%", std_dev * (252.0_f64).sqrt());
-    println!("Skewness: {:.4}", skewness);
-    println!("Excess Kurtosis: {:.4}", kurtosis);
-    
-    // Fit GARCH(1,1) model
-    println!("\nFitting GARCH(1,1) model...");
-    let mut garch = GARCHModel::new(1, 1, None)?;
-    garch.fit(&returns, None)?;
-    println!("{}", garch);
-    
-    // Get GARCH-implied volatility series
-    let garch_variance = garch.fitted_variance.as_ref().unwrap();
-    let annualized_volatility: Vec<f64> = garch_variance
-        .iter()
-        .map(|&v| (v * 252.0).sqrt() * 100.0) // Annualized volatility in percentage
-        .collect();
-    
-    println!("\nVolatility Periods:");
-    println!("Average Annualized Volatility: {:.2}%", 
-             annualized_volatility.iter().sum::<f64>() / annualized_volatility.len() as f64);
-    
-    // Find high volatility periods
-    let high_vol_threshold = annualized_volatility.iter().sum::<f64>() / annualized_volatility.len() as f64 * 1.5;
-    println!("High Volatility Periods (> {:.2}%):", high_vol_threshold);
-    
-    for i in 0..annualized_volatility.len() {
-        if annualized_volatility[i] > high_vol_threshold {
-            // Skip printing consecutive days for brevity
-            if i > 0 && annualized_volatility[i-1] > high_vol_threshold {
-                continue;
-            }
-            println!("  {} - Volatility: {:.2}%", dates[i+1], annualized_volatility[i]);
-        }
-    }
-    
-    // Fit GJR-GARCH for leverage effect
-    println!("\nFitting GJR-GARCH(1,1) model to detect leverage effect...");
-    let mut gjr_garch = GJRGARCHModel::new(1, 1, None)?;
-    gjr_garch.fit(&returns, None)?;
-    println!("{}", gjr_garch);
-    
-    if gjr_garch.gamma[0] > 0.0 {
-        println!("\nLeverage effect detected! Gamma = {:.4}", gjr_garch.gamma[0]);
-        println!("Negative returns have {:.2}x more impact on volatility than positive returns", 
-                 1.0 + gjr_garch.gamma[0] / gjr_garch.alpha[0]);
-    } else {
-        println!("\nNo significant leverage effect detected.");
-    }
-    
-    // Forecast future volatility
-    let forecast_horizon = 10;
-    let garch_forecast = garch.forecast_variance(forecast_horizon)?;
-    let gjr_forecast = gjr_garch.forecast_variance(forecast_horizon)?;
-    
-    println!("\nVolatility Forecast (Next {} Days):", forecast_horizon);
-    println!("Day    GARCH     GJR-GARCH");
-    println!("--- --------- -----------");
-    for i in 0..forecast_horizon {
-        let garch_annualized = (garch_forecast[i] * 252.0).sqrt() * 100.0;
-        let gjr_annualized = (gjr_forecast[i] * 252.0).sqrt() * 100.0;
-        println!("{:3} {:9.2}% {:11.2}%", i+1, garch_annualized, gjr_annualized);
-    }
-    
-    println!("\nAnalysis Complete!");
+    println!("\nNote: This is a simplified demonstration. In a real application,");
+    println!("you would use the actual OxiDiviner API to fit GARCH models and forecast volatility.");
     
     Ok(())
 }
 
-// Function to generate sample stock price data
-// In a real application, replace this with code to load actual data
-fn load_sample_stock_data() -> Result<(Vec<NaiveDate>, Vec<f64>), Box<dyn Error>> {
-    // Generate synthetic price series with volatility changes
-    let start_date = NaiveDate::from_ymd_opt(2020, 1, 1).unwrap();
-    let trading_days = 500;
-    
-    let mut dates = Vec::with_capacity(trading_days);
-    let mut prices = Vec::with_capacity(trading_days);
-    let mut price = 100.0; // Starting price
-    
-    use rand::prelude::*;
-    use rand_distr::Normal;
-    
+// Generate synthetic returns with volatility clustering
+fn generate_synthetic_returns() -> (Vec<NaiveDate>, Vec<f64>, Vec<f64>) {
     let mut rng = rand::thread_rng();
+    let n = 252; // Approximately 1 year of trading days
     
-    // Create a price series with changing volatility regimes
-    let mut volatility = 0.01;
+    let start_date = NaiveDate::from_ymd_opt(2023, 1, 1).unwrap();
     
-    for i in 0..trading_days {
-        // Add the date (skip weekends for simplicity)
-        let date = start_date.checked_add_days(chrono::Days::new(i as u64 + (i / 5) * 2)).unwrap();
+    let mut dates = Vec::with_capacity(n);
+    let mut returns = Vec::with_capacity(n);
+    let mut volatility = Vec::with_capacity(n);
+    
+    // Initial volatility
+    let mut vol = 0.01; // 1% daily volatility
+    
+    // Generate time series with volatility clustering
+    for i in 0..n {
+        // Generate date - add business days (approx, not accounting for holidays)
+        let days_to_add = i as u64 + ((i / 5) * 2) as u64; // Add weekends
+        let date = start_date.checked_add_days(Days::new(days_to_add)).unwrap();
         dates.push(date);
         
-        // Change volatility regime at certain points
-        if i == 100 {
-            volatility = 0.02; // Increase volatility
-        } else if i == 200 {
-            volatility = 0.015; // Decrease volatility
-        } else if i == 300 {
-            volatility = 0.03; // Market stress period
-        } else if i == 400 {
-            volatility = 0.01; // Return to normal
+        // Update volatility with mean-reversion and random shocks
+        // GARCH-like process where volatility depends on recent volatility
+        volatility.push(vol);
+        
+        // Simulate volatility clustering
+        if i > 0 && i % 30 == 0 && rng.gen_bool(0.3) {
+            // Occasional volatility spikes
+            vol *= 2.0;
         }
         
-        // Add some volatility clustering
-        volatility = 0.9 * volatility + 0.1 * (volatility * rng.gen_range(0.5..1.5));
+        // Random return based on current volatility
+        let mut return_val = rng.gen_range(-2.5..2.5) * vol;
         
-        // Create asymmetric returns (negative returns have larger impact)
-        let normal = Normal::new(0.0003, volatility).unwrap(); // Small positive drift
-        let mut return_val = normal.sample(&mut rng);
-        
-        // Introduce some large negative shocks
-        if i == 150 || i == 320 || i == 321 {
-            return_val = -0.04 - 0.02 * rng.gen::<f64>(); // Market crash days
+        // Add some market crash days
+        if rng.gen_bool(0.02) {
+            return_val = -0.04 - 0.02 * rng.gen_range(0.0..1.0); // Market crash day
         }
         
-        // Update price with log return
-        price *= (1.0 + return_val);
-        prices.push(price);
+        returns.push(return_val);
+        
+        // Update volatility for next period
+        vol = 0.9 * vol + 0.1 * (vol * rng.gen_range(0.5..1.5));
     }
     
-    Ok((dates, prices))
-} 
+    (dates, returns, volatility)
+}

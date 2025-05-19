@@ -25,8 +25,8 @@ pub enum GARCHError {
     /// Non-convergence error during optimization
     #[error("Optimization did not converge")]
     NonConvergence,
-    
+
     /// Numerical errors
     #[error("Numerical error: {0}")]
     NumericalError(String),
-} 
+}

@@ -13,4 +13,4 @@ pub mod transforms;
 pub use error::MathError;
 pub use metrics::*;
 pub use statistics::*;
-pub use transforms::*; 
+pub use transforms::*;

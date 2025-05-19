@@ -1,6 +1,6 @@
-use oxidiviner_core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
-use oxidiviner_math::metrics::{mae, mse, rmse, mape, smape};
 use crate::error::{ARError, Result as ARResult};
+use oxidiviner_core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
+use oxidiviner_math::metrics::{mae, mape, mse, rmse, smape};
 use std::collections::HashMap;
 
 /// Vector Autoregression (VAR) model for multivariate time series forecasting.
@@ -64,18 +64,20 @@ impl VARModel {
         if p == 0 {
             return Err(ARError::InvalidLagOrder(p));
         }
-        
+
         if variable_names.is_empty() {
-            return Err(ARError::InvalidParameter("At least one variable required for VAR model".to_string()));
+            return Err(ARError::InvalidParameter(
+                "At least one variable required for VAR model".to_string(),
+            ));
         }
-        
+
         let k = variable_names.len();
         let name = if include_intercept {
             format!("VAR({})_{}vars+intercept", p, k)
         } else {
             format!("VAR({})_{}vars", p, k)
         };
-        
+
         Ok(VARModel {
             name,
             k,
@@ -89,7 +91,7 @@ impl VARModel {
             residuals: None,
         })
     }
-    
+
     /// Fit the VAR model to multiple time series data.
     ///
     /// # Arguments
@@ -101,35 +103,39 @@ impl VARModel {
         // Check if we have data for all variables
         for var_name in &self.variable_names {
             if !data_map.contains_key(var_name) {
-                return Err(OxiError::DataError(
-                    format!("Missing data for variable '{}'", var_name)
-                ));
+                return Err(OxiError::DataError(format!(
+                    "Missing data for variable '{}'",
+                    var_name
+                )));
             }
         }
-        
+
         // Check if all time series have the same timestamps
         let first_var = &data_map[&self.variable_names[0]];
         let timestamps = &first_var.timestamps;
         let n = timestamps.len();
-        
+
         for var_name in &self.variable_names {
             let var_data = &data_map[var_name];
             if var_data.timestamps.len() != n {
-                return Err(OxiError::DataError(
-                    format!("Inconsistent time series lengths. Expected {} timestamps, but got {} for '{}'",
-                           n, var_data.timestamps.len(), var_name)
-                ));
+                return Err(OxiError::DataError(format!(
+                    "Inconsistent time series lengths. Expected {} timestamps, but got {} for '{}'",
+                    n,
+                    var_data.timestamps.len(),
+                    var_name
+                )));
             }
-            
+
             for i in 0..n {
                 if var_data.timestamps[i] != timestamps[i] {
-                    return Err(OxiError::DataError(
-                        format!("Inconsistent timestamps at position {} for variable '{}'", i, var_name)
-                    ));
+                    return Err(OxiError::DataError(format!(
+                        "Inconsistent timestamps at position {} for variable '{}'",
+                        i, var_name
+                    )));
                 }
             }
         }
-        
+
         // Need more observations than the VAR order
         if n <= self.p {
             return Err(OxiError::from(ARError::InsufficientData {
@@ -137,19 +143,20 @@ impl VARModel {
                 expected: self.p + 1,
             }));
         }
-        
+
         // Extract all time series values into a k×n matrix
         let mut all_values = Vec::with_capacity(self.k);
         for var_name in &self.variable_names {
             all_values.push(data_map[var_name].values.clone());
         }
-        
+
         // Fit the VAR model
-        self.fit_var_model(&all_values).map_err(|e| OxiError::from(e))?;
-        
+        self.fit_var_model(&all_values)
+            .map_err(|e| OxiError::from(e))?;
+
         Ok(())
     }
-    
+
     /// Fit the model to the provided single time series data.
     ///
     /// This is a convenience method that assumes a univariate model (k=1).
@@ -162,17 +169,18 @@ impl VARModel {
     /// * `Result<()>` - Success or error
     pub fn fit(&mut self, data: &TimeSeriesData) -> Result<()> {
         if self.k != 1 {
-            return Err(OxiError::ModelError(
-                format!("Cannot use fit() for VAR model with {} variables. Use fit_multiple() instead.", self.k)
-            ));
+            return Err(OxiError::ModelError(format!(
+                "Cannot use fit() for VAR model with {} variables. Use fit_multiple() instead.",
+                self.k
+            )));
         }
-        
+
         let mut data_map = HashMap::new();
         data_map.insert(self.variable_names[0].clone(), data.clone());
-        
+
         self.fit_multiple(&data_map)
     }
-    
+
     /// Forecast future values for all variables.
     ///
     /// # Arguments
@@ -184,67 +192,72 @@ impl VARModel {
         if horizon == 0 {
             return Err(OxiError::from(ARError::InvalidHorizon(horizon)));
         }
-        
+
         if self.coefficient_matrices.is_none() || self.last_values.is_none() {
             return Err(OxiError::from(ARError::NotFitted));
         }
-        
+
         // Get coefficient matrices and last values
         let coef_matrices = self.coefficient_matrices.as_ref().unwrap();
         let last_values = self.last_values.as_ref().unwrap();
-        
+
         // Initialize forecasts with empty vectors for each variable
         let mut forecasts: HashMap<String, Vec<f64>> = HashMap::new();
         for var_name in &self.variable_names {
             forecasts.insert(var_name.clone(), Vec::with_capacity(horizon));
         }
-        
+
         // Create a matrix of historical + forecasted values for each variable
         // Start with the last p observed values (in reverse order, newest first)
         let mut extended_values = last_values.clone();
-        
+
         // Create a default intercept vector if none is provided
         let default_intercept = vec![0.0; self.k];
         let intercept = self.intercept.as_ref().unwrap_or(&default_intercept);
-        
+
         // Generate forecasts one step at a time
         for _ in 0..horizon {
             // Current forecast is a k×1 vector
             let mut current_forecast = vec![0.0; self.k];
-            
+
             // Add intercept term if included
             if self.include_intercept {
                 for i in 0..self.k {
                     current_forecast[i] = intercept[i];
                 }
             }
-            
+
             // Apply coefficient matrices to lagged values
             for lag in 0..self.p {
                 let coef_matrix = &coef_matrices[lag];
                 let lagged_values = &extended_values[lag];
-                
-                for i in 0..self.k {  // For each output variable
-                    for j in 0..self.k {  // For each input variable
+
+                for i in 0..self.k {
+                    // For each output variable
+                    for j in 0..self.k {
+                        // For each input variable
                         current_forecast[i] += coef_matrix[i][j] * lagged_values[j];
                     }
                 }
             }
-            
+
             // Add the current forecast to the historical values
             extended_values.insert(0, current_forecast.clone());
             // Remove the oldest value to maintain p lags
             extended_values.pop();
-            
+
             // Add the forecast to each variable's forecast vector
             for (i, var_name) in self.variable_names.iter().enumerate() {
-                forecasts.get_mut(var_name).unwrap().push(current_forecast[i]);
+                forecasts
+                    .get_mut(var_name)
+                    .unwrap()
+                    .push(current_forecast[i]);
             }
         }
-        
+
         Ok(forecasts)
     }
-    
+
     /// Forecast future values for a single variable.
     ///
     /// This is a convenience method that returns forecasts for the first variable only.
@@ -258,10 +271,10 @@ impl VARModel {
     pub fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
         let forecasts_map = self.forecast_multiple(horizon)?;
         let var_name = &self.variable_names[0];
-        
+
         Ok(forecasts_map[var_name].clone())
     }
-    
+
     /// Evaluate the model on test data for multiple variables.
     ///
     /// # Arguments
@@ -269,50 +282,56 @@ impl VARModel {
     ///
     /// # Returns
     /// * `Result<HashMap<String, ModelEvaluation>>` - Evaluation for each variable
-    pub fn evaluate_multiple(&self, test_data_map: &HashMap<String, TimeSeriesData>) -> Result<HashMap<String, ModelEvaluation>> {
+    pub fn evaluate_multiple(
+        &self,
+        test_data_map: &HashMap<String, TimeSeriesData>,
+    ) -> Result<HashMap<String, ModelEvaluation>> {
         if self.coefficient_matrices.is_none() {
             return Err(OxiError::from(ARError::NotFitted));
         }
-        
+
         // Check if we have test data for all variables
         for var_name in &self.variable_names {
             if !test_data_map.contains_key(var_name) {
-                return Err(OxiError::DataError(
-                    format!("Missing test data for variable '{}'", var_name)
-                ));
+                return Err(OxiError::DataError(format!(
+                    "Missing test data for variable '{}'",
+                    var_name
+                )));
             }
         }
-        
+
         // Check if all test time series have the same horizon
         let first_var = &test_data_map[&self.variable_names[0]];
         let horizon = first_var.values.len();
-        
+
         for var_name in &self.variable_names {
             let var_data = &test_data_map[var_name];
             if var_data.values.len() != horizon {
-                return Err(OxiError::DataError(
-                    format!("Inconsistent test series lengths. Expected {} values, but got {} for '{}'",
-                           horizon, var_data.values.len(), var_name)
-                ));
+                return Err(OxiError::DataError(format!(
+                    "Inconsistent test series lengths. Expected {} values, but got {} for '{}'",
+                    horizon,
+                    var_data.values.len(),
+                    var_name
+                )));
             }
         }
-        
+
         // Generate forecasts for all variables
         let forecasts_map = self.forecast_multiple(horizon)?;
-        
+
         // Calculate evaluation metrics for each variable
         let mut evaluations = HashMap::new();
-        
+
         for var_name in &self.variable_names {
             let actual = &test_data_map[var_name].values;
             let forecast = &forecasts_map[var_name];
-            
+
             let mae_value = mae(actual, forecast);
             let mse_value = mse(actual, forecast);
             let rmse_value = rmse(actual, forecast);
             let mape_value = mape(actual, forecast);
             let smape_value = smape(actual, forecast);
-            
+
             let model_name = format!("{}-{}", self.name, var_name);
             let eval = ModelEvaluation {
                 model_name,
@@ -322,13 +341,13 @@ impl VARModel {
                 mape: mape_value,
                 smape: smape_value,
             };
-            
+
             evaluations.insert(var_name.clone(), eval);
         }
-        
+
         Ok(evaluations)
     }
-    
+
     /// Evaluate the model on a single test series.
     ///
     /// This is a convenience method for univariate VAR models.
@@ -345,15 +364,15 @@ impl VARModel {
                 format!("Cannot use evaluate() for VAR model with {} variables. Use evaluate_multiple() instead.", self.k)
             ));
         }
-        
+
         let mut test_data_map = HashMap::new();
         test_data_map.insert(self.variable_names[0].clone(), test_data.clone());
-        
+
         let evaluations = self.evaluate_multiple(&test_data_map)?;
-        
+
         Ok(evaluations[&self.variable_names[0]].clone())
     }
-    
+
     /// Generate forecasts and evaluation for multiple variables.
     ///
     /// # Arguments
@@ -362,37 +381,41 @@ impl VARModel {
     ///
     /// # Returns
     /// * `Result<HashMap<String, ModelOutput>>` - Outputs for each variable
-    pub fn predict_multiple(&self, horizon: usize, test_data_map: Option<&HashMap<String, TimeSeriesData>>) -> Result<HashMap<String, ModelOutput>> {
+    pub fn predict_multiple(
+        &self,
+        horizon: usize,
+        test_data_map: Option<&HashMap<String, TimeSeriesData>>,
+    ) -> Result<HashMap<String, ModelOutput>> {
         if horizon == 0 {
             return Err(OxiError::from(ARError::InvalidHorizon(horizon)));
         }
-        
+
         if self.coefficient_matrices.is_none() {
             return Err(OxiError::from(ARError::NotFitted));
         }
-        
+
         // Generate forecasts for all variables
         let forecasts_map = self.forecast_multiple(horizon)?;
-        
+
         // Initialize outputs with forecasts
         let mut outputs = HashMap::new();
-        
+
         for var_name in &self.variable_names {
             let forecast = forecasts_map[var_name].clone();
-            
+
             let output = ModelOutput {
                 model_name: format!("{}-{}", self.name, var_name),
                 forecasts: forecast,
                 evaluation: None,
             };
-            
+
             outputs.insert(var_name.clone(), output);
         }
-        
+
         // Add evaluations if test data is provided
         if let Some(test_map) = test_data_map {
             let evaluations = self.evaluate_multiple(test_map)?;
-            
+
             for var_name in &self.variable_names {
                 if let Some(eval) = evaluations.get(var_name) {
                     if let Some(output) = outputs.get_mut(var_name) {
@@ -401,10 +424,10 @@ impl VARModel {
                 }
             }
         }
-        
+
         Ok(outputs)
     }
-    
+
     /// Generate forecasts and evaluation for a single variable.
     ///
     /// This is a convenience method for univariate VAR models.
@@ -416,47 +439,51 @@ impl VARModel {
     ///
     /// # Returns
     /// * `Result<ModelOutput>` - Output for the first variable
-    pub fn predict(&self, horizon: usize, test_data: Option<&TimeSeriesData>) -> Result<ModelOutput> {
+    pub fn predict(
+        &self,
+        horizon: usize,
+        test_data: Option<&TimeSeriesData>,
+    ) -> Result<ModelOutput> {
         if self.k != 1 {
             return Err(OxiError::ModelError(
                 format!("Cannot use predict() for VAR model with {} variables. Use predict_multiple() instead.", self.k)
             ));
         }
-        
+
         let mut test_data_map = None;
-        
+
         if let Some(data) = test_data {
             let mut map = HashMap::new();
             map.insert(self.variable_names[0].clone(), data.clone());
             test_data_map = Some(map);
         }
-        
+
         let test_map_ref = test_data_map.as_ref();
         let outputs = self.predict_multiple(horizon, test_map_ref)?;
-        
+
         Ok(outputs[&self.variable_names[0]].clone())
     }
-    
+
     /// Get the estimated coefficient matrices.
     pub fn coefficient_matrices(&self) -> Option<&Vec<Vec<Vec<f64>>>> {
         self.coefficient_matrices.as_ref()
     }
-    
+
     /// Get the estimated intercept vector.
     pub fn intercept(&self) -> Option<&Vec<f64>> {
         self.intercept.as_ref()
     }
-    
+
     /// Get the fitted values for each variable.
     pub fn fitted_values(&self) -> Option<&Vec<Vec<f64>>> {
         self.fitted_values.as_ref()
     }
-    
+
     /// Get the residuals for each variable.
     pub fn residuals(&self) -> Option<&Vec<Vec<f64>>> {
         self.residuals.as_ref()
     }
-    
+
     /// Fit the VAR model using OLS estimation.
     ///
     /// This method implements OLS estimation for each equation separately.
@@ -470,7 +497,7 @@ impl VARModel {
     fn fit_var_model(&mut self, data: &[Vec<f64>]) -> ARResult<()> {
         let k = data.len();
         let n = data[0].len();
-        
+
         // Sanity check: all time series should have the same length
         for i in 1..k {
             if data[i].len() != n {
@@ -480,21 +507,21 @@ impl VARModel {
                 ));
             }
         }
-        
+
         // Effective sample size after losing p observations
         let T = n - self.p;
-        
+
         if T <= k * self.p + self.include_intercept as usize {
             return Err(ARError::InsufficientData {
                 actual: n,
                 expected: k * self.p + self.include_intercept as usize + self.p + 1,
             });
         }
-        
+
         // Prepare dependent and independent variables
         // Y is a T×k matrix of dependent variables
         // X is a T×(kp+1) matrix of regressors (if include_intercept is true, +1 for the constant term)
-        
+
         // Y matrix (will be T×k)
         let mut Y = vec![vec![0.0; k]; T];
         for t in 0..T {
@@ -502,17 +529,17 @@ impl VARModel {
                 Y[t][i] = data[i][t + self.p];
             }
         }
-        
+
         // X matrix (will be T×(kp+intercept))
         let num_regressors = k * self.p + self.include_intercept as usize;
         let mut X = vec![vec![0.0; num_regressors]; T];
-        
+
         for t in 0..T {
             // If intercept is included, set first column to 1
             if self.include_intercept {
                 X[t][0] = 1.0;
             }
-            
+
             // Set other columns to lagged values
             let intercept_offset = self.include_intercept as usize;
             for lag in 0..self.p {
@@ -522,10 +549,10 @@ impl VARModel {
                 }
             }
         }
-        
+
         // Fit each equation using OLS: B = (X'X)^(-1)X'Y
         // Where B is a (kp+1)×k matrix of coefficients
-        
+
         // First, compute X'X (num_regressors × num_regressors)
         let mut XtX = vec![vec![0.0; num_regressors]; num_regressors];
         for i in 0..num_regressors {
@@ -535,10 +562,10 @@ impl VARModel {
                 }
             }
         }
-        
+
         // Compute the inverse of X'X
         let XtX_inv = self.invert_matrix(&XtX)?;
-        
+
         // Compute X'Y (num_regressors × k)
         let mut XtY = vec![vec![0.0; k]; num_regressors];
         for i in 0..num_regressors {
@@ -548,7 +575,7 @@ impl VARModel {
                 }
             }
         }
-        
+
         // Compute B = (X'X)^(-1)X'Y
         let mut B = vec![vec![0.0; k]; num_regressors];
         for i in 0..num_regressors {
@@ -558,37 +585,37 @@ impl VARModel {
                 }
             }
         }
-        
+
         // Extract coefficient matrices and intercept from B
         let mut coefficient_matrices = Vec::with_capacity(self.p);
         let mut intercept = vec![0.0; k];
-        
+
         // Set intercept if included
         if self.include_intercept {
             for i in 0..k {
                 intercept[i] = B[0][i];
             }
         }
-        
+
         // Extract coefficient matrices
         for lag in 0..self.p {
             let mut coef_matrix = vec![vec![0.0; k]; k];
             let intercept_offset = self.include_intercept as usize;
-            
+
             for i in 0..k {
                 for j in 0..k {
                     let row_idx = intercept_offset + lag * k + j;
                     coef_matrix[i][j] = B[row_idx][i];
                 }
             }
-            
+
             coefficient_matrices.push(coef_matrix);
         }
-        
+
         // Calculate fitted values and residuals
         let mut fitted_values = vec![vec![0.0; n]; k];
         let mut residuals = vec![vec![0.0; n]; k];
-        
+
         // First p values cannot be predicted
         for i in 0..k {
             for t in 0..self.p {
@@ -596,46 +623,54 @@ impl VARModel {
                 residuals[i][t] = f64::NAN;
             }
         }
-        
+
         // Calculate fitted values for the rest
         for t in self.p..n {
             for i in 0..k {
-                let mut fitted = if self.include_intercept { intercept[i] } else { 0.0 };
-                
+                let mut fitted = if self.include_intercept {
+                    intercept[i]
+                } else {
+                    0.0
+                };
+
                 for lag in 0..self.p {
                     for j in 0..k {
                         fitted += coefficient_matrices[lag][i][j] * data[j][t - lag - 1];
                     }
                 }
-                
+
                 fitted_values[i][t] = fitted;
                 residuals[i][t] = data[i][t] - fitted;
             }
         }
-        
+
         // Store last p values for forecasting
         let mut last_values = Vec::with_capacity(self.p);
         for lag in 0..self.p {
             let t = n - lag - 1;
             let mut current_values = Vec::with_capacity(k);
-            
+
             for i in 0..k {
                 current_values.push(data[i][t]);
             }
-            
+
             last_values.push(current_values);
         }
-        
+
         // Store results
         self.coefficient_matrices = Some(coefficient_matrices);
-        self.intercept = if self.include_intercept { Some(intercept) } else { None };
+        self.intercept = if self.include_intercept {
+            Some(intercept)
+        } else {
+            None
+        };
         self.fitted_values = Some(fitted_values);
         self.residuals = Some(residuals);
         self.last_values = Some(last_values);
-        
+
         Ok(())
     }
-    
+
     /// Invert a matrix using Gaussian elimination.
     ///
     /// # Arguments
@@ -646,9 +681,11 @@ impl VARModel {
     fn invert_matrix(&self, a: &[Vec<f64>]) -> ARResult<Vec<Vec<f64>>> {
         let n = a.len();
         if n == 0 || a[0].len() != n {
-            return Err(ARError::LinearSolveError("Invalid matrix dimensions for inversion".to_string()));
+            return Err(ARError::LinearSolveError(
+                "Invalid matrix dimensions for inversion".to_string(),
+            ));
         }
-        
+
         // Create augmented matrix [A|I]
         let mut aug = vec![vec![0.0; 2 * n]; n];
         for i in 0..n {
@@ -657,36 +694,38 @@ impl VARModel {
             }
             aug[i][n + i] = 1.0; // Identity matrix on the right
         }
-        
+
         // Gaussian elimination
         for i in 0..n {
             // Find pivot
             let mut max_idx = i;
             let mut max_val = aug[i][i].abs();
-            
+
             for j in (i + 1)..n {
                 if aug[j][i].abs() > max_val {
                     max_idx = j;
                     max_val = aug[j][i].abs();
                 }
             }
-            
+
             // Check if matrix is singular
             if max_val < 1e-10 {
-                return Err(ARError::LinearSolveError("Singular matrix detected".to_string()));
+                return Err(ARError::LinearSolveError(
+                    "Singular matrix detected".to_string(),
+                ));
             }
-            
+
             // Swap rows if needed
             if max_idx != i {
                 aug.swap(i, max_idx);
             }
-            
+
             // Scale pivot row
             let pivot = aug[i][i];
             for j in 0..(2 * n) {
                 aug[i][j] /= pivot;
             }
-            
+
             // Eliminate other rows
             for j in 0..n {
                 if j != i {
@@ -697,20 +736,20 @@ impl VARModel {
                 }
             }
         }
-        
+
         // Extract inverse matrix
         let mut inverse = vec![vec![0.0; n]; n];
         for i in 0..n {
             for j in 0..n {
                 inverse[i][j] = aug[i][n + j];
-                
+
                 // Check for invalid values
                 if inverse[i][j].is_nan() || inverse[i][j].is_infinite() {
                     return Err(ARError::InvalidCoefficient);
                 }
             }
         }
-        
+
         Ok(inverse)
     }
 }
@@ -720,65 +759,65 @@ impl Forecaster for VARModel {
     fn name(&self) -> &str {
         &self.name
     }
-    
+
     fn fit(&mut self, data: &TimeSeriesData) -> Result<()> {
         if self.k != 1 {
             return Err(OxiError::ModelError(
                 format!("Cannot use Forecaster::fit() for VAR model with {} variables. Use fit_multiple() instead.", self.k)
             ));
         }
-        
+
         let mut data_map = HashMap::new();
         data_map.insert(self.variable_names[0].clone(), data.clone());
-        
+
         self.fit_multiple(&data_map)
     }
-    
+
     fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
         if self.k != 1 {
             return Err(OxiError::ModelError(
                 format!("Cannot use Forecaster::forecast() for VAR model with {} variables. Use forecast_multiple() instead.", self.k)
             ));
         }
-        
+
         let forecasts_map = self.forecast_multiple(horizon)?;
-        
+
         Ok(forecasts_map[&self.variable_names[0]].clone())
     }
-    
+
     fn evaluate(&self, test_data: &TimeSeriesData) -> Result<ModelEvaluation> {
         if self.k != 1 {
             return Err(OxiError::ModelError(
                 format!("Cannot use Forecaster::evaluate() for VAR model with {} variables. Use evaluate_multiple() instead.", self.k)
             ));
         }
-        
+
         let mut test_data_map = HashMap::new();
         test_data_map.insert(self.variable_names[0].clone(), test_data.clone());
-        
+
         let evaluations = self.evaluate_multiple(&test_data_map)?;
-        
+
         Ok(evaluations[&self.variable_names[0]].clone())
     }
-    
+
     fn predict(&self, horizon: usize, test_data: Option<&TimeSeriesData>) -> Result<ModelOutput> {
         if self.k != 1 {
             return Err(OxiError::ModelError(
                 format!("Cannot use Forecaster::predict() for VAR model with {} variables. Use predict_multiple() instead.", self.k)
             ));
         }
-        
+
         let mut test_data_map = None;
-        
+
         if let Some(data) = test_data {
             let mut map = HashMap::new();
             map.insert(self.variable_names[0].clone(), data.clone());
             test_data_map = Some(map);
         }
-        
+
         let test_map_ref = test_data_map.as_ref();
         let outputs = self.predict_multiple(horizon, test_map_ref)?;
-        
+
         Ok(outputs[&self.variable_names[0]].clone())
     }
 }
@@ -786,45 +825,48 @@ impl Forecaster for VARModel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{DateTime, Utc, TimeZone};
+    use chrono::{DateTime, TimeZone, Utc};
 
     #[test]
     fn test_var_univariate() {
         // This test verifies that a VAR(1) model with a single variable
         // behaves similarly to an AR(1) model
-        
+
         // Create linear trend data: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
         let now = Utc::now();
         let timestamps: Vec<DateTime<Utc>> = (0..12)
             .map(|i| Utc.timestamp_opt(now.timestamp() + i * 86400, 0).unwrap())
             .collect();
-        
+
         let values: Vec<f64> = (1..=12).map(|i| i as f64).collect();
-        
+
         let time_series = TimeSeriesData::new(timestamps, values, "trend_series").unwrap();
-        
+
         // Create and fit a VAR(1) model with one variable
         let variable_names = vec!["y".to_string()];
         let mut model = VARModel::new(1, variable_names, true).unwrap();
         model.fit(&time_series).unwrap();
-        
+
         // Forecast the next 5 values
         let forecast_horizon = 5;
         let forecasts = model.forecast(forecast_horizon).unwrap();
-        
+
         // Check that we got the expected number of forecasts
         assert_eq!(forecasts.len(), forecast_horizon);
-        
+
         // For a linear trend, the model should continue the trend (approximately)
         for (i, forecast) in forecasts.iter().enumerate() {
             let expected = 13.0 + i as f64;
             // Allow for some deviation in the forecast
-            assert!((forecast - expected).abs() < 1.0, 
-                   "Forecast {} should be close to {} for trend data", 
-                   forecast, expected);
+            assert!(
+                (forecast - expected).abs() < 1.0,
+                "Forecast {} should be close to {} for trend data",
+                forecast,
+                expected
+            );
         }
     }
-    
+
     #[test]
     fn test_var_bivariate() {
         // Create two related time series
@@ -834,40 +876,43 @@ mod tests {
         let timestamps: Vec<DateTime<Utc>> = (0..12)
             .map(|i| Utc.timestamp_opt(now.timestamp() + i * 86400, 0).unwrap())
             .collect();
-        
+
         let values1: Vec<f64> = (1..=12).map(|i| i as f64).collect();
         let values2: Vec<f64> = (1..=12).map(|i| 2.0 * i as f64).collect();
-        
+
         let ts1 = TimeSeriesData::new(timestamps.clone(), values1, "y1").unwrap();
         let ts2 = TimeSeriesData::new(timestamps, values2, "y2").unwrap();
-        
+
         let mut data_map = HashMap::new();
         data_map.insert("y1".to_string(), ts1);
         data_map.insert("y2".to_string(), ts2);
-        
+
         // Create and fit a VAR(1) model
         let variable_names = vec!["y1".to_string(), "y2".to_string()];
         let mut model = VARModel::new(1, variable_names, true).unwrap();
         model.fit_multiple(&data_map).unwrap();
-        
+
         // Check that the coefficient matrices capture the relationship
         let coef_matrices = model.coefficient_matrices().unwrap();
         assert_eq!(coef_matrices.len(), 1); // VAR(1) has one coefficient matrix
-        
+
         // Forecast the next 5 values
         let forecast_horizon = 5;
         let forecasts = model.forecast_multiple(forecast_horizon).unwrap();
-        
+
         // Check that the relationship y2 ≈ 2*y1 holds in the forecasts
         for i in 0..forecast_horizon {
             let y1_forecast = forecasts["y1"][i];
             let y2_forecast = forecasts["y2"][i];
-            
+
             // The relationship should be approximately preserved
             let ratio = y2_forecast / y1_forecast;
-            assert!((ratio - 2.0).abs() < 0.2, 
-                   "Forecast relationship should preserve y2 ≈ 2*y1, but got ratio {} at horizon {}",
-                   ratio, i);
+            assert!(
+                (ratio - 2.0).abs() < 0.2,
+                "Forecast relationship should preserve y2 ≈ 2*y1, but got ratio {} at horizon {}",
+                ratio,
+                i
+            );
         }
     }
-} 
+}

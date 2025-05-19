@@ -30,16 +30,16 @@ pub fn autocorrelation(data: &[f64], max_lag: usize) -> Vec<f64> {
     if data.is_empty() || max_lag >= data.len() {
         return Vec::new();
     }
-    
+
     let mean_val = mean(data);
     let variance_val = variance(data);
-    
+
     if variance_val == 0.0 {
         return vec![1.0; max_lag + 1];
     }
-    
+
     let mut result = Vec::with_capacity(max_lag + 1);
-    
+
     for lag in 0..=max_lag {
         let mut numerator = 0.0;
         for i in 0..data.len() - lag {
@@ -47,6 +47,6 @@ pub fn autocorrelation(data: &[f64], max_lag: usize) -> Vec<f64> {
         }
         result.push(numerator / ((data.len() - lag) as f64 * variance_val));
     }
-    
+
     result
-} 
+}

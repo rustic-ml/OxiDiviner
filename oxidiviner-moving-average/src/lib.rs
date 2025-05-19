@@ -8,4 +8,4 @@ mod model;
 pub use model::MAModel;
 
 // Re-export the error types
-pub use error::{MAError, Result}; 
+pub use error::{MAError, Result};

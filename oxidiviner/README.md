@@ -2,6 +2,11 @@
 
 ![OxiDiviner Logo](OxiDiviner_250px.JPG)
 
+[![Crates.io](https://img.shields.io/crates/v/oxidiviner.svg)](https://crates.io/crates/oxidiviner)
+[![Documentation](https://docs.rs/oxidiviner/badge.svg)](https://docs.rs/oxidiviner)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/rustic-ml/OxiDiviner/blob/main/LICENSE)
+[![GitHub](https://img.shields.io/badge/github-rustic--ml/OxiDiviner-8da0cb?logo=github)](https://github.com/rustic-ml/OxiDiviner)
+
 OxiDiviner is a Rust library for time series analysis and forecasting, designed to be a comprehensive toolkit for traders and data scientists.
 
 ## Standardized Model Interface

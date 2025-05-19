@@ -1,5 +1,5 @@
-use oxidiviner_garch::{GARCHModel, GJRGARCHModel, EGARCHModel, GARCHMModel, RiskPremiumType};
 use chrono::Utc;
+use oxidiviner_garch::{EGARCHModel, GARCHMModel, GARCHModel, GJRGARCHModel, RiskPremiumType};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("OxiDiviner GARCH Models Example");
@@ -29,7 +29,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (shock_values, variance_values) = gjr_garch.news_impact_curve(10, 2.0);
     println!("News Impact Curve (10 points):");
     for i in 0..shock_values.len() {
-        println!("  Shock: {:.2}, Variance: {:.4}", shock_values[i], variance_values[i]);
+        println!(
+            "  Shock: {:.2}, Variance: {:.4}",
+            shock_values[i], variance_values[i]
+        );
     }
 
     // Demonstrate EGARCH(1,1) model
@@ -49,8 +52,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (mean_forecast, var_forecast) = garch_m.forecast(5)?;
     println!("5-step ahead mean and variance forecast:");
     for i in 0..mean_forecast.len() {
-        println!("  Step {}: Mean = {:.4}, Variance = {:.4}", 
-                 i+1, mean_forecast[i], var_forecast[i]);
+        println!(
+            "  Step {}: Mean = {:.4}, Variance = {:.4}",
+            i + 1,
+            mean_forecast[i],
+            var_forecast[i]
+        );
     }
 
     Ok(())
@@ -60,23 +67,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn generate_sample_data(n: usize) -> Vec<f64> {
     use rand::prelude::*;
     use rand_distr::Normal;
-    
+
     let mut rng = rand::thread_rng();
     let mut returns = Vec::with_capacity(n);
-    
+
     let mut volatility = 0.01;
-    let mean = 0.0001;  // Small positive drift
-    
+    let mean = 0.0001; // Small positive drift
+
     for _ in 0..n {
         // Create volatility clustering by making volatility autocorrelated
         volatility = 0.9 * volatility + 0.1 * (0.005 + 0.015 * rng.gen::<f64>());
-        
+
         // Generate return with current volatility
         let normal = Normal::new(mean, volatility).unwrap();
         let return_value = normal.sample(&mut rng);
-        
+
         returns.push(return_value);
     }
-    
+
     returns
-} 
+}

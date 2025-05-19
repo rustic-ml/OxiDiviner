@@ -13,7 +13,7 @@ resolver = "2"
 
 [workspace.package]
 name = "OxiDiviner"
-version = "0.3.3"
+version = "0.3.4"
 edition = "2021"
 license = "MIT"
 authors = ["OxiDiviner Team"]
@@ -27,7 +27,8 @@ exclude = [
     ".cursor/**",
     "Cargo.lock",
     "target/**",
-    "*.JPG",
+    "OxiDiviner_original.JPG",
+    "OxiDiviner.JPG",    
     "update_examples.sh",
     ".git/**",
     ".gitignore",

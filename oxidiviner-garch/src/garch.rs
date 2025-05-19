@@ -78,22 +78,22 @@ impl GARCHModel {
 
             let mean = params[0];
             let omega = params[1];
-            
+
             // Extract alpha and beta parameters
             let mut alpha = Vec::with_capacity(p);
             let mut beta = Vec::with_capacity(q);
-            
+
             for i in 0..p {
                 alpha.push(params[2 + i]);
             }
-            
+
             for i in 0..q {
                 beta.push(params[2 + p + i]);
             }
-            
+
             // Validate parameters for stationarity and positivity
             Self::validate_parameters(&omega, &alpha, &beta)?;
-            
+
             GARCHModel {
                 mean,
                 omega,
@@ -180,107 +180,108 @@ impl GARCHModel {
 
         // Calculate mean
         self.mean = data.iter().sum::<f64>() / data.len() as f64;
-        
+
         // Calculate residuals
         let residuals: Vec<f64> = data.iter().map(|&x| x - self.mean).collect();
-        
+
         // Initial parameter guess
         let p = self.alpha.len();
         let q = self.beta.len();
-        
+
         // Default initial parameters if not already set
         if self.omega <= 0.0 {
-            self.omega = residuals.iter().map(|&r| r * r).sum::<f64>() / residuals.len() as f64 * 0.1;
+            self.omega =
+                residuals.iter().map(|&r| r * r).sum::<f64>() / residuals.len() as f64 * 0.1;
         }
-        
+
         if self.alpha.iter().all(|&a| a == 0.0) {
             for i in 0..p {
                 self.alpha[i] = 0.05 + (0.1 / (i + 1) as f64);
             }
         }
-        
+
         if self.beta.iter().all(|&b| b == 0.0) {
             for i in 0..q {
                 self.beta[i] = 0.1 + (0.5 / (i + 1) as f64);
             }
         }
-        
+
         // Calculate the fitted variance
         let fitted_variance = self.calculate_variance(&residuals)?;
-        
+
         // Store results
         self.residuals = Some(residuals);
         self.fitted_variance = Some(fitted_variance);
-        
+
         // Store timestamps if provided
         if let Some(ts) = timestamps {
             self.timestamps = Some(ts.to_vec());
         }
-        
+
         // Calculate log-likelihood and information criteria
         self.calculate_statistics()?;
-        
+
         Ok(())
     }
-    
+
     /// Calculate the conditional variance based on the model parameters
     fn calculate_variance(&self, residuals: &[f64]) -> Result<Vec<f64>> {
         let n = residuals.len();
         let p = self.alpha.len();
         let q = self.beta.len();
         let max_lag = p.max(q);
-        
+
         if n <= max_lag {
             return Err(GARCHError::InvalidData(
                 "Not enough data points for the specified model".to_string(),
             ));
         }
-        
+
         let mut variance = vec![0.0; n];
-        
+
         // Initialize with unconditional variance
         let unconditional_variance = residuals.iter().map(|&r| r * r).sum::<f64>() / n as f64;
         for i in 0..max_lag {
             variance[i] = unconditional_variance;
         }
-        
+
         // Calculate variance for the rest of the series
         for t in max_lag..n {
             let mut var_t = self.omega;
-            
+
             // Add ARCH components
             for i in 0..p {
                 var_t += self.alpha[i] * residuals[t - i - 1].powi(2);
             }
-            
+
             // Add GARCH components
             for j in 0..q {
                 var_t += self.beta[j] * variance[t - j - 1];
             }
-            
+
             variance[t] = var_t;
         }
-        
+
         Ok(variance)
     }
-    
+
     /// Calculate log-likelihood and information criteria
     fn calculate_statistics(&mut self) -> Result<()> {
         let residuals = match &self.residuals {
             Some(r) => r,
             None => return Err(GARCHError::EstimationError("Model not fitted".to_string())),
         };
-        
+
         let variance = match &self.fitted_variance {
             Some(v) => v,
             None => return Err(GARCHError::EstimationError("Model not fitted".to_string())),
         };
-        
+
         let n = residuals.len();
         let p = self.alpha.len();
         let q = self.beta.len();
         let num_params = 2 + p + q; // mean, omega, alphas, betas
-        
+
         // Calculate log-likelihood
         let mut log_likelihood = 0.0;
         for t in 0..n {
@@ -289,21 +290,25 @@ impl GARCHModel {
                     "Negative or zero variance encountered".to_string(),
                 ));
             }
-            
-            log_likelihood += -0.5 * (std::f64::consts::LN_2 + std::f64::consts::PI.ln() + (variance[t]).ln() + residuals[t].powi(2) / variance[t]);
+
+            log_likelihood += -0.5
+                * (std::f64::consts::LN_2
+                    + std::f64::consts::PI.ln()
+                    + (variance[t]).ln()
+                    + residuals[t].powi(2) / variance[t]);
         }
-        
+
         self.log_likelihood = Some(log_likelihood);
-        
+
         // Calculate information criteria
         let aic = -2.0 * log_likelihood + 2.0 * num_params as f64;
         let bic = -2.0 * log_likelihood + (num_params as f64) * (n as f64).ln();
-        
+
         self.info_criteria = Some((aic, bic));
-        
+
         Ok(())
     }
-    
+
     /// Forecast future volatility
     ///
     /// # Arguments
@@ -317,27 +322,27 @@ impl GARCHModel {
         if horizon == 0 {
             return Ok(vec![]);
         }
-        
+
         let residuals = match &self.residuals {
             Some(r) => r,
             None => return Err(GARCHError::ForecastError("Model not fitted".to_string())),
         };
-        
+
         let variance = match &self.fitted_variance {
             Some(v) => v,
             None => return Err(GARCHError::ForecastError("Model not fitted".to_string())),
         };
-        
+
         let n = residuals.len();
         let p = self.alpha.len();
         let q = self.beta.len();
-        
+
         let mut forecast = Vec::with_capacity(horizon);
-        
+
         // For each forecast step
         for h in 1..=horizon {
             let mut var_h = self.omega;
-            
+
             // Add ARCH components
             for i in 0..p {
                 if h <= i {
@@ -348,7 +353,7 @@ impl GARCHModel {
                     var_h += self.alpha[i] * forecast[h - i - 2];
                 }
             }
-            
+
             // Add GARCH components
             for j in 0..q {
                 if h <= j + 1 {
@@ -359,13 +364,13 @@ impl GARCHModel {
                     var_h += self.beta[j] * forecast[h - j - 2];
                 }
             }
-            
+
             forecast.push(var_h);
         }
-        
+
         Ok(forecast)
     }
-    
+
     /// Get the order of the GARCH model as (p,q)
     pub fn order(&self) -> (usize, usize) {
         (self.alpha.len(), self.beta.len())
@@ -378,23 +383,23 @@ impl fmt::Display for GARCHModel {
         writeln!(f, "GARCH({}, {}) Model", p, q)?;
         writeln!(f, "Mean: {:.6}", self.mean)?;
         writeln!(f, "Omega: {:.6}", self.omega)?;
-        
+
         for (i, &alpha) in self.alpha.iter().enumerate() {
             writeln!(f, "Alpha[{}]: {:.6}", i + 1, alpha)?;
         }
-        
+
         for (i, &beta) in self.beta.iter().enumerate() {
             writeln!(f, "Beta[{}]: {:.6}", i + 1, beta)?;
         }
-        
+
         if let Some(ll) = self.log_likelihood {
             writeln!(f, "Log-Likelihood: {:.6}", ll)?;
         }
-        
+
         if let Some((aic, bic)) = self.info_criteria {
             writeln!(f, "AIC: {:.6}, BIC: {:.6}", aic, bic)?;
         }
-        
+
         Ok(())
     }
-} 
+}
