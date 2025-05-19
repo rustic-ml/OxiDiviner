@@ -36,6 +36,9 @@ pub enum ESError {
 
     #[error("Unsupported model type: {0}")]
     UnsupportedModelType(String),
+    
+    #[error("Invalid parameter: {0}")]
+    InvalidParameter(String),
 }
 
 // Convert from ESError to OxiError
@@ -71,6 +74,9 @@ impl From<ESError> for OxiError {
             }
             ESError::UnsupportedModelType(model) => {
                 OxiError::ModelError(format!("Unsupported model type: {}", model))
+            }
+            ESError::InvalidParameter(msg) => {
+                OxiError::InvalidParameter(msg)
             }
         }
     }

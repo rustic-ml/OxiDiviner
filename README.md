@@ -62,6 +62,8 @@ if let Some(ma_eval) = ma_output.evaluation {
 - Time series forecasting models including:
   - Simple Exponential Smoothing (SES)
   - Moving Average (MA)
+  - Exponential Smoothing models with trend and seasonality
+  - Specialized models for daily and minute-level financial data
   - More models coming soon!
 
 - Standardized model interface via the `Forecaster` trait
@@ -89,6 +91,9 @@ See the examples directory for complete usage examples.
   - Simple Exponential Smoothing
   - Holt's Linear Trend
   - Holt-Winters Seasonal Model
+- **Time-Based Models**: Specialized models for different time granularities
+  - `DailyETSModel`: Optimized for daily financial data
+  - `MinuteETSModel`: Designed for high-frequency data with aggregation support
 - **Flexible Analysis**: Support for both daily and minute-level data
 - **Model Evaluation**: Tools for assessing forecast accuracy and model fit
 
@@ -123,13 +128,24 @@ let time_series = data.to_time_series(false);  // false = use regular close, not
 let (train, test) = time_series.train_test_split(0.8).unwrap();
 ```
 
-### Using ETS Models
+### Using Daily ETS Models
+
+The `DailyETSModel` provides specialized functionality for daily financial data:
 
 ```rust
 use oxdiviner::models::ets::{ETSComponent, DailyETSModel};
 
-// Create a Holt-Winters seasonal model
-let mut model = DailyETSModel::new(
+// Create a Holt-Winters seasonal model with weekly seasonality
+let mut model = DailyETSModel::holt_winters_additive(
+    0.3,                     // alpha (level smoothing)
+    0.1,                     // beta (trend smoothing)
+    0.1,                     // gamma (seasonal smoothing)
+    7,                       // Seasonal period (7 = weekly)
+    None,                    // Target column (None = use Close price)
+).unwrap();
+
+// Or create with full control over all parameters
+let mut custom_model = DailyETSModel::new(
     ETSComponent::Additive,  // Error type
     ETSComponent::Additive,  // Trend type
     ETSComponent::Additive,  // Seasonal type
@@ -142,7 +158,7 @@ let mut model = DailyETSModel::new(
 ).unwrap();
 
 // Fit the model to data
-model.fit(&train_data).unwrap();
+model.fit(&daily_data).unwrap();
 
 // Generate forecasts
 let horizon = 30;  // 30-day forecast
@@ -153,31 +169,48 @@ let evaluation = model.evaluate(&test_data).unwrap();
 println!("MAE: {:.4}", evaluation.mae);
 println!("RMSE: {:.4}", evaluation.rmse);
 println!("MAPE: {:.2}%", evaluation.mape);
+
+// Get fitted values
+if let Some(fitted) = model.fitted_values() {
+    println!("Last fitted value: {:.4}", fitted.last().unwrap());
+}
 ```
 
 ### Working with Minute Data
 
+The `MinuteETSModel` is designed specifically for high-frequency data and includes unique features like data aggregation:
+
 ```rust
 use oxdiviner::models::ets::{ETSComponent, MinuteETSModel};
 
-// Create a model for minute-level data with 5-minute aggregation
-let mut model = MinuteETSModel::new(
-    ETSComponent::Additive,  // Error type
-    ETSComponent::None,      // No trend
-    ETSComponent::Additive,  // Additive seasonality
-    0.3,                     // alpha
-    None,                    // No beta (no trend)
-    Some(0.1),               // gamma
-    None,                    // No phi (no damping)
-    Some(60),                // Seasonal period = 60 minutes (hourly pattern)
+// Create a simple model with 5-minute aggregation
+let mut simple_model = MinuteETSModel::simple(
+    0.4,                     // alpha (higher for minute data to adapt faster)
+    None,                    // Default to Close price
+    Some(5),                 // 5-minute aggregation (reduces noise)
+).unwrap();
+
+// Create a model with hourly seasonality pattern
+let mut hourly_model = MinuteETSModel::holt_winters_additive(
+    0.4,                     // alpha 
+    0.1,                     // beta
+    0.1,                     // gamma
+    60,                      // Seasonal period = 60 minutes (hourly pattern)
     None,                    // Default to Close price
     Some(5),                 // 5-minute aggregation
 ).unwrap();
 
 // Fit and forecast as with daily models
-model.fit(&minute_data).unwrap();
-let forecasts = model.forecast(12).unwrap();  // Next hour forecast (12 x 5 minutes)
+hourly_model.fit(&minute_data).unwrap();
+let forecasts = hourly_model.forecast(12).unwrap();  // Forecast the next hour
 ```
+
+#### Benefits of the MinuteETSModel
+
+- **Data Aggregation**: Reduce noise by converting 1-minute data to higher timeframes (e.g., 5-minute, 15-minute)
+- **Appropriate Defaults**: Higher smoothing parameters better suited for high-frequency data
+- **Suitable Seasonality**: Optimized for intraday patterns (e.g., hourly cycles)
+- **Performance**: Efficiently handles large volumes of minute-level data
 
 ## Running the Demo
 

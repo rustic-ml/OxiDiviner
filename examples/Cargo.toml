@@ -15,6 +15,11 @@ chrono = { version = "0.4.41", features = ["serde"] }
 rand = "0.9.1"
 rand_distr = "0.5.0"
 
+# OHLCV Data Handling
+[[bin]]
+name = "ohlcv_data_processor"
+path = "ohlcv-handling/data_processor.rs"
+
 # Exponential Smoothing Models
 [[bin]]
 name = "ses_demo"
