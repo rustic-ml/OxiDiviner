@@ -1,8 +1,8 @@
 use chrono::{Duration, Utc};
-use oxidiviner::ModelsOHLCVData;
-use oxidiviner::models::exponential_smoothing::ets::{ETSComponent, DailyETSModel, MinuteETSModel, ModelEvaluation};
+use oxidiviner_core::ModelsOHLCVData;
+use oxidiviner_core::models::exponential_smoothing::ets::{ETSComponent, DailyETSModel, MinuteETSModel, ModelEvaluation};
 
-fn create_test_data() -> ModelsOHLCVData {
+fn create_test_data() -> OHLCVData::new(
     let now = Utc::now();
     let mut timestamps = Vec::with_capacity(100);
     let mut open = Vec::with_capacity(100);
@@ -38,7 +38,7 @@ fn create_test_data() -> ModelsOHLCVData {
         low,
         close,
         volume,
-        "TEST"
+        Some("TEST".to_string())
     ).unwrap()
 }
 

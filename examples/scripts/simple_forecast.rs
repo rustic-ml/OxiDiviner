@@ -1,8 +1,8 @@
 use std::path::Path;
-use oxidiviner::data::{OHLCVData, TimeSeriesData};
-use oxidiviner::models::ets::{SimpleExponentialSmoothing, HoltLinearTrend, HoltWintersAdditive};
-use oxidiviner::models::Forecaster;
-use oxidiviner::prelude::*;
+use oxidiviner_core::data::{OHLCVData, TimeSeriesData};
+use oxidiviner_core::models::ets::{SimpleExponentialSmoothing, HoltLinearTrend, HoltWintersAdditive};
+use oxidiviner_core::models::Forecaster;
+use oxidiviner_core::prelude::*;
 use polars::prelude::*;
 use rustalib::util::file_utils;
 

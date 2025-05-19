@@ -1,12 +1,12 @@
 use chrono::{Duration, Utc};
-use oxidiviner::ModelsOHLCVData;
-use oxidiviner::models::exponential_smoothing::ets::{ETSComponent, ModelEvaluation};
+use oxidiviner_core::ModelsOHLCVData;
+use oxidiviner_core::models::exponential_smoothing::ets::{ETSComponent, ModelEvaluation};
 
 // Import the new DailyETSModel and MinuteETSModel from the reorganized structure
 // The imports might need to be adjusted based on the actual reorganized structure
-use oxidiviner::models::exponential_smoothing::ets::{DailyETSModel, MinuteETSModel};
+use oxidiviner_core::models::exponential_smoothing::ets::{DailyETSModel, MinuteETSModel};
 
-fn create_test_data_daily() -> ModelsOHLCVData {
+fn create_test_data_daily() -> OHLCVData::new(
     let now = Utc::now();
     let mut timestamps = Vec::with_capacity(100);
     let mut open = Vec::with_capacity(100);
@@ -46,7 +46,7 @@ fn create_test_data_daily() -> ModelsOHLCVData {
     ).unwrap()
 }
 
-fn create_test_data_minute() -> ModelsOHLCVData {
+fn create_test_data_minute() -> OHLCVData::new(
     let now = Utc::now();
     let mut timestamps = Vec::with_capacity(480); // 8 hours of minute data
     let mut open = Vec::with_capacity(480);

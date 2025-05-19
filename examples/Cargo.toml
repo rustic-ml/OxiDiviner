@@ -1,0 +1,64 @@
+[package]
+name = "oxidiviner-examples"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+oxidiviner-core = { path = "../oxidiviner-core" }
+oxidiviner-math = { path = "../oxidiviner-math" }
+oxidiviner-moving-average = { path = "../oxidiviner-moving-average" }
+oxidiviner-exponential-smoothing = { path = "../oxidiviner-exponential-smoothing" }
+oxidiviner-autoregressive = { path = "../oxidiviner-autoregressive" }
+chrono = { version = "0.4.41", features = ["serde"] }
+rand = "0.9.1"
+
+# Exponential Smoothing Models
+[[bin]]
+name = "ses_demo"
+path = "exponential-smoothing-models/ses_demo.rs"
+
+[[bin]]
+name = "holt_demo"
+path = "exponential-smoothing-models/holt_demo.rs"
+
+[[bin]]
+name = "holt_winters_demo"
+path = "exponential-smoothing-models/holt_winters_demo.rs"
+
+[[bin]]
+name = "ets_model_complete"
+path = "exponential-smoothing-models/ets_model_complete.rs"
+
+[[bin]]
+name = "es_models_comparison"
+path = "exponential-smoothing-models/es_models_comparison.rs"
+
+[[bin]]
+name = "ses_parameter_tuning"
+path = "exponential-smoothing-models/ses_parameter_tuning.rs"
+
+[[bin]]
+name = "es_parameter_tuning"
+path = "exponential-smoothing-models/es_parameter_tuning.rs"
+
+[[bin]]
+name = "ses_model_example"
+path = "exponential-smoothing-models/ses_model_example.rs"
+
+[[bin]]
+name = "ets_model_demo"
+path = "exponential-smoothing-models/ets_model_demo.rs"
+
+[[bin]]
+name = "ets_demo"
+path = "exponential-smoothing-models/ets_demo.rs"
+
+# Autoregressive Models
+[[bin]]
+name = "autoregressive_demo"
+path = "autoregressive-models/autoregressive_demo.rs"
+
+[[bin]]
+name = "ma_demo"
+path = "autoregressive-models/ma_demo.rs" 

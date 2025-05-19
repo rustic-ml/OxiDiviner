@@ -1,0 +1,18 @@
+[package]
+name = "oxidiviner-moving-average"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Moving average models for OxiDiviner time series analysis library"
+
+[dependencies]
+oxidiviner-core = { path = "../oxidiviner-core", version = "0.1.0" }
+oxidiviner-math = { path = "../oxidiviner-math", version = "0.1.0" }
+thiserror.workspace = true
+chrono.workspace = true 

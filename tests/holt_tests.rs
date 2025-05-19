@@ -1,8 +1,8 @@
 use chrono::{Duration, Utc};
-use oxidiviner::ModelsOHLCVData;
-use oxidiviner::models::exponential_smoothing::holt::{HoltModel, TargetColumn};
+use oxidiviner_core::ModelsOHLCVData;
+use oxidiviner_core::models::exponential_smoothing::holt::{HoltModel, TargetColumn};
 
-fn create_test_data() -> ModelsOHLCVData {
+fn create_test_data() -> OHLCVData::new(
     let now = Utc::now();
     let timestamps = vec![
         now,
@@ -26,7 +26,7 @@ fn create_test_data() -> ModelsOHLCVData {
         low,
         close,
         volume,
-        "TEST"
+        Some("TEST".to_string())
     ).unwrap()
 }
 
@@ -159,7 +159,7 @@ fn test_holt_insufficient_data() {
         vec![98.0],
         vec![103.0],
         vec![1000.0],
-        "SINGLE"
+        Some("SINGLE".to_string())
     ).unwrap();
     
     // Should fail because at least two points are needed for trend

@@ -1,8 +1,8 @@
 use chrono::{Duration, Utc};
-use oxidiviner::ModelsOHLCVData;
-use oxidiviner::models::exponential_smoothing::holt_winters::{HoltWintersModel, SeasonalType, TargetColumn};
+use oxidiviner_core::ModelsOHLCVData;
+use oxidiviner_core::models::exponential_smoothing::holt_winters::{HoltWintersModel, SeasonalType, TargetColumn};
 
-fn create_test_data_with_seasonality() -> ModelsOHLCVData {
+fn create_test_data_with_seasonality() -> OHLCVData::new(
     let now = Utc::now();
     let mut timestamps = Vec::with_capacity(28);
     let mut open = Vec::with_capacity(28);
@@ -255,7 +255,7 @@ fn test_holt_winters_insufficient_data() {
         values.clone(),
         values.clone(),
         values.clone(),
-        "INSUFFICIENT"
+        Some("INSUFFICIENT".to_string())
     ).unwrap();
     
     // Should fail because Holt-Winters needs at least 2 complete seasons for initialization

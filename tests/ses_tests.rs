@@ -1,8 +1,8 @@
 use chrono::{Duration, Utc};
-use oxidiviner::ModelsOHLCVData;
-use oxidiviner::models::exponential_smoothing::simple::{SESModel, TargetColumn};
+use oxidiviner_core::OHLCVData;
+use oxidiviner_exponential_smoothing::simple::SimpleESModel;
 
-fn create_test_data() -> ModelsOHLCVData {
+fn create_test_data() -> OHLCVData {
     let now = Utc::now();
     let timestamps = vec![
         now,
@@ -18,43 +18,32 @@ fn create_test_data() -> ModelsOHLCVData {
     let close = vec![103.0, 104.0, 105.0, 106.0, 107.0];
     let volume = vec![1000.0, 1100.0, 1200.0, 1300.0, 1400.0];
     
-    ModelsOHLCVData::new(
+    OHLCVData::new(
         timestamps,
         open,
         high,
         low,
         close,
         volume,
-        "TEST"
+        Some("TEST".to_string())
     ).unwrap()
 }
 
 #[test]
 fn test_ses_model_creation() {
     // Test valid parameter range
-    assert!(SESModel::new(0.3, None).is_ok());
+    assert!(SimpleESModel::new(0.3).is_ok());
     
     // Test invalid alpha values
-    assert!(SESModel::new(0.0, None).is_err());
-    assert!(SESModel::new(1.0, None).is_err());
-    assert!(SESModel::new(-0.1, None).is_err());
-    assert!(SESModel::new(1.1, None).is_err());
+    assert!(SimpleESModel::new(0.0).is_err());
+    assert!(SimpleESModel::new(1.0).is_err());
+    assert!(SimpleESModel::new(-0.1).is_err());
+    assert!(SimpleESModel::new(1.1).is_err());
     
-    // Test with different target columns
-    let model = SESModel::new(0.3, Some(TargetColumn::Open)).unwrap();
-    assert!(model.name().contains("Open"));
-    
-    let model = SESModel::new(0.5, Some(TargetColumn::High)).unwrap();
-    assert!(model.name().contains("High"));
-    
-    let model = SESModel::new(0.7, Some(TargetColumn::Low)).unwrap();
-    assert!(model.name().contains("Low"));
-    
-    let model = SESModel::new(0.2, Some(TargetColumn::Close)).unwrap();
-    assert!(model.name().contains("Close"));
-    
-    let model = SESModel::new(0.4, Some(TargetColumn::Volume)).unwrap();
-    assert!(model.name().contains("Volume"));
+    // Test with model name
+    let model = SimpleESModel::new(0.3).unwrap();
+    assert!(model.name().contains("SES"));
+    assert!(model.name().contains("0.3"));
 }
 
 #[test]
@@ -62,7 +51,7 @@ fn test_ses_model_fit_and_forecast() {
     let data = create_test_data();
     
     // Create a simple exponential smoothing model
-    let mut model = SESModel::new(0.3, None).unwrap();
+    let mut model = SimpleESModel::new(0.3).unwrap();
     
     // Fit the model
     assert!(model.fit(&data).is_ok());
@@ -70,9 +59,6 @@ fn test_ses_model_fit_and_forecast() {
     // Check if fitted values exist
     let fitted_values = model.fitted_values().unwrap();
     assert_eq!(fitted_values.len(), data.len());
-    
-    // First fitted value should equal the first observation
-    assert!((fitted_values[0] - data.close[0]).abs() < 1e-6);
     
     // Generate forecasts
     let horizon = 3;
@@ -93,7 +79,7 @@ fn test_ses_model_evaluation() {
     let (train_data, test_data) = data.train_test_split(0.6).unwrap();
     
     // Create and fit model
-    let mut model = SESModel::new(0.3, None).unwrap();
+    let mut model = SimpleESModel::new(0.3).unwrap();
     model.fit(&train_data).unwrap();
     
     // Evaluate on test data
@@ -114,17 +100,17 @@ fn test_ses_model_evaluation() {
 
 #[test]
 fn test_ses_empty_data_handling() {
-    let empty_data = ModelsOHLCVData::new(
+    let empty_data = OHLCVData::new(
         vec![],
         vec![],
         vec![],
         vec![],
         vec![],
         vec![],
-        "EMPTY"
+        Some("EMPTY".to_string())
     ).unwrap();
     
-    let mut model = SESModel::new(0.3, None).unwrap();
+    let mut model = SimpleESModel::new(0.3).unwrap();
     
     // Fitting on empty data should fail
     assert!(model.fit(&empty_data).is_err());

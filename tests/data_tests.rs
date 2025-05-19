@@ -1,5 +1,5 @@
 use chrono::{Duration, Utc};
-use oxidiviner::ModelsOHLCVData;
+use oxidiviner_core::OHLCVData;
 
 #[test]
 fn test_ohlcv_data_creation() {
@@ -11,17 +11,17 @@ fn test_ohlcv_data_creation() {
     let close = vec![103.0, 104.0, 105.0];
     let volume = vec![1000.0, 1100.0, 1200.0];
     
-    let data = ModelsOHLCVData::new(
+    let data = OHLCVData::new(
         timestamps,
         open,
         high,
         low,
         close,
         volume,
-        "TEST"
+        Some("TEST".to_string())
     ).unwrap();
     
-    assert_eq!(data.name, "TEST");
+    assert_eq!(data.name(), Some("TEST"));
     assert!(!data.is_empty());
     assert_eq!(data.len(), 3);
 }
@@ -43,14 +43,14 @@ fn test_ohlcv_train_test_split() {
     let close = vec![103.0, 104.0, 105.0, 106.0, 107.0];
     let volume = vec![1000.0, 1100.0, 1200.0, 1300.0, 1400.0];
     
-    let data = ModelsOHLCVData::new(
+    let data = OHLCVData::new(
         timestamps.clone(),
         open.clone(),
         high.clone(),
         low.clone(),
         close.clone(),
         volume.clone(),
-        "TEST"
+        Some("TEST".to_string())
     ).unwrap();
     
     // Split with 60% training data
@@ -58,13 +58,18 @@ fn test_ohlcv_train_test_split() {
     
     // Check train data
     assert_eq!(train.len(), 3);
-    assert_eq!(train.name, "TEST_train");
-    assert_eq!(train.close, vec![103.0, 104.0, 105.0]);
+    assert_eq!(train.name(), Some("TEST_train"));
+    // Check that close values are correct
+    assert_eq!(train.close()[0], 103.0);
+    assert_eq!(train.close()[1], 104.0);
+    assert_eq!(train.close()[2], 105.0);
     
     // Check test data
     assert_eq!(test.len(), 2);
-    assert_eq!(test.name, "TEST_test");
-    assert_eq!(test.close, vec![106.0, 107.0]);
+    assert_eq!(test.name(), Some("TEST_test"));
+    // Check that close values are correct
+    assert_eq!(test.close()[0], 106.0);
+    assert_eq!(test.close()[1], 107.0);
 }
 
 #[test]
@@ -78,26 +83,26 @@ fn test_ohlcv_data_validation() {
     let volume = vec![1000.0, 1100.0];
     
     // This should fail because lengths don't match
-    let result = ModelsOHLCVData::new(
+    let result = OHLCVData::new(
         timestamps,
         open,
         high,
         low,
         close,
         volume,
-        "TEST"
+        Some("TEST".to_string())
     );
     assert!(result.is_err());
     
     // Test invalid train ratio
-    let good_data = ModelsOHLCVData::new(
+    let good_data = OHLCVData::new(
         vec![now, now + Duration::days(1), now + Duration::days(2)],
         vec![100.0, 101.0, 102.0],
         vec![105.0, 106.0, 107.0],
         vec![98.0, 99.0, 100.0],
         vec![103.0, 104.0, 105.0],
         vec![1000.0, 1100.0, 1200.0],
-        "TEST"
+        Some("TEST".to_string())
     ).unwrap();
     
     assert!(good_data.train_test_split(0.0).is_err());

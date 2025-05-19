@@ -1,0 +1,22 @@
+[package]
+name = "oxidiviner-math"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Mathematical utilities for OxiDiviner time series analysis library"
+
+[dependencies]
+thiserror.workspace = true
+statrs.workspace = true
+rand.workspace = true
+ndarray = { workspace = true, optional = true }
+
+[features]
+default = []
+ndarray_support = ["ndarray"] 

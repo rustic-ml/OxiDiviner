@@ -1,6 +1,6 @@
 use chrono::{DateTime, TimeZone, Utc};
-use oxidiviner::prelude::*;
-use oxidiviner::models::Forecaster;
+use oxidiviner_core::prelude::*;
+use oxidiviner_core::models::Forecaster;
 use std::error::Error;
 
 fn main() -> std::result::Result<(), Box<dyn Error>> {
