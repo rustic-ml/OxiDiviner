@@ -8,9 +8,8 @@ repository = "https://github.com/rustic-ml/OxiDiviner"
 documentation = "https://docs.rs/oxidiviner-garch"
 keywords.workspace = true
 categories.workspace = true
-authors.workspace = true
 homepage = "https://github.com/rustic-ml/OxiDiviner"
-description = "GARCH (Generalized Autoregressive Conditional Heteroskedasticity) models for the OxiDiviner time series analysis library"
+description = "GARCH models for volatility forecasting and risk modeling in financial time series"
 
 [dependencies]
 oxidiviner-core = { path = "../oxidiviner-core", version = "0.3.0" }
