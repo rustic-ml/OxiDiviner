@@ -10,8 +10,10 @@ oxidiviner-math = { path = "../oxidiviner-math" }
 oxidiviner-moving-average = { path = "../oxidiviner-moving-average" }
 oxidiviner-exponential-smoothing = { path = "../oxidiviner-exponential-smoothing" }
 oxidiviner-autoregressive = { path = "../oxidiviner-autoregressive" }
+oxidiviner-garch = { path = "../oxidiviner-garch" }
 chrono = { version = "0.4.41", features = ["serde"] }
 rand = "0.9.1"
+rand_distr = "0.5.0"
 
 # Exponential Smoothing Models
 [[bin]]
@@ -61,4 +63,13 @@ path = "autoregressive-models/autoregressive_demo.rs"
 
 [[bin]]
 name = "ma_demo"
-path = "autoregressive-models/ma_demo.rs" 
+path = "autoregressive-models/ma_demo.rs"
+
+# GARCH Models
+[[bin]]
+name = "basic_garch_example"
+path = "garch-models/basic_garch_example.rs"
+
+[[bin]]
+name = "stock_volatility_analysis"
+path = "garch-models/stock_volatility_analysis.rs" 

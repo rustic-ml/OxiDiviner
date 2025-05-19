@@ -1,5 +1,5 @@
 [package]
-name = "oxidiviner-autoregressive"
+name = "oxidiviner-garch"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,13 +9,16 @@ homepage.workspace = true
 documentation.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "Autoregressive models for the OxiDiviner time series forecasting library"
+description = "GARCH (Generalized Autoregressive Conditional Heteroskedasticity) models for the OxiDiviner time series analysis library"
 
 [dependencies]
 oxidiviner-core = { path = "../oxidiviner-core", version = "0.1.0" }
 oxidiviner-math = { path = "../oxidiviner-math", version = "0.1.0" }
 thiserror.workspace = true
 chrono.workspace = true
+ndarray.workspace = true
+statrs.workspace = true
 
 [dev-dependencies]
-rand.workspace = true 
+rand.workspace = true
+rand_distr = "0.5.0" 

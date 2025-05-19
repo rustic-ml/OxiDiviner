@@ -5,17 +5,20 @@ members = [
     "oxidiviner-moving-average",
     "oxidiviner-exponential-smoothing",
     "oxidiviner-autoregressive",
+    "oxidiviner-garch",
     "examples",
 ]
 resolver = "2"
 
 [workspace.package]
+name = "oxidiviner"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
 authors = ["OxiDiviner Team"]
-repository = "https://github.com/OxiDiviner/oxdiviner"
-homepage = "https://github.com/OxiDiviner/oxdiviner"
+description = "A comprehensive Rust library for time series analysis and forecasting including moving average, exponential smoothing, autoregressive, and GARCH models"
+repository = "https://github.com/rustic-ml/OxiDiviner"
+homepage = "https://github.com/rustic-ml/OxiDiviner"
 documentation = "https://docs.rs/oxidiviner"
 keywords = ["time-series", "forecasting", "statistics", "analysis", "data"]
 categories = ["science", "mathematics", "algorithms", "finance"]
