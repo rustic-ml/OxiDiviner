@@ -12,7 +12,7 @@ resolver = "2"
 
 [workspace.package]
 name = "OxiDiviner"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
 authors = ["OxiDiviner Team"]
@@ -22,6 +22,18 @@ homepage = "https://github.com/rustic-ml/OxiDiviner"
 documentation = "https://docs.rs/oxidiviner"
 keywords = ["time-series", "forecasting", "statistics", "analysis", "data"]
 categories = ["science", "mathematics", "algorithms", "finance"]
+exclude = [
+    ".cursor/**",
+    "Cargo.lock",
+    "target/**",
+    "*.JPG",
+    "update_examples.sh",
+    ".git/**",
+    ".gitignore",
+    "GUIDELINES.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+]
 
 [workspace.dependencies]
 chrono = { version = ">=0.4.41", features = ["serde"] }
