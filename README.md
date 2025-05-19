@@ -68,7 +68,7 @@ Add OxiDiviner to your Cargo.toml:
 
 ```toml
 [dependencies]
-oxidiviner = "0.2.0"
+oxidiviner = "0.3.0"
 ```
 
 See the examples directory for complete usage examples.
@@ -91,7 +91,7 @@ Add OxiDiviner to your Cargo.toml:
 
 ```toml
 [dependencies]
-oxdiviner = "0.2.0"
+oxdiviner = "0.3.0"
 ```
 
 ## Usage Examples
@@ -196,7 +196,7 @@ Enable features in your Cargo.toml:
 
 ```toml
 [dependencies]
-oxdiviner = { version = "0.2.0", features = ["plotting", "polars_integration"] }
+oxdiviner = { version = "0.3.0", features = ["plotting", "polars_integration"] }
 ```
 
 ## License
