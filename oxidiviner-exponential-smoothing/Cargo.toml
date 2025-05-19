@@ -12,8 +12,8 @@ categories.workspace = true
 description = "Exponential smoothing models for OxiDiviner time series analysis library"
 
 [dependencies]
-oxidiviner-core = { path = "../oxidiviner-core", version = "0.1.0" }
-oxidiviner-math = { path = "../oxidiviner-math", version = "0.1.0" }
+oxidiviner-core = { path = "../oxidiviner-core", version = "0.2.0" }
+oxidiviner-math = { path = "../oxidiviner-math", version = "0.2.0" }
 thiserror.workspace = true
 chrono.workspace = true
 
