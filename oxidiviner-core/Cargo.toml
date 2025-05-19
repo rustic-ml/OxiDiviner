@@ -21,8 +21,7 @@ ndarray = { workspace = true, optional = true }
 
 [dev-dependencies]
 oxidiviner-math = { path = "../oxidiviner-math", version = "0.2.0" }
-oxidiviner-moving-average = { path = "../oxidiviner-moving-average", version = "0.2.0" }
-oxidiviner-exponential-smoothing = { path = "../oxidiviner-exponential-smoothing", version = "0.2.0" }
+# Removed circular dependencies for publishing
 rand = { workspace = true }
 chrono = { workspace = true }
 
