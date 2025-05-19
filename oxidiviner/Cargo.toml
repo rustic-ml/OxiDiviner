@@ -4,15 +4,12 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
-repository.workspace = true
-homepage.workspace = true
-documentation.workspace = true
-keywords.workspace = true
-categories.workspace = true
-description = "A comprehensive Rust library for time series analysis and forecasting including moving average, exponential smoothing, autoregressive, and GARCH models"
 repository = "https://github.com/rustic-ml/OxiDiviner"
 homepage = "https://github.com/rustic-ml/OxiDiviner"
 documentation = "https://docs.rs/oxidiviner"
+keywords.workspace = true
+categories.workspace = true
+description = "A comprehensive Rust library for time series analysis and forecasting including moving average, exponential smoothing, autoregressive, and GARCH models"
 
 [dependencies]
 oxidiviner-core = { version = "0.3.0", path = "../oxidiviner-core" }
