@@ -15,14 +15,14 @@ description = "Core functionality for OxiDiviner time series analysis library"
 chrono.workspace = true
 thiserror.workspace = true
 serde.workspace = true
-oxidiviner-math = { path = "../oxidiviner-math" }
+oxidiviner-math = { path = "../oxidiviner-math", version = "0.2.0" }
 rand.workspace = true
 ndarray = { workspace = true, optional = true }
 
 [dev-dependencies]
-oxidiviner-math = { path = "../oxidiviner-math" }
-oxidiviner-moving-average = { path = "../oxidiviner-moving-average" }
-oxidiviner-exponential-smoothing = { path = "../oxidiviner-exponential-smoothing" }
+oxidiviner-math = { path = "../oxidiviner-math", version = "0.2.0" }
+oxidiviner-moving-average = { path = "../oxidiviner-moving-average", version = "0.2.0" }
+oxidiviner-exponential-smoothing = { path = "../oxidiviner-exponential-smoothing", version = "0.2.0" }
 rand = { workspace = true }
 chrono = { workspace = true }
 
