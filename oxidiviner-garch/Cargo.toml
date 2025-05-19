@@ -4,16 +4,17 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
-repository.workspace = true
-homepage.workspace = true
-documentation.workspace = true
+repository = "https://github.com/rustic-ml/OxiDiviner"
+documentation = "https://docs.rs/oxidiviner-garch"
 keywords.workspace = true
 categories.workspace = true
+authors.workspace = true
+homepage = "https://github.com/rustic-ml/OxiDiviner"
 description = "GARCH (Generalized Autoregressive Conditional Heteroskedasticity) models for the OxiDiviner time series analysis library"
 
 [dependencies]
-oxidiviner-core = { path = "../oxidiviner-core", version = "0.2.0" }
-oxidiviner-math = { path = "../oxidiviner-math", version = "0.2.0" }
+oxidiviner-core = { path = "../oxidiviner-core", version = "0.3.0" }
+oxidiviner-math = { path = "../oxidiviner-math", version = "0.3.0" }
 thiserror.workspace = true
 chrono.workspace = true
 ndarray.workspace = true
