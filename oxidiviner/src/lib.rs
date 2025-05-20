@@ -147,27 +147,32 @@
 pub use oxidiviner_core::*;
 
 // Re-export from math
+#[doc(inline)]
 pub use oxidiviner_math as math;
 
 // Re-export models from module-specific crates
 pub mod models {
     /// Moving average models for capturing short-term patterns
     pub mod moving_average {
+        #[doc(inline)]
         pub use oxidiviner_moving_average::*;
     }
 
     /// Exponential smoothing models for trend and seasonal data
     pub mod exponential_smoothing {
+        #[doc(inline)]
         pub use oxidiviner_exponential_smoothing::*;
     }
 
     /// Autoregressive models for data with dependency on past values
     pub mod autoregressive {
+        #[doc(inline)]
         pub use oxidiviner_autoregressive::*;
     }
 
     /// GARCH models for volatility forecasting in financial time series
     pub mod garch {
+        #[doc(inline)]
         pub use oxidiviner_garch::*;
     }
 }
