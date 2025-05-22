@@ -11,6 +11,7 @@ keywords.workspace = true
 categories.workspace = true
 readme.workspace = true
 description = "A comprehensive Rust library for time series analysis and forecasting including moving average, exponential smoothing, autoregressive, and GARCH models"
+publish = true
 
 # Configuration for docs.rs
 [package.metadata.docs.rs]
@@ -18,21 +19,29 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs", "--extern-html-root-url=oxidiviner-core=https://docs.rs/oxidiviner-core/latest/", "--extern-html-root-url=oxidiviner-math=https://docs.rs/oxidiviner-math/latest/", "--extern-html-root-url=oxidiviner-moving-average=https://docs.rs/oxidiviner-moving-average/latest/", "--extern-html-root-url=oxidiviner-exponential-smoothing=https://docs.rs/oxidiviner-exponential-smoothing/latest/", "--extern-html-root-url=oxidiviner-autoregressive=https://docs.rs/oxidiviner-autoregressive/latest/", "--extern-html-root-url=oxidiviner-garch=https://docs.rs/oxidiviner-garch/latest/"]
 default-target = "x86_64-unknown-linux-gnu"
 
-# Include readme and examples
+# Include readme and examples plus all internal crate source code
 readme = "../README.md"
 include = [
     "src/**/*",
+    "../README.md",
     "../examples/**/*",
-    "../README.md"
+    "../oxidiviner-core/src/**/*",
+    "../oxidiviner-math/src/**/*",
+    "../oxidiviner-moving-average/src/**/*",
+    "../oxidiviner-exponential-smoothing/src/**/*",
+    "../oxidiviner-autoregressive/src/**/*",
+    "../oxidiviner-garch/src/**/*"
 ]
 
 [dependencies]
-oxidiviner-core = { version = "0.3.7", path = "../oxidiviner-core" }
-oxidiviner-math = { version = "0.3.7", path = "../oxidiviner-math" }
-oxidiviner-moving-average = { version = "0.3.7", path = "../oxidiviner-moving-average" }
-oxidiviner-exponential-smoothing = { version = "0.3.7", path = "../oxidiviner-exponential-smoothing" }
-oxidiviner-autoregressive = { version = "0.3.7", path = "../oxidiviner-autoregressive" }
-oxidiviner-garch = { version = "0.3.7", path = "../oxidiviner-garch" } 
+# Use path dependencies for local development, but specify version for publishing
+# Use the latest published versions (0.3.3) as references on crates.io
+oxidiviner-core = { version = "0.3.3", path = "../oxidiviner-core" }
+oxidiviner-math = { version = "0.3.3", path = "../oxidiviner-math" }
+oxidiviner-moving-average = { version = "0.3.3", path = "../oxidiviner-moving-average" }
+oxidiviner-exponential-smoothing = { version = "0.3.3", path = "../oxidiviner-exponential-smoothing" }
+oxidiviner-autoregressive = { version = "0.3.3", path = "../oxidiviner-autoregressive" }
+oxidiviner-garch = { version = "0.3.3", path = "../oxidiviner-garch" } 
 rand = "0.9.1"
 rand_distr = "0.5.0"
 chrono = { version = "0.4.41", features = ["serde"] }

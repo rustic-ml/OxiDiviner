@@ -1,0 +1,7 @@
+[patch.crates-io]
+oxidiviner-core = { path = "oxidiviner-core" }
+oxidiviner-math = { path = "oxidiviner-math" }
+oxidiviner-moving-average = { path = "oxidiviner-moving-average" }
+oxidiviner-exponential-smoothing = { path = "oxidiviner-exponential-smoothing" }
+oxidiviner-autoregressive = { path = "oxidiviner-autoregressive" }
+oxidiviner-garch = { path = "oxidiviner-garch" } 

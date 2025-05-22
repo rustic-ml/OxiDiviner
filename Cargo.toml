@@ -17,7 +17,7 @@ docs-rs-all-features = true
 publish-only-main-crate = true
 
 [workspace.package]
-version = "0.3.7"
+version = "0.3.9"
 edition = "2021"
 license = "MIT"
 authors = ["OxiDiviner Team"]
