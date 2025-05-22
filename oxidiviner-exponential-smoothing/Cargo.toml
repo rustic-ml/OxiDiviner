@@ -10,6 +10,7 @@ documentation.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "Exponential smoothing models for OxiDiviner time series analysis library"
+publish = false
 
 [dependencies]
 oxidiviner-core = { path = "../oxidiviner-core", version = "0.3.3" }

@@ -4,12 +4,13 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
-repository = "https://github.com/rustic-ml/OxiDiviner"
-documentation = "https://docs.rs/oxidiviner-garch"
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 keywords.workspace = true
 categories.workspace = true
-homepage = "https://github.com/rustic-ml/OxiDiviner"
-description = "GARCH models for volatility forecasting and risk modeling in financial time series"
+description = "GARCH models for OxiDiviner time series analysis library"
+publish = false
 
 # Configuration for docs.rs
 [package.metadata.docs.rs]

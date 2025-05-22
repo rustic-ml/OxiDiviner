@@ -1,110 +1,107 @@
 use chrono::{DateTime, TimeZone, Utc};
-use oxidiviner_core::prelude::*;
-use oxidiviner_core::models::Forecaster;
+use oxidiviner::prelude::*;
+use rand::Rng;
 use std::error::Error;
 
+// Main function to demonstrate OxiDiviner's standard interface
 fn main() -> std::result::Result<(), Box<dyn Error>> {
-    println!("OxiDiviner - Standardized Model Interface Demo");
-    println!("==============================================\n");
+    println!("OxiDiviner - Standard Interface Demo");
+    println!("====================================\n");
 
-    // Generate sample time series data
-    let (time_series, _true_trend) = generate_demo_data();
+    // Create some demo data
+    let data = create_sample_data(100, "test_series")?;
     
-    println!("Using standardized model interface for different models");
-    println!("------------------------------------------------------\n");
+    // Create and configure models
+    println!("Creating and configuring models...");
     
-    // Create models
-    let mut ses_model = SESModel::new(0.3, None)?;
+    // Simple Exponential Smoothing model
+    let mut ses_model = SESModel::new(0.3)?;
+    
+    // Moving Average model
     let mut ma_model = MAModel::new(5)?;
     
-    // Train both models on the data using the standard interface
-    ses_model.fit(&time_series)?;
-    ma_model.fit(&time_series)?;
+    // Autoregressive model (order 3)
+    let mut ar_model = ARModel::new(3, true)?;
     
-    // Forecast with both models using the standard interface
-    let horizon = 10;
-    let ses_output = ses_model.predict(horizon, Some(&time_series))?;
-    let ma_output = ma_model.predict(horizon, Some(&time_series))?;
+    // Fit models to data
+    println!("\nFitting models to data...");
     
-    // Print forecasts using the standard output format
-    println!("Forecasts from Simple Exponential Smoothing (SES):");
-    println!("--------------------------------------------------");
+    ses_model.fit(&data)?;
+    ma_model.fit(&data)?;
+    ar_model.fit(&data)?;
+    
+    // Make predictions
+    println!("\nMaking predictions...");
+    
+    let forecast_horizon = 10;
+    let ses_output = ses_model.predict(forecast_horizon, None)?;
+    let ma_output = ma_model.predict(forecast_horizon, None)?;
+    let ar_output = ar_model.predict(forecast_horizon, None)?;
+    
+    // Print results
+    println!("\nModel outputs:");
+    
     print_model_output(&ses_output);
-    
-    println!("\nForecasts from Moving Average (MA):");
-    println!("----------------------------------");
     print_model_output(&ma_output);
-    
-    println!("\nComparing model evaluation metrics:");
-    println!("----------------------------------");
-    if let Some(ses_eval) = ses_output.evaluation {
-        println!("SES Model ({}): MAE = {:.4}, RMSE = {:.4}", 
-                 ses_eval.model_name, ses_eval.mae, ses_eval.rmse);
-    }
-    
-    if let Some(ma_eval) = ma_output.evaluation {
-        println!("MA Model ({}): MAE = {:.4}, RMSE = {:.4}", 
-                 ma_eval.model_name, ma_eval.mae, ma_eval.rmse);
-    }
+    print_model_output(&ar_output);
     
     Ok(())
 }
 
-// Print the model output in a nicely formatted way
-fn print_model_output(output: &oxidiviner::models::data::ModelOutput) {
-    println!("Model: {}", output.model_name);
-    println!("Forecast:");
+// Helper function to print model output information
+fn print_model_output(output: &ModelOutput) {
+    println!("\nModel: {}", output.model_name);
+    println!("Forecasts:");
     
     for (i, value) in output.forecasts.iter().enumerate() {
-        println!("  t+{}: {:.4}", i+1, value);
+        println!("  t+{}: {:.2}", i + 1, value);
     }
     
-    if let Some(intervals) = &output.confidence_intervals {
-        println!("Confidence Intervals:");
-        for (i, (lower, upper)) in intervals.iter().enumerate() {
-            println!("  t+{}: [{:.4}, {:.4}]", i+1, lower, upper);
-        }
+    // Print evaluation metrics if available
+    if let Some(eval) = &output.evaluation {
+        println!("\nEvaluation metrics:");
+        println!("  MAE:  {:.4}", eval.mae);
+        println!("  RMSE: {:.4}", eval.rmse);
+        println!("  MAPE: {:.2}%", eval.mape);
     }
     
-    if !output.metadata.is_empty() {
-        println!("Metadata:");
-        for (key, value) in &output.metadata {
-            println!("  {}: {}", key, value);
-        }
-    }
+    println!("");
 }
 
-// Generate synthetic demo data
-fn generate_demo_data() -> (TimeSeriesData, Vec<f64>) {
-    let now = Utc::now();
-    let n = 100;
+// Helper function to create sample time series data
+fn create_sample_data(n: usize, name: &str) -> std::result::Result<TimeSeriesData, Box<dyn Error>> {
+    println!("Creating sample data with {} points...", n);
     
-    // Create timestamps (daily intervals)
-    let timestamps: Vec<DateTime<Utc>> = (0..n)
-        .map(|i| Utc.timestamp_opt(now.timestamp() + i as i64 * 86400, 0).unwrap())
-        .collect();
-    
-    // Create a trend with some noise
+    let mut timestamps = Vec::with_capacity(n);
     let mut values = Vec::with_capacity(n);
-    let mut trend = Vec::with_capacity(n);
     
-    use rand::Rng;
+    // Create a base timestamp
+    let base_time = chrono::Utc::now();
+    
+    // Initialize random number generator
     let mut rng = rand::thread_rng();
+    
+    // Generate a sinusoidal pattern with some noise
     for i in 0..n {
-        // Trend component: linear trend
-        let t = 10.0 + 0.5 * (i as f64);
-        trend.push(t);
+        // Add i days to the base time
+        let timestamp = base_time + chrono::Duration::days(i as i64);
         
-        // Add some noise
-        let noise = rng.gen::<f64>() * 5.0 - 2.5;
-        values.push(t + noise);
+        // Generate a value with sinusoidal pattern and noise
+        let time = i as f64 / 10.0;
+        let trend = 0.5 * time;
+        let seasonal = 10.0 * (time * 0.5).sin();
+        let noise = rng.random::<f64>() * 5.0 - 2.5;
+        
+        let value = 100.0 + trend + seasonal + noise;
+        
+        timestamps.push(timestamp);
+        values.push(value);
     }
     
-    let time_series = TimeSeriesData::new(
+    // Create the TimeSeriesData struct
+    Ok(TimeSeriesData {
         timestamps,
         values,
-        "demo_data"
-    ).unwrap();
-    
-    (time_series, trend)
+        name: name.to_string(),
+    })
 } 

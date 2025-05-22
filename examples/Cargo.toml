@@ -11,9 +11,20 @@ oxidiviner-moving-average = { path = "../oxidiviner-moving-average" }
 oxidiviner-exponential-smoothing = { path = "../oxidiviner-exponential-smoothing" }
 oxidiviner-autoregressive = { path = "../oxidiviner-autoregressive" }
 oxidiviner-garch = { path = "../oxidiviner-garch" }
+oxidiviner = { path = "../oxidiviner" }
 chrono = { version = "0.4.41", features = ["serde"] }
 rand = "0.9.1"
 rand_distr = "0.5.0"
+
+# Standard Interface Demo
+[[bin]]
+name = "standard_interface_demo"
+path = "standard_interface_demo.rs"
+
+# OHLCV Data Examples
+[[bin]]
+name = "ohlcv_forecasting_example"
+path = "ohlcv_forecasting_example.rs"
 
 # OHLCV Data Handling
 [[bin]]

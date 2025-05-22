@@ -176,3 +176,25 @@ pub mod models {
         pub use oxidiviner_garch::*;
     }
 }
+
+/// Prelude module that re-exports the most commonly used types and traits
+///
+/// This module is intended to be glob-imported with `use oxidiviner::prelude::*`
+/// to bring the most common OxiDiviner types and traits into scope.
+pub mod prelude {
+    pub use crate::TimeSeriesData;
+    pub use crate::OHLCVData;
+    pub use crate::OxiError;
+    pub use crate::Result;
+    pub use crate::Forecaster;
+    pub use crate::ModelOutput;
+    pub use crate::ModelEvaluation;
+    
+    // Common models
+    pub use crate::models::moving_average::MAModel;
+    pub use crate::models::exponential_smoothing::SimpleESModel as SESModel;
+    pub use crate::models::exponential_smoothing::HoltWintersModel;
+    pub use crate::models::autoregressive::ARModel;
+    pub use crate::models::autoregressive::ARIMAModel;
+    pub use crate::models::garch::GARCHModel;
+}

@@ -11,9 +11,14 @@ members = [
 ]
 resolver = "2"
 
+# Document all workspace crates but only publish oxidiviner
+[workspace.metadata]
+docs-rs-all-features = true
+publish-only-main-crate = true
+
 [workspace.package]
 name = "OxiDiviner"
-version = "0.3.5"
+version = "0.3.6"
 edition = "2021"
 license = "MIT"
 authors = ["OxiDiviner Team"]

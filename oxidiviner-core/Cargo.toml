@@ -10,6 +10,7 @@ documentation.workspace = true
 keywords.workspace = true
 categories.workspace = true
 description = "Core functionality for OxiDiviner time series analysis library"
+publish = false
 
 [dependencies]
 chrono.workspace = true

@@ -59,17 +59,20 @@ if let Some(ma_eval) = ma_output.evaluation {
 
 ## Features
 
-- Time series forecasting models including:
+- **Time series forecasting models** including:
   - Simple Exponential Smoothing (SES)
   - Moving Average (MA)
   - Exponential Smoothing models with trend and seasonality
+  - Autoregressive (AR) and ARIMA models
+  - GARCH models for volatility forecasting
   - Specialized models for daily and minute-level financial data
-  - More models coming soon!
 
-- Standardized model interface via the `Forecaster` trait
-- Consistent output format via the `ModelOutput` struct
-- Comprehensive model evaluation metrics
-- Utilities for data loading, preprocessing, and visualization
+- **Data handling**: Import and manage OHLCV (Open-High-Low-Close-Volume) stock data
+- **Time series processing**: Tools for manipulating and analyzing time series data
+- **Standardized model interface** via the `Forecaster` trait
+- **Consistent output format** via the `ModelOutput` struct
+- **Comprehensive model evaluation metrics**
+- **Utilities for data loading, preprocessing, and visualization**
 
 ## Getting Started
 
@@ -77,34 +80,10 @@ Add OxiDiviner to your Cargo.toml:
 
 ```toml
 [dependencies]
-oxidiviner = "0.3.3"
+oxidiviner = "0.3.6"
 ```
 
 See the examples directory for complete usage examples.
-
-## Features
-
-- **Data Handling**: Import and manage OHLCV (Open-High-Low-Close-Volume) stock data
-- **Time Series Processing**: Tools for manipulating and analyzing time series data
-- **Forecasting Models**: Implementation of various statistical forecasting methods
-  - Error-Trend-Seasonality (ETS) models
-  - Simple Exponential Smoothing
-  - Holt's Linear Trend
-  - Holt-Winters Seasonal Model
-- **Time-Based Models**: Specialized models for different time granularities
-  - `DailyETSModel`: Optimized for daily financial data
-  - `MinuteETSModel`: Designed for high-frequency data with aggregation support
-- **Flexible Analysis**: Support for both daily and minute-level data
-- **Model Evaluation**: Tools for assessing forecast accuracy and model fit
-
-## Installation
-
-Add OxiDiviner to your Cargo.toml:
-
-```toml
-[dependencies]
-oxdiviner = "0.3.3"
-```
 
 ## Usage Examples
 
@@ -112,7 +91,7 @@ oxdiviner = "0.3.3"
 
 ```rust
 use chrono::Utc;
-use oxdiviner::{OHLCVData, TimeSeriesData};
+use oxidiviner::{OHLCVData, TimeSeriesData};
 
 // Create or load OHLCV data
 let data = OHLCVData::new("AAPL");
@@ -128,12 +107,314 @@ let time_series = data.to_time_series(false);  // false = use regular close, not
 let (train, test) = time_series.train_test_split(0.8).unwrap();
 ```
 
+### Forecasting Examples
+
+#### Moving Average (MA) Model
+
+Ideal for smoothing short-term fluctuations and identifying longer-term trends:
+
+```rust
+use oxidiviner::prelude::*;
+use chrono::{Utc, TimeZone};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Create sample time series data
+    let dates = (0..20).map(|i| Utc.with_ymd_and_hms(2023, 1, i+1, 0, 0, 0).unwrap()).collect();
+    let values = vec![10.5, 11.2, 10.8, 11.5, 12.0, 11.8, 12.3, 13.0, 12.5, 12.8, 
+                      13.2, 13.5, 13.0, 14.0, 14.5, 14.2, 14.8, 15.0, 15.5, 15.2];
+    let data = TimeSeriesData::new(dates, values, "sample_data")?;
+    
+    // Create and fit an MA model with window size 3
+    let mut ma_model = MAModel::new(3)?;
+    ma_model.fit(&data)?;
+    
+    // Generate forecast for next 5 periods
+    let forecast = ma_model.forecast(5)?;
+    println!("MA(3) forecast: {:?}", forecast);
+    
+    Ok(())
+}
+```
+
+#### Simple Exponential Smoothing (SES) Model
+
+Appropriate for data without clear trend or seasonality:
+
+```rust
+use oxidiviner::prelude::*;
+use chrono::{Utc, TimeZone};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Create sample time series data
+    let dates = (0..20).map(|i| Utc.with_ymd_and_hms(2023, 1, i+1, 0, 0, 0).unwrap()).collect();
+    let values = vec![10.5, 11.2, 10.8, 11.5, 12.0, 11.8, 12.3, 13.0, 12.5, 12.8, 
+                      13.2, 13.5, 13.0, 14.0, 14.5, 14.2, 14.8, 15.0, 15.5, 15.2];
+    let data = TimeSeriesData::new(dates, values, "sample_data")?;
+    
+    // Create and fit a Simple Exponential Smoothing model with α=0.3
+    let mut ses_model = SESModel::new(0.3, None)?;
+    ses_model.fit(&data)?;
+    
+    // Generate forecast for next 5 periods
+    let forecast = ses_model.forecast(5)?;
+    println!("SES forecast: {:?}", forecast);
+    
+    Ok(())
+}
+```
+
+#### Holt-Winters Model (Triple Exponential Smoothing)
+
+For data with both trend and seasonality:
+
+```rust
+use oxidiviner::prelude::*;
+use oxidiviner::models::exponential_smoothing::HoltWintersModel;
+use chrono::{Utc, TimeZone};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Create sample time series with seasonality (period=7 days)
+    let dates = (0..28).map(|i| Utc.with_ymd_and_hms(2023, 1, i+1, 0, 0, 0).unwrap()).collect();
+    
+    // Values with weekly seasonality
+    let values = vec![
+        10.0, 11.2, 12.5, 14.0, 13.0, 11.5, 10.2,  // Week 1
+        11.0, 12.2, 13.5, 15.0, 14.0, 12.5, 11.2,  // Week 2
+        12.0, 13.2, 14.5, 16.0, 15.0, 13.5, 12.2,  // Week 3
+        13.0, 14.2, 15.5, 17.0, 16.0, 14.5, 13.2   // Week 4
+    ];
+    
+    let data = TimeSeriesData::new(dates, values, "seasonal_data")?;
+    
+    // Create and fit a Holt-Winters model
+    // Parameters: α (level), β (trend), γ (seasonal), seasonal_period
+    let mut hw_model = HoltWintersModel::new(0.2, 0.1, 0.1, 7)?;
+    hw_model.fit(&data)?;
+    
+    // Generate forecast for next 7 days
+    let forecast = hw_model.forecast(7)?;
+    println!("Holt-Winters forecast: {:?}", forecast);
+    
+    Ok(())
+}
+```
+
+#### Autoregressive (AR) Model
+
+For data where values depend on previous values:
+
+```rust
+use oxidiviner::prelude::*;
+use chrono::{Utc, TimeZone};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Create sample time series data
+    let dates = (0..30).map(|i| Utc.with_ymd_and_hms(2023, 1, i+1, 0, 0, 0).unwrap()).collect();
+    
+    // Create an AR(2) process with some noise
+    let mut values = Vec::with_capacity(30);
+    values.push(1.0);
+    values.push(1.2);
+    
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+    
+    for i in 2..30 {
+        // AR(2) process: y_t = 0.7*y_{t-1} - 0.3*y_{t-2} + noise
+        let next_val = 0.7 * values[i-1] - 0.3 * values[i-2] + rng.gen::<f64>() * 0.5 - 0.25;
+        values.push(next_val);
+    }
+    
+    let data = TimeSeriesData::new(dates, values, "ar_data")?;
+    
+    // Create and fit an AR(2) model
+    let mut ar_model = ARModel::new(2)?;
+    ar_model.fit(&data)?;
+    
+    // Generate forecast for next 5 periods
+    let forecast = ar_model.forecast(5)?;
+    println!("AR(2) forecast: {:?}", forecast);
+    
+    Ok(())
+}
+```
+
+#### ARIMA Model
+
+For data that requires differencing to become stationary:
+
+```rust
+use oxidiviner::prelude::*;
+use chrono::{Utc, TimeZone};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Create sample time series with trend (non-stationary)
+    let dates = (0..30).map(|i| Utc.with_ymd_and_hms(2023, 1, i+1, 0, 0, 0).unwrap()).collect();
+    
+    // Create a trending series with AR components
+    let mut values = Vec::with_capacity(30);
+    values.push(10.0);
+    values.push(10.4);
+    
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+    
+    for i in 2..30 {
+        // Trend + AR(1) process
+        let trend = 0.2 * (i as f64);  // Linear trend
+        let ar_component = 0.7 * (values[i-1] - trend);
+        let next_val = trend + ar_component + rng.gen::<f64>() * 0.5 - 0.25;
+        values.push(next_val);
+    }
+    
+    let data = TimeSeriesData::new(dates, values, "arima_data")?;
+    
+    // Create and fit an ARIMA(1,1,0) model
+    // Parameters: p (AR order), d (differencing), q (MA order)
+    let mut arima_model = ARIMAModel::new(1, 1, 0)?;
+    arima_model.fit(&data)?;
+    
+    // Generate forecast for next 5 periods
+    let forecast = arima_model.forecast(5)?;
+    println!("ARIMA(1,1,0) forecast: {:?}", forecast);
+    
+    Ok(())
+}
+```
+
+#### GARCH Model for Volatility Forecasting
+
+For financial time series where volatility clustering is important:
+
+```rust
+use oxidiviner::prelude::*;
+use chrono::{Utc, TimeZone};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Sample financial returns data (percentage changes)
+    let returns = vec![
+        0.03, 0.02, 0.01, -0.02, -0.03, -0.01, 0.02, 0.03, 0.02, 0.01,
+        -0.05, -0.06, -0.03, -0.04, -0.02, 0.01, 0.02, 0.01, 0.03, 0.04,
+        0.02, 0.01, -0.01, -0.02, -0.01, 0.01, 0.02, 0.01, -0.03, -0.02
+    ];
+    
+    // Create a GARCH(1,1) model
+    let mut garch_model = GARCHModel::new(1, 1, None)?;
+    
+    // Fit the model to the returns data
+    garch_model.fit(&returns, None)?;
+    
+    // Forecast volatility for the next 5 periods
+    let volatility_forecast = garch_model.forecast_variance(5)?;
+    println!("GARCH(1,1) volatility forecast: {:?}", volatility_forecast);
+    
+    Ok(())
+}
+```
+
+### Combining Multiple Models for Improved Forecasting
+
+OxiDiviner's standardized interface makes it easy to combine multiple models for ensemble forecasting, which often produces more robust predictions than any single model:
+
+```rust
+use oxidiviner::prelude::*;
+use chrono::{Utc, TimeZone};
+use std::collections::HashMap;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Create sample time series data
+    let dates = (0..30).map(|i| Utc.with_ymd_and_hms(2023, 1, i+1, 0, 0, 0).unwrap()).collect();
+    let values = vec![
+        10.5, 11.2, 10.8, 11.5, 12.0, 11.8, 12.3, 13.0, 12.5, 12.8, 
+        13.2, 13.5, 13.0, 14.0, 14.5, 14.2, 14.8, 15.0, 15.5, 15.2,
+        15.8, 16.1, 15.9, 16.3, 16.5, 16.0, 16.6, 17.0, 17.2, 17.5
+    ];
+    
+    // Split into training and test sets
+    let train_data = TimeSeriesData::new(
+        dates[0..25].to_vec(),
+        values[0..25].to_vec(),
+        "train_data"
+    )?;
+    
+    let test_data = TimeSeriesData::new(
+        dates[25..30].to_vec(),
+        values[25..30].to_vec(),
+        "test_data"
+    )?;
+    
+    // Create and fit multiple models
+    let mut models: HashMap<String, Box<dyn Forecaster>> = HashMap::new();
+    
+    // Moving Average model
+    let mut ma_model = MAModel::new(3)?;
+    ma_model.fit(&train_data)?;
+    models.insert("MA(3)".to_string(), Box::new(ma_model));
+    
+    // Simple Exponential Smoothing model
+    let mut ses_model = SESModel::new(0.3, None)?;
+    ses_model.fit(&train_data)?;
+    models.insert("SES".to_string(), Box::new(ses_model));
+    
+    // AR model
+    let mut ar_model = ARModel::new(2)?;
+    ar_model.fit(&train_data)?;
+    models.insert("AR(2)".to_string(), Box::new(ar_model));
+    
+    // Generate forecasts and evaluate each model
+    let horizon = 5; // Same as test data length
+    let mut forecasts = HashMap::new();
+    let mut weights = HashMap::new();
+    let mut total_weight = 0.0;
+    
+    println!("Individual model forecasts and evaluation:");
+    for (name, model) in &models {
+        let output = model.predict(horizon, Some(&test_data))?;
+        
+        if let Some(eval) = &output.evaluation {
+            println!("{} - MAE: {:.4}, RMSE: {:.4}", name, eval.mae, eval.rmse);
+            
+            // Use inverse of MAE as weight (lower error = higher weight)
+            let weight = 1.0 / eval.mae;
+            weights.insert(name.clone(), weight);
+            total_weight += weight;
+        }
+        
+        forecasts.insert(name.clone(), output.forecasts);
+    }
+    
+    // Calculate weighted ensemble forecast
+    let mut ensemble_forecast = vec![0.0; horizon];
+    
+    for (name, model_forecast) in &forecasts {
+        let weight = weights.get(name).unwrap() / total_weight;
+        
+        for i in 0..horizon {
+            ensemble_forecast[i] += model_forecast[i] * weight;
+        }
+    }
+    
+    println!("\nEnsemble forecast (weighted average):");
+    for i in 0..horizon {
+        println!("t+{}: {:.4}", i+1, ensemble_forecast[i]);
+    }
+    
+    // Calculate ensemble error metrics
+    let mae = oxidiviner::math::metrics::mean_absolute_error(&test_data.values, &ensemble_forecast);
+    let rmse = oxidiviner::math::metrics::root_mean_squared_error(&test_data.values, &ensemble_forecast);
+    
+    println!("\nEnsemble performance - MAE: {:.4}, RMSE: {:.4}", mae, rmse);
+    
+    Ok(())
+}
+```
+
 ### Using Daily ETS Models
 
 The `DailyETSModel` provides specialized functionality for daily financial data:
 
 ```rust
-use oxdiviner::models::ets::{ETSComponent, DailyETSModel};
+use oxidiviner::models::ets::{ETSComponent, DailyETSModel};
 
 // Create a Holt-Winters seasonal model with weekly seasonality
 let mut model = DailyETSModel::holt_winters_additive(
@@ -181,7 +462,7 @@ if let Some(fitted) = model.fitted_values() {
 The `MinuteETSModel` is designed specifically for high-frequency data and includes unique features like data aggregation:
 
 ```rust
-use oxdiviner::models::ets::{ETSComponent, MinuteETSModel};
+use oxidiviner::models::ets::{ETSComponent, MinuteETSModel};
 
 // Create a simple model with 5-minute aggregation
 let mut simple_model = MinuteETSModel::simple(
@@ -224,7 +505,7 @@ Options:
 - First argument: Stock ticker (e.g., AAPL, MSFT) or SYNTHETIC for synthetic data
 - Second argument: Data type - 'daily' or 'minute'
 
-## Features
+## Feature Options
 
 OxiDiviner has several optional features that can be enabled:
 
@@ -236,7 +517,7 @@ Enable features in your Cargo.toml:
 
 ```toml
 [dependencies]
-oxdiviner = { version = "0.3.3", features = ["plotting", "polars_integration"] }
+oxidiviner = { version = "0.3.6", features = ["plotting", "polars_integration"] }
 ```
 
 ## License

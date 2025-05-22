@@ -9,7 +9,8 @@ homepage.workspace = true
 documentation.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "Autoregressive models for the OxiDiviner time series forecasting library"
+description = "Autoregressive models for OxiDiviner time series analysis library"
+publish = false
 
 [dependencies]
 oxidiviner-core = { path = "../oxidiviner-core", version = "0.3.3" }

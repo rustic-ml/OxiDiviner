@@ -9,7 +9,8 @@ homepage.workspace = true
 documentation.workspace = true
 keywords.workspace = true
 categories.workspace = true
-description = "Mathematical utilities for time series analysis, including transformations, metrics, and statistical functions"
+description = "Mathematical utilities for OxiDiviner time series analysis library"
+publish = false
 
 # Configuration for docs.rs
 [package.metadata.docs.rs]
