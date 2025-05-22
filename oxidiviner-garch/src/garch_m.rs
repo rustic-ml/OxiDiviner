@@ -433,11 +433,20 @@ impl GARCHMModel {
             for i in 0..p {
                 if h <= i {
                     // We have actual residuals available
-                    var_h += self.alpha[i] * residuals[n - h + i].powi(2);
+                    // Safe indexing: Only access if within bounds
+                    let idx = n.checked_sub(h).and_then(|v| v.checked_add(i));
+                    if let Some(idx) = idx {
+                        if idx < residuals.len() {
+                            var_h += self.alpha[i] * residuals[idx].powi(2);
+                        }
+                    }
                 } else {
                     // Expected value of future squared residuals is the variance
-                    if h - i - 2 < forecast_var.len() {
-                        var_h += self.alpha[i] * forecast_var[h - i - 2];
+                    let prev_idx = h.checked_sub(i).and_then(|v| v.checked_sub(2));
+                    if let Some(idx) = prev_idx {
+                        if idx < forecast_var.len() {
+                            var_h += self.alpha[i] * forecast_var[idx];
+                        }
                     }
                 }
             }
@@ -446,10 +455,21 @@ impl GARCHMModel {
             for j in 0..q {
                 if h <= j + 1 {
                     // We have actual variances available
-                    var_h += self.beta[j] * variance[n - h + j + 1];
-                } else if h - j - 2 < forecast_var.len() {
+                    // Safe indexing: Only access if within bounds
+                    let idx = n.checked_sub(h).and_then(|v| v.checked_add(j + 1));
+                    if let Some(idx) = idx {
+                        if idx < variance.len() {
+                            var_h += self.beta[j] * variance[idx];
+                        }
+                    }
+                } else {
                     // Use previously forecasted variances
-                    var_h += self.beta[j] * forecast_var[h - j - 2];
+                    let prev_idx = h.checked_sub(j).and_then(|v| v.checked_sub(2));
+                    if let Some(idx) = prev_idx {
+                        if idx < forecast_var.len() {
+                            var_h += self.beta[j] * forecast_var[idx];
+                        }
+                    }
                 }
             }
 

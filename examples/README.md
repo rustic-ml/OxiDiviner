@@ -26,28 +26,39 @@ cargo run --bin <example_name>
 #### Exponential Smoothing Models
 
 - **ses_demo.rs** - Simple Exponential Smoothing basic usage
-- **ses_model_example.rs** - More comprehensive SES model example
-- **ses_parameter_tuning.rs** - How to tune SES model parameters
-- **holt_demo.rs** - Holt's Linear method for trend data
-- **holt_winters_demo.rs** - Holt-Winters method for seasonal data
+- **ses_model_example.rs** - More comprehensive SES model demonstration
+- **holt_demo.rs** - Holt's Linear Trend model usage
+- **holt_winters_demo.rs** - Holt-Winters Seasonal model usage
 - **es_models_comparison.rs** - Comparison of different exponential smoothing models
-- **es_parameter_tuning.rs** - Tuning parameters for various ES models
-- **ets_demo.rs** - Generic ETS (Error-Trend-Seasonal) framework
-- **ets_model_demo.rs** - Comprehensive ETS model examples
+- **es_parameter_tuning.rs** - Parameter tuning for exponential smoothing models
+- **ses_parameter_tuning.rs** - Parameter tuning specifically for SES models
+- **ets_demo.rs** - Error-Trend-Seasonal (ETS) model usage
+- **ets_model_demo.rs** - More comprehensive ETS model demonstration
+- **ets_model_complete.rs** - Complete example of ETS model usage
 
 #### Autoregressive Models
 
 - **autoregressive_demo.rs** - Demonstrates AR, ARMA, ARIMA, SARIMA, and VAR models
-- **ma_demo.rs** - Moving Average model demonstration
+- **ma_demo.rs** - Moving Average (MA) model usage
 
 #### GARCH Models
 
-- **basic_garch_example.rs** - Basic GARCH model for volatility forecasting
-- **stock_volatility_analysis.rs** - GARCH models applied to stock market volatility
+- **basic_garch_example.rs** - Basic GARCH model usage
+- **stock_volatility_analysis.rs** - Using GARCH for stock volatility analysis
 
-### Data Handling
+### OHLCV Data Handling
 
-- **ohlcv-handling/** - Examples for working with financial time series data
+- **ohlcv_data_processor.rs** - Example of processing OHLCV data
+
+### Notes
+
+Some examples require additional data files that are not included in the repository:
+
+1. **ohlcv_data_processor.rs** - Requires CSV files in the examples/csv directory
+2. **simple_forecast.rs** - Requires CSV files and uses an older API structure
+3. **ets_simple_demo.rs** - A simplified demonstration that is not meant to be run fully
+
+To run these examples, you would need to provide the appropriate data files or update the code to work with your own data.
 
 ## Advanced Usage
 

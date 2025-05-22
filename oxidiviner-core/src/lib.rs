@@ -48,13 +48,13 @@ impl Forecaster for SimpleAverageForecast {
     }
 
     fn fit(&mut self, data: &TimeSeriesData) -> Result<()> {
-        self.values = data.values().to_vec();
+        self.values = data.values.clone();
         Ok(())
     }
 
     fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
         if self.values.is_empty() {
-            return Err(oxidiviner_core::OxiError::NotFitted);
+            return Err(oxidiviner_core::OxiError::ModelError("Model not fitted".to_string()));
         }
 
         // Calculate the average of all values
@@ -80,7 +80,7 @@ fn example() -> Result<()> {
     ];
     let values = vec![1.0, 2.0, 3.0];
 
-    let data = TimeSeriesData::new(dates, values)?;
+    let data = TimeSeriesData::new(dates, values, "sample_data")?;
 
     // Create our model
     let mut model = SimpleAverageForecast::new();

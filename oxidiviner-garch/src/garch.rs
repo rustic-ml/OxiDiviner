@@ -345,9 +345,16 @@ impl GARCHModel {
             for i in 0..p {
                 if h <= i {
                     // We have actual residuals available
-                    var_h += self.alpha[i] * residuals[n - h + i].powi(2);
-                } else {
+                    // Safe indexing: Only access if within bounds
+                    let idx = n.checked_sub(h).and_then(|v| v.checked_add(i));
+                    if let Some(idx) = idx {
+                        if idx < residuals.len() {
+                            var_h += self.alpha[i] * residuals[idx].powi(2);
+                        }
+                    }
+                } else if h > i + 1 && (h - i - 2) < forecast.len() {
                     // Expected value of future squared residuals is the variance
+                    // Use forecasted variance safely
                     var_h += self.alpha[i] * forecast[h - i - 2];
                 }
             }
@@ -356,9 +363,15 @@ impl GARCHModel {
             for j in 0..q {
                 if h <= j + 1 {
                     // We have actual variances available
-                    var_h += self.beta[j] * variance[n - h + j + 1];
-                } else {
-                    // Use previously forecasted variances
+                    // Safe indexing: Only access if within bounds
+                    let idx = n.checked_sub(h).and_then(|v| v.checked_add(j + 1));
+                    if let Some(idx) = idx {
+                        if idx < variance.len() {
+                            var_h += self.beta[j] * variance[idx];
+                        }
+                    }
+                } else if (h - j - 2) < forecast.len() {
+                    // Use previously forecasted variances safely
                     var_h += self.beta[j] * forecast[h - j - 2];
                 }
             }
