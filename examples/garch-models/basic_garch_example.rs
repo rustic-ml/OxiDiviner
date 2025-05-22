@@ -78,6 +78,9 @@ fn generate_sample_data(n: usize) -> Vec<f64> {
         // Create volatility clustering by making volatility autocorrelated
         volatility = 0.9 * volatility + 0.1 * (0.005 + 0.015 * rng.gen::<f64>());
 
+        // Add a safety check to prevent volatility from getting too large
+        volatility = volatility.min(0.05);
+
         // Generate return with current volatility
         let normal = Normal::new(mean, volatility).unwrap();
         let return_value = normal.sample(&mut rng);
