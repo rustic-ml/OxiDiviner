@@ -12,6 +12,17 @@
 //! designed to provide efficient, accurate, and easy-to-use statistical models for Rust.
 //! This main crate serves as a convenient entry point to access all functionality.
 //!
+//! ## Project Organization
+//!
+//! OxiDiviner uses a monorepo architecture where:
+//! 
+//! * The main `oxidiviner` crate is the only publicly published package
+//! * Internal crates provide modular organization during development
+//! * All internal crate source code is included in the main crate's package
+//!
+//! This approach allows for a cleaner architecture while simplifying usage for
+//! consumers who only need to depend on a single crate.
+//!
 //! ## Components
 //!
 //! OxiDiviner includes the following major components:

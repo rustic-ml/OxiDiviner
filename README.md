@@ -98,7 +98,7 @@ Add OxiDiviner to your Cargo.toml:
 
 ```toml
 [dependencies]
-oxidiviner = "0.3.7"
+oxidiviner = "0.3.9"
 ```
 
 See the examples directory for complete usage examples.
@@ -516,7 +516,7 @@ let forecasts = hourly_model.forecast(12).unwrap();  // Forecast the next hour
 The package includes a comprehensive demo that showcases ETS models with detailed interpretations:
 
 ```bash
-cargo run --example ets_demo -- AAPL daily
+cd examples && cargo run --bin ets_demo -- SYNTHETIC daily
 ```
 
 Options:
@@ -535,7 +535,7 @@ Enable features in your Cargo.toml:
 
 ```toml
 [dependencies]
-oxidiviner = { version = "0.3.7", features = ["plotting", "polars_integration"] }
+oxidiviner = { version = "0.3.9", features = ["plotting", "polars_integration"] }
 ```
 
 ## License
