@@ -12,7 +12,7 @@ fn test_prelude_contains_core_types() {
         values: vec![1.0],
         name: "test".to_string(),
     };
-    
+
     // Verify we can create OHLCVData
     let _ohlcv_data = OHLCVData {
         symbol: "AAPL".to_string(),
@@ -24,11 +24,11 @@ fn test_prelude_contains_core_types() {
         volume: vec![1000.0],
         adjusted_close: None,
     };
-    
+
     // Verify we can create Result and OxiError
     let _result: Result<()> = Ok(());
     let _error = OxiError::InvalidParameter("test".to_string());
-    
+
     // Verify model types are available
     let _model_output = ModelOutput {
         model_name: "TestModel".to_string(),
@@ -51,8 +51,8 @@ fn test_prelude_contains_model_implementations() {
     let _ses_model = SESModel::new(0.3);
     let _hw_model = HoltWintersModel::new(0.2, 0.1, 0.1, 7);
     let _ar_model = ARModel::new(3, true);
-    
+
     // Additional models if needed
     // let _arma_model = ARMAModel::new(2, 1);
     // let _garch_model = GARCHModel::new(1, 1);
-} 
+}
