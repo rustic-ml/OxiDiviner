@@ -265,17 +265,8 @@ fn split_time_series(
         )));
     }
 
-    let train = TimeSeriesData {
-        timestamps: data.timestamps[0..train_size].to_vec(),
-        values: data.values[0..train_size].to_vec(),
-        name: format!("{}_train", data.name),
-    };
-
-    let test = TimeSeriesData {
-        timestamps: data.timestamps[train_size..].to_vec(),
-        values: data.values[train_size..].to_vec(),
-        name: format!("{}_test", data.name),
-    };
+    let train = data.slice(0, train_size)?;
+    let test = data.slice(train_size, data.len())?;
 
     Ok((train, test))
 }

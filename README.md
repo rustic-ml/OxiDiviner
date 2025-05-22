@@ -98,7 +98,7 @@ Add OxiDiviner to your Cargo.toml:
 
 ```toml
 [dependencies]
-oxidiviner = "0.4.0"
+oxidiviner = "0.4.1"
 ```
 
 See the examples directory for complete usage examples.

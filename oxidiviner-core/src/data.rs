@@ -227,17 +227,12 @@ impl TimeSeriesData {
             ));
         }
 
-        let train = TimeSeriesData {
-            timestamps: self.timestamps[0..split_idx].to_vec(),
-            values: self.values[0..split_idx].to_vec(),
-            name: format!("{}_train", self.name),
-        };
-
-        let test = TimeSeriesData {
-            timestamps: self.timestamps[split_idx..].to_vec(),
-            values: self.values[split_idx..].to_vec(),
-            name: format!("{}_test", self.name),
-        };
+        let mut train = self.slice(0, split_idx)?;
+        let mut test = self.slice(split_idx, self.len())?;
+        
+        // Update names to follow the convention
+        train.name = format!("{}_train", self.name);
+        test.name = format!("{}_test", self.name);
 
         Ok((train, test))
     }

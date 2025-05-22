@@ -22,19 +22,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let data = generate_synthetic_daily_data();
     println!("Generated {} data points\n", data.len());
 
-    // Split data for training and testing (manually since train_test_split isn't available)
+    // Split data for training and testing
     println!("Splitting data into training (80%) and testing (20%) sets...");
     let split_point = (data.len() as f64 * 0.8) as usize;
-    let train_data = TimeSeriesData::new(
-        data.timestamps[..split_point].to_vec(),
-        data.values[..split_point].to_vec(),
-        "Training data",
-    )?;
-    let test_data = TimeSeriesData::new(
-        data.timestamps[split_point..].to_vec(),
-        data.values[split_point..].to_vec(),
-        "Testing data",
-    )?;
+    let train_data = data.slice(0, split_point)?;
+    let test_data = data.slice(split_point, data.len())?;
     println!("Training set: {} points", train_data.len());
     println!("Testing set: {} points\n", test_data.len());
 
