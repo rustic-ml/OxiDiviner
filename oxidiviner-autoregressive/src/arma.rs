@@ -421,6 +421,36 @@ impl ARMAModel {
 
         Ok(x)
     }
+
+    /// Extract AR coefficients
+    fn extract_ar_coefficients(&self, phi: &[f64], ar_coeffs: &mut [f64]) -> ARResult<()> {
+        if ar_coeffs.len() < self.p {
+            return Err(ARError::InvalidParameter(
+                "AR coefficients array too small".to_string(),
+            ));
+        }
+
+        // Copy AR coefficients
+        ar_coeffs[..self.p].copy_from_slice(&phi[..self.p]);
+        
+        Ok(())
+    }
+
+    /// Extract MA coefficients
+    fn extract_ma_coefficients(&self, theta: &[f64], ma_coeffs: &mut [f64]) -> ARResult<()> {
+        if ma_coeffs.len() < self.q {
+            return Err(ARError::InvalidParameter(
+                "MA coefficients array too small".to_string(),
+            ));
+        }
+
+        // Copy MA coefficients
+        for (q, coeff) in ma_coeffs.iter_mut().enumerate().take(self.q) {
+            *coeff = theta[q];
+        }
+        
+        Ok(())
+    }
 }
 
 impl Forecaster for ARMAModel {

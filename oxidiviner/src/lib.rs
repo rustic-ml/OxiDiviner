@@ -93,7 +93,7 @@
 //!
 //! // Create an ARIMA(1,1,1) model
 //! let mut arima_model = ARIMAModel::new(1, 1, 1, true)?;
-//! 
+//!
 //! // Create a SARIMA(1,1,1)(1,1,0)12 model for monthly data with yearly seasonality
 //! let mut sarima_model = SARIMAModel::new(1, 1, 1, 1, 1, 0, 12, true)?;
 //! # Ok(())
@@ -111,13 +111,13 @@
 //! # fn main() -> oxidiviner::Result<()> {
 //! // Create a basic GARCH(1,1) model
 //! let mut garch_model = GARCHModel::new(1, 1, None).unwrap();
-//! 
+//!
 //! // Create a GJR-GARCH(1,1) model for asymmetric volatility
 //! let mut gjr_garch_model = GJRGARCHModel::new(1, 1, None).unwrap();
-//! 
+//!
 //! // Create an EGARCH(1,1) model
 //! let mut egarch_model = EGARCHModel::new(1, 1, None).unwrap();
-//! 
+//!
 //! // Create a GARCH-M(1,1) model with risk premium as variance
 //! let mut garch_m_model = GARCHMModel::new(1, 1, RiskPremiumType::Variance, None).unwrap();
 //! # Ok(())

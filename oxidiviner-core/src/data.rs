@@ -171,6 +171,12 @@ pub struct TimeSeriesData {
 impl TimeSeriesData {
     /// Create a new time series with given data
     pub fn new(timestamps: Vec<DateTime<Utc>>, values: Vec<f64>, name: &str) -> Result<Self> {
+        if timestamps.is_empty() || values.is_empty() {
+            return Err(OxiError::DataError(
+                "Timestamps and values cannot be empty".to_string(),
+            ));
+        }
+        
         if timestamps.len() != values.len() {
             return Err(OxiError::DataError(
                 "Timestamps and values must have the same length".to_string(),
@@ -248,5 +254,148 @@ impl TimeSeriesData {
     /// Create a TimeSeriesData from OHLCVData
     pub fn from_ohlcv(ohlcv: &OHLCVData, use_adjusted_close: bool) -> Self {
         ohlcv.to_time_series(use_adjusted_close)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{Utc, TimeZone};
+    
+    #[test]
+    fn test_time_series_data_creation() {
+        let now = Utc::now();
+        let timestamps = vec![
+            now,
+            now + chrono::Duration::days(1),
+            now + chrono::Duration::days(2),
+        ];
+        let values = vec![1.0, 2.0, 3.0];
+        
+        // Test successful creation
+        let ts = TimeSeriesData::new(timestamps.clone(), values.clone(), "test_series").unwrap();
+        
+        assert_eq!(ts.len(), 3);
+        assert_eq!(ts.timestamps, timestamps);
+        assert_eq!(ts.values, values);
+        assert_eq!(ts.name, "test_series");
+        
+        // Test empty data - this should fail with an error
+        let empty_result = TimeSeriesData::new(vec![], vec![], "empty");
+        assert!(empty_result.is_err(), "Empty data should return an error");
+        
+        // Test mismatched lengths
+        let mismatched_result = TimeSeriesData::new(timestamps, vec![1.0, 2.0], "mismatched");
+        assert!(mismatched_result.is_err(), "Mismatched lengths should return an error");
+    }
+    
+    #[test]
+    fn test_ohlcv_data_creation() {
+        let now = Utc::now();
+        let timestamps = vec![
+            now,
+            now + chrono::Duration::days(1),
+            now + chrono::Duration::days(2),
+        ];
+        let open = vec![100.0, 101.0, 102.0];
+        let high = vec![105.0, 106.0, 107.0];
+        let low = vec![95.0, 96.0, 97.0];
+        let close = vec![102.0, 103.0, 104.0];
+        let volume = vec![1000.0, 1100.0, 1200.0];
+        
+        // Create a new OHLCV data object
+        let mut ohlcv = OHLCVData::new("AAPL");
+        
+        // Manually populate it
+        ohlcv.timestamps = timestamps.clone();
+        ohlcv.open = open.clone();
+        ohlcv.high = high.clone();
+        ohlcv.low = low.clone();
+        ohlcv.close = close.clone();
+        ohlcv.volume = volume.clone();
+        
+        // Test the data is stored correctly
+        assert_eq!(ohlcv.len(), 3);
+        assert_eq!(ohlcv.symbol, "AAPL");
+        assert_eq!(ohlcv.timestamps, timestamps);
+        assert_eq!(ohlcv.open, open);
+        assert_eq!(ohlcv.high, high);
+        assert_eq!(ohlcv.low, low);
+        assert_eq!(ohlcv.close, close);
+        assert_eq!(ohlcv.volume, volume);
+        assert!(ohlcv.adjusted_close.is_none());
+        
+        // Test with adjusted close
+        let adjusted = vec![101.5, 102.5, 103.5];
+        ohlcv.adjusted_close = Some(adjusted.clone());
+        
+        assert!(ohlcv.adjusted_close.is_some());
+        assert_eq!(ohlcv.adjusted_close.unwrap(), adjusted);
+    }
+    
+    #[test]
+    fn test_ohlcv_to_time_series() {
+        let now = Utc::now();
+        let timestamps = vec![
+            now,
+            now + chrono::Duration::days(1),
+            now + chrono::Duration::days(2),
+        ];
+        let open = vec![100.0, 101.0, 102.0];
+        let high = vec![105.0, 106.0, 107.0];
+        let low = vec![95.0, 96.0, 97.0];
+        let close = vec![102.0, 103.0, 104.0];
+        let volume = vec![1000.0, 1100.0, 1200.0];
+        
+        // Create and populate OHLCV data
+        let mut ohlcv = OHLCVData::new("AAPL");
+        ohlcv.timestamps = timestamps;
+        ohlcv.open = open;
+        ohlcv.high = high;
+        ohlcv.low = low;
+        ohlcv.close = close;
+        ohlcv.volume = volume;
+        
+        // Test default to_time_series (using close prices)
+        let ts = ohlcv.to_time_series(false);
+        assert_eq!(ts.name, "AAPL close");
+        assert_eq!(ts.values, ohlcv.close);
+        
+        // Add adjusted close and test with it
+        let adjusted = vec![101.5, 102.5, 103.5];
+        ohlcv.adjusted_close = Some(adjusted.clone());
+        
+        let ts_adjusted = ohlcv.to_time_series(true);
+        assert_eq!(ts_adjusted.name, "AAPL close");
+        assert_eq!(ts_adjusted.values, adjusted);
+    }
+
+    #[test]
+    fn test_time_series_operations() {
+        let now = Utc::now();
+        let timestamps = vec![
+            now,
+            now + chrono::Duration::days(1),
+            now + chrono::Duration::days(2),
+            now + chrono::Duration::days(3),
+            now + chrono::Duration::days(4),
+        ];
+        let values = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        
+        let ts = TimeSeriesData::new(timestamps, values, "test_series").unwrap();
+        
+        // Test train_test_split
+        let (train, test) = ts.train_test_split(0.6).unwrap();
+        assert_eq!(train.len(), 3);  // 60% of 5 = 3
+        assert_eq!(test.len(), 2);
+        assert_eq!(train.values, vec![1.0, 2.0, 3.0]);
+        assert_eq!(test.values, vec![4.0, 5.0]);
+        
+        // Test invalid ratio
+        let result = ts.train_test_split(0.0);
+        assert!(result.is_err());
+        
+        let result = ts.train_test_split(1.0);
+        assert!(result.is_err());
     }
 }

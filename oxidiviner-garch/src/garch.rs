@@ -239,8 +239,13 @@ impl GARCHModel {
 
         // Initialize with unconditional variance
         let unconditional_variance = residuals.iter().map(|&r| r * r).sum::<f64>() / n as f64;
-        for i in 0..max_lag {
-            variance[i] = unconditional_variance;
+
+        // Initialize the first elements with historical values
+        let max_lag = p.max(q);
+        
+        // Instead of a range loop, use an iterator on the slice
+        for variance_item in variance.iter_mut().take(max_lag) {
+            *variance_item = unconditional_variance;
         }
 
         // Calculate variance for the rest of the series

@@ -222,9 +222,7 @@ impl VARModel {
 
             // Add intercept term if included
             if self.include_intercept {
-                for i in 0..self.k {
-                    current_forecast[i] = intercept[i];
-                }
+                current_forecast[..self.k].copy_from_slice(&intercept[..self.k]);
             }
 
             // Apply coefficient matrices to lagged values
@@ -591,12 +589,8 @@ impl VARModel {
         let mut coefficient_matrices = Vec::with_capacity(self.p);
         let mut intercept = vec![0.0; k];
 
-        // Set intercept if included
-        if self.include_intercept {
-            for i in 0..k {
-                intercept[i] = b[0][i];
-            }
-        }
+        // Copy the intercept values from the first row of the coefficient matrix
+        intercept[..k].copy_from_slice(&b[0][..k]);
 
         // Extract coefficient matrices
         for lag in 0..self.p {
