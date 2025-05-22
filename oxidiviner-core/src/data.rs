@@ -255,6 +255,21 @@ impl TimeSeriesData {
     pub fn from_ohlcv(ohlcv: &OHLCVData, use_adjusted_close: bool) -> Self {
         ohlcv.to_time_series(use_adjusted_close)
     }
+
+    /// Create a new TimeSeriesData with a subset of the data from start_idx to end_idx
+    pub fn slice(&self, start_idx: usize, end_idx: usize) -> Result<Self> {
+        if start_idx >= end_idx || end_idx > self.len() {
+            return Err(OxiError::InvalidParameter(
+                "Invalid slice indices".to_string(),
+            ));
+        }
+
+        Ok(TimeSeriesData {
+            timestamps: self.timestamps[start_idx..end_idx].to_vec(),
+            values: self.values[start_idx..end_idx].to_vec(),
+            name: format!("{}_slice", self.name),
+        })
+    }
 }
 
 #[cfg(test)]
