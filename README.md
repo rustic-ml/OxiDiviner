@@ -98,10 +98,68 @@ Add OxiDiviner to your Cargo.toml:
 
 ```toml
 [dependencies]
-oxidiviner = "0.3.9"
+oxidiviner = "0.4.0"
 ```
 
 See the examples directory for complete usage examples.
+
+## Simplified Imports
+
+OxiDiviner offers multiple ways to import functionality, making it easier to use the library based on your preferences:
+
+### Option 1: Using the Prelude Module
+
+The prelude module provides access to commonly used types and models in a single import:
+
+```rust
+use oxidiviner::prelude::*;
+
+fn main() -> Result<()> {
+    // Create a time series
+    let data = TimeSeriesData::new(dates, values, "example_series")?;
+    
+    // Use models directly
+    let mut model = ARModel::new(1, true)?;
+    model.fit(&data)?;
+    
+    // Access metrics functions
+    let mae_value = mae(&actual, &predicted);
+    
+    Ok(())
+}
+```
+
+### Option 2: Direct Model Imports from Root
+
+For a clean, concise approach, you can import models directly from the root:
+
+```rust
+use oxidiviner::{TimeSeriesData, Forecaster, ARModel, HoltWintersModel, MAModel};
+
+fn main() -> oxidiviner::Result<()> {
+    // Now you can use models directly without nested imports
+    let mut ma_model = MAModel::new(3)?;
+    let mut arima = oxidiviner::ARIMAModel::new(1, 1, 1, true)?;
+    
+    Ok(())
+}
+```
+
+### Option 3: Direct Access to Subcrates
+
+For more advanced usage or when working with specific components:
+
+```rust
+// Direct access to subcrates
+use oxidiviner::moving_average::MAModel;
+use oxidiviner::exponential_smoothing::HoltWintersModel;
+use oxidiviner::autoregressive::ARIMAModel;
+use oxidiviner::math::metrics::rmse;
+
+fn main() {
+    // Use types directly from the subcrates
+}
+```
 
 ## Usage Examples
 
@@ -535,7 +593,7 @@ Enable features in your Cargo.toml:
 
 ```toml
 [dependencies]
-oxidiviner = { version = "0.3.9", features = ["plotting", "polars_integration"] }
+oxidiviner = { version = "0.4.0", features = ["plotting", "polars_integration"] }
 ```
 
 ## License

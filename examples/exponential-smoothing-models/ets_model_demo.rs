@@ -101,11 +101,7 @@ fn generate_synthetic_daily_data() -> TimeSeriesData {
         values.push(value);
     }
 
-    TimeSeriesData::new(
-        timestamps,
-        values,
-        "Synthetic daily data",
-    ).unwrap() // Unwrapping is safe here since we ensure lengths are equal
+    TimeSeriesData::new(timestamps, values, "Synthetic daily data").unwrap() // Unwrapping is safe here since we ensure lengths are equal
 }
 
 // This function is no longer needed since we're not using OHLCV data

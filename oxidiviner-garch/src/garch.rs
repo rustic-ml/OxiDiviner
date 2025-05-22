@@ -242,7 +242,7 @@ impl GARCHModel {
 
         // Initialize the first elements with historical values
         let max_lag = p.max(q);
-        
+
         // Instead of a range loop, use an iterator on the slice
         for variance_item in variance.iter_mut().take(max_lag) {
             *variance_item = unconditional_variance;

@@ -212,8 +212,8 @@ impl Forecaster for ARIMAModel {
         .map_err(|e| OxiError::ModelError(format!("Failed to create differenced series: {}", e)))?;
 
         // Create and fit an ARMA model on the differenced data
-        let mut arma = ARMAModel::new(self.p, self.q, self.include_intercept)
-            .map_err(OxiError::from)?;
+        let mut arma =
+            ARMAModel::new(self.p, self.q, self.include_intercept).map_err(OxiError::from)?;
 
         arma.fit(&differenced_series)?;
 

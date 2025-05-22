@@ -151,8 +151,7 @@ impl VARModel {
         }
 
         // Fit the VAR model
-        self.fit_var_model(&all_values)
-            .map_err(OxiError::from)?;
+        self.fit_var_model(&all_values).map_err(OxiError::from)?;
 
         Ok(())
     }
@@ -875,16 +874,16 @@ mod tests {
         // Add small variations to avoid singularity issues
         let mut values1 = Vec::with_capacity(15);
         let mut values2 = Vec::with_capacity(15);
-        
+
         for i in 0..15 {
             let base = (i + 1) as f64;
             // Small sinusoidal variations
             let noise1 = 0.05 * (i as f64 * 0.7).sin();
             let noise2 = 0.05 * (i as f64 * 0.5).cos();
-            
+
             let y1 = base + noise1;
             let y2 = 2.0 * base + noise2; // Approximately 2*y1 with different noise
-            
+
             values1.push(y1);
             values2.push(y2);
         }

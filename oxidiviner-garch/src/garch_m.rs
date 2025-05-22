@@ -326,10 +326,10 @@ impl GARCHMModel {
 
         // Initialize the first elements with historical values
         let max_lag = p.max(q);
-        
+
         // Initialize with unconditional variance
         let unconditional_variance = residuals.iter().map(|&r| r * r).sum::<f64>() / n as f64;
-        
+
         // Instead of a range loop, use an iterator on the slice
         for variance_item in variance.iter_mut().take(max_lag) {
             *variance_item = unconditional_variance;
@@ -539,27 +539,27 @@ mod tests {
         // Test with valid parameters
         let model = GARCHMModel::new(1, 1, RiskPremiumType::Variance, None);
         assert!(model.is_ok());
-        
+
         let model = model.unwrap();
         assert_eq!(model.alpha.len(), 1);
         assert_eq!(model.beta.len(), 1);
         assert_eq!(model.risk_type, RiskPremiumType::Variance);
-        
+
         // Test with both p and q as zero
         let model = GARCHMModel::new(0, 0, RiskPremiumType::StdDev, None);
         assert!(model.is_err());
-        
+
         if let Err(GARCHError::InvalidParameters(msg)) = model {
             assert!(msg.contains("Both p and q cannot be zero"));
         } else {
             panic!("Expected InvalidParameters error");
         }
-        
+
         // Test with provided parameters
         let params = vec![0.01, 0.05, 0.05, 0.1, 0.8];
         let model = GARCHMModel::new(1, 1, RiskPremiumType::LogVariance, Some(params.clone()));
         assert!(model.is_ok());
-        
+
         let model = model.unwrap();
         assert_eq!(model.mean, params[0]);
         assert_eq!(model.lambda, params[1]);
@@ -567,13 +567,13 @@ mod tests {
         assert_eq!(model.alpha[0], params[3]);
         assert_eq!(model.beta[0], params[4]);
         assert_eq!(model.risk_type, RiskPremiumType::LogVariance);
-        
+
         // Test with wrong number of parameters
         let params = vec![0.01, 0.05, 0.05]; // Missing alpha and beta
         let model = GARCHMModel::new(1, 1, RiskPremiumType::Variance, Some(params));
         assert!(model.is_err());
     }
-    
+
     #[test]
     fn test_parameter_validation() {
         // Test with negative omega
@@ -585,7 +585,7 @@ mod tests {
         } else {
             panic!("Expected InvalidParameters error");
         }
-        
+
         // Test with negative alpha
         let params = vec![0.0, 0.05, 0.01, -0.1, 0.8];
         let model = GARCHMModel::new(1, 1, RiskPremiumType::Variance, Some(params));
@@ -595,7 +595,7 @@ mod tests {
         } else {
             panic!("Expected InvalidParameters error");
         }
-        
+
         // Test with negative beta
         let params = vec![0.0, 0.05, 0.01, 0.1, -0.8];
         let model = GARCHMModel::new(1, 1, RiskPremiumType::Variance, Some(params));
@@ -605,7 +605,7 @@ mod tests {
         } else {
             panic!("Expected InvalidParameters error");
         }
-        
+
         // Test with sum of alpha and beta >= 1
         let params = vec![0.0, 0.05, 0.01, 0.3, 0.7]; // Sum = 1.0
         let model = GARCHMModel::new(1, 1, RiskPremiumType::Variance, Some(params));
@@ -615,51 +615,50 @@ mod tests {
         } else {
             panic!("Expected InvalidParameters error");
         }
-        
+
         // Test with sum of alpha and beta > 1
         let params = vec![0.0, 0.05, 0.01, 0.4, 0.7]; // Sum = 1.1
         let model = GARCHMModel::new(1, 1, RiskPremiumType::Variance, Some(params));
         assert!(model.is_err());
     }
-    
+
     #[test]
     fn test_risk_premium_types() {
         let variance = 0.25;
-        
+
         // Test Variance type
         let model = GARCHMModel::new(1, 1, RiskPremiumType::Variance, None).unwrap();
         assert_eq!(model.apply_risk_premium(variance), variance);
-        
+
         // Test StdDev type
         let model = GARCHMModel::new(1, 1, RiskPremiumType::StdDev, None).unwrap();
         assert_eq!(model.apply_risk_premium(variance), 0.5); // sqrt(0.25) = 0.5
-        
+
         // Test LogVariance type
         let model = GARCHMModel::new(1, 1, RiskPremiumType::LogVariance, None).unwrap();
         assert_eq!(model.apply_risk_premium(variance), variance.ln());
     }
-    
+
     #[test]
     fn test_fit_and_forecast() {
         // Create a simple synthetic dataset
         let data = vec![
-            0.1, 0.2, -0.1, 0.3, -0.2, 0.15, -0.15, 0.25, -0.1, 0.3, 
-            -0.2, 0.4, -0.3, 0.2, -0.1, 0.3, -0.2, 0.25, -0.15, 0.35
+            0.1, 0.2, -0.1, 0.3, -0.2, 0.15, -0.15, 0.25, -0.1, 0.3, -0.2, 0.4, -0.3, 0.2, -0.1,
+            0.3, -0.2, 0.25, -0.15, 0.35,
         ];
-        
+
         let timestamps = (0..data.len())
             .map(|i| Utc::now() + chrono::Duration::days(i as i64))
             .collect::<Vec<_>>();
-        
+
         // Create a GARCH-M(1,1) model with valid parameters
         let params = vec![0.01, 0.05, 0.05, 0.1, 0.8];
-        let mut model = GARCHMModel::new(1, 1, RiskPremiumType::Variance, Some(params))
-            .unwrap();
-        
+        let mut model = GARCHMModel::new(1, 1, RiskPremiumType::Variance, Some(params)).unwrap();
+
         // Fit the model
         let result = model.fit(&data, Some(&timestamps));
         assert!(result.is_ok());
-        
+
         // Check that fitted values are populated
         assert!(model.fitted_variance.is_some());
         assert!(model.fitted_mean.is_some());
@@ -667,27 +666,27 @@ mod tests {
         assert!(model.log_likelihood.is_some());
         assert!(model.info_criteria.is_some());
         assert!(model.timestamps.is_some());
-        
+
         // Check the fitted variance is positive
         let variance = model.fitted_variance.as_ref().unwrap();
         for &v in variance {
             assert!(v > 0.0);
         }
-        
+
         // Test forecasting
         let horizon = 5;
         let result = model.forecast(horizon);
         assert!(result.is_ok());
-        
+
         let (forecast_mean, forecast_var) = result.unwrap();
         assert_eq!(forecast_mean.len(), horizon);
         assert_eq!(forecast_var.len(), horizon);
-        
+
         // All forecasted variances should be positive
         for &v in &forecast_var {
             assert!(v > 0.0);
         }
-        
+
         // Test zero horizon
         let result = model.forecast(0);
         assert!(result.is_ok());
@@ -695,13 +694,13 @@ mod tests {
         assert!(mean.is_empty());
         assert!(var.is_empty());
     }
-    
+
     #[test]
     fn test_fit_error_cases() {
         // Test with too little data
         let data = vec![0.1];
         let mut model = GARCHMModel::new(1, 1, RiskPremiumType::Variance, None).unwrap();
-        
+
         let result = model.fit(&data, None);
         assert!(result.is_err());
         if let Err(err) = result {
@@ -709,11 +708,11 @@ mod tests {
             assert!(err_msg.contains("at least 2 points"));
         }
     }
-    
+
     #[test]
     fn test_forecast_without_fitting() {
         let model = GARCHMModel::new(1, 1, RiskPremiumType::Variance, None).unwrap();
-        
+
         // Try to forecast without fitting
         let result = model.forecast(5);
         assert!(result.is_err());
@@ -722,15 +721,14 @@ mod tests {
             assert!(err_msg.contains("not fitted"));
         }
     }
-    
+
     #[test]
     fn test_display() {
         let params = vec![0.01, 0.05, 0.05, 0.1, 0.8];
-        let model = GARCHMModel::new(1, 1, RiskPremiumType::Variance, Some(params))
-            .unwrap();
-        
+        let model = GARCHMModel::new(1, 1, RiskPremiumType::Variance, Some(params)).unwrap();
+
         let display_str = format!("{}", model);
-        
+
         // Check that the display string contains key information
         assert!(display_str.contains("GARCH-M(1, 1) Model"));
         assert!(display_str.contains("Risk Premium Type: Variance"));

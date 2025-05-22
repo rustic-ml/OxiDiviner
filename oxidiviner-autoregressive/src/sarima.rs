@@ -90,7 +90,10 @@ impl SARIMAModel {
                 p, d, q, seasonal_p, seasonal_d, seasonal_q, s
             )
         } else {
-            format!("SARIMA({},{},{})({},{},{}){}", p, d, q, seasonal_p, seasonal_d, seasonal_q, s)
+            format!(
+                "SARIMA({},{},{})({},{},{}){}",
+                p, d, q, seasonal_p, seasonal_d, seasonal_q, s
+            )
         };
 
         Ok(SARIMAModel {
@@ -248,8 +251,13 @@ impl Forecaster for SARIMAModel {
         let n = data.values.len();
 
         // Need enough data for both seasonal and non-seasonal components
-        let min_required =
-            self.s * self.seasonal_d + self.d + self.p.max(self.seasonal_p * self.s).max(self.q).max(self.seasonal_q * self.s);
+        let min_required = self.s * self.seasonal_d
+            + self.d
+            + self
+                .p
+                .max(self.seasonal_p * self.s)
+                .max(self.q)
+                .max(self.seasonal_q * self.s);
 
         if n <= min_required {
             return Err(OxiError::from(ARError::InsufficientData {
@@ -259,7 +267,8 @@ impl Forecaster for SARIMAModel {
         }
 
         // First apply seasonal differencing
-        let seasonally_differenced = self.seasonal_difference(&data.values, self.seasonal_d, self.s);
+        let seasonally_differenced =
+            self.seasonal_difference(&data.values, self.seasonal_d, self.s);
 
         // Store original values for later integration during forecasting
         self.last_values = Some(data.values[(n - self.s * self.seasonal_d - 1)..].to_vec());

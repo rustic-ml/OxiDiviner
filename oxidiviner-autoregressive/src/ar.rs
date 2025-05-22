@@ -275,8 +275,7 @@ impl Forecaster for ARModel {
         }
 
         // Fit the model using Yule-Walker equations
-        self.fit_yule_walker(&data.values)
-            .map_err(OxiError::from)?;
+        self.fit_yule_walker(&data.values).map_err(OxiError::from)?;
 
         // Calculate fitted values
         let mut fitted_values = vec![f64::NAN; self.p]; // First p values cannot be predicted
@@ -373,7 +372,7 @@ mod tests {
         values[5] = 10.01;
         values[10] = 9.99;
         values[15] = 10.02;
-        
+
         let timestamps: Vec<chrono::DateTime<Utc>> = (0..values.len())
             .map(|i| Utc::now() + chrono::Duration::days(i as i64))
             .collect();
@@ -382,14 +381,14 @@ mod tests {
 
         let mut model = ARModel::new(1, true).unwrap();
         let result = model.fit(&ts_data);
-        
+
         // Should fit without errors
         assert!(result.is_ok());
-        
+
         // The coefficient should be small for near-constant data
         let coeffs = model.coefficients().unwrap();
         assert!(coeffs[0].abs() < 0.5);
-        
+
         // Forecast should predict values close to 10.0
         let forecast = model.forecast(5).unwrap();
         assert_eq!(forecast.len(), 5);
@@ -406,7 +405,7 @@ mod tests {
         values[5] += 0.01;
         values[10] -= 0.02;
         values[15] += 0.03;
-        
+
         let timestamps: Vec<chrono::DateTime<Utc>> = (0..values.len())
             .map(|i| Utc::now() + chrono::Duration::days(i as i64))
             .collect();
@@ -419,10 +418,10 @@ mod tests {
 
         // Forecast with trending data
         let forecast = model.forecast(5).unwrap();
-        
+
         // Check that we can make forecasts for trending data
         assert_eq!(forecast.len(), 5);
-        
+
         // Check that all forecasts are finite numbers
         for f in forecast {
             assert!(f.is_finite(), "Forecast should be a finite number");
@@ -433,100 +432,103 @@ mod tests {
     fn test_ar_model_coefficient_access() {
         // Test accessing model parameters
         let mut model = ARModel::new(2, true).unwrap();
-        
+
         // Before fitting
         assert!(model.coefficients().is_none());
         assert!(model.intercept().is_none());
         assert!(model.mean().is_none());
         assert!(model.fitted_values().is_none());
-        
+
         // Create some data with known pattern
-        let values = vec![1.0, 2.0, 3.0, 2.0, 1.0, 2.0, 3.0, 2.0, 1.0, 2.0, 3.0, 2.0, 1.0];
+        let values = vec![
+            1.0, 2.0, 3.0, 2.0, 1.0, 2.0, 3.0, 2.0, 1.0, 2.0, 3.0, 2.0, 1.0,
+        ];
         let timestamps = (0..values.len())
             .map(|i| Utc::now() + chrono::Duration::days(i as i64))
             .collect();
-        
+
         let ts_data = TimeSeriesData::new(timestamps, values, "pattern").unwrap();
-        
+
         // Fit the model
         let result = model.fit(&ts_data);
         assert!(result.is_ok());
-        
+
         // After fitting, these should be available
         assert!(model.coefficients().is_some());
         assert!(model.intercept().is_some());
         assert!(model.mean().is_some());
         assert!(model.fitted_values().is_some());
-        
+
         // The name should include the order and intercept info
         assert_eq!(model.name(), "AR(2)+intercept");
     }
-    
+
     #[test]
     fn test_ar_model_invalid_parameters() {
         // Test with invalid lag order p=0
         let result = ARModel::new(0, true);
         assert!(result.is_err());
-        
+
         if let Err(ARError::InvalidLagOrder(p)) = result {
             assert_eq!(p, 0);
         } else {
             panic!("Expected InvalidLagOrder error");
         }
-        
+
         // Test with insufficient data
         let mut model = ARModel::new(5, true).unwrap();
-        
+
         // Create data with fewer points than needed for AR(5)
-        let values = vec![1.0, 2.0, 3.0, 4.0];  // Only 4 points, need at least 5
+        let values = vec![1.0, 2.0, 3.0, 4.0]; // Only 4 points, need at least 5
         let timestamps = (0..values.len())
             .map(|i| Utc::now() + chrono::Duration::days(i as i64))
             .collect();
-        
+
         let ts_data = TimeSeriesData::new(timestamps, values, "short").unwrap();
-        
+
         // Fitting should fail
         let result = model.fit(&ts_data);
         assert!(result.is_err());
     }
-    
+
     #[test]
     fn test_ar_model_evaluation() {
         // Create data with a clear AR(1) pattern
-        let values = vec![1.0, 1.2, 1.1, 1.15, 1.12, 1.14, 1.13, 1.15, 1.14, 1.16, 
-                         1.15, 1.17, 1.16, 1.18, 1.17];
+        let values = vec![
+            1.0, 1.2, 1.1, 1.15, 1.12, 1.14, 1.13, 1.15, 1.14, 1.16, 1.15, 1.17, 1.16, 1.18, 1.17,
+        ];
         let timestamps: Vec<chrono::DateTime<Utc>> = (0..values.len())
             .map(|i| Utc::now() + chrono::Duration::days(i as i64))
             .collect();
-        
+
         // We don't need the full time series, just train and test splits
         let train_len = 10;
         let train_timestamps = timestamps[0..train_len].to_vec();
         let train_values = values[0..train_len].to_vec();
         let test_timestamps = timestamps[train_len..].to_vec();
         let test_values = values[train_len..].to_vec();
-        
+
         let train_data = TimeSeriesData::new(train_timestamps, train_values, "train").unwrap();
         let test_data = TimeSeriesData::new(test_timestamps, test_values, "test").unwrap();
-        
+
         // Fit an AR(1) model
         let mut model = ARModel::new(1, true).unwrap();
         model.fit(&train_data).unwrap();
-        
+
         // Evaluate on test data
         let eval = model.evaluate(&test_data).unwrap();
-        
+
         // Check evaluation metrics
         assert!(eval.mae > 0.0);
         assert!(eval.mse > 0.0);
         assert!(eval.rmse > 0.0);
         assert!(eval.mape > 0.0);
-        
+
         // Try the predict method too
         let output = model.predict(5, Some(&test_data)).unwrap();
         assert_eq!(output.forecasts.len(), 5);
         assert!(output.evaluation.is_some());
-        
+
         // Predict without test data
         let output_no_test = model.predict(5, None).unwrap();
         assert_eq!(output_no_test.forecasts.len(), 5);

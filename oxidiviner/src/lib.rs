@@ -12,10 +12,75 @@
 //! designed to provide efficient, accurate, and easy-to-use statistical models for Rust.
 //! This main crate serves as a convenient entry point to access all functionality.
 //!
+//! ## Usage
+//!
+//! The easiest way to use OxiDiviner is through the prelude module, which provides access to commonly used types and functions:
+//!
+//! ```rust
+//! use oxidiviner::prelude::*;
+//!
+//! # fn main() -> Result<()> {
+//! // Create a time series
+//! let dates = vec![
+//!     Utc.with_ymd_and_hms(2023, 1, 1, 0, 0, 0).unwrap(),
+//!     Utc.with_ymd_and_hms(2023, 1, 2, 0, 0, 0).unwrap(),
+//!     Utc.with_ymd_and_hms(2023, 1, 3, 0, 0, 0).unwrap(),
+//! ];
+//! let values = vec![1.0, 1.5, 2.0];
+//! let data = TimeSeriesData::new(dates, values, "example_series")?;
+//!
+//! // Create and fit a model
+//! let mut model = ARModel::new(1, true)?;
+//! model.fit(&data)?;
+//!
+//! // Generate forecast
+//! let forecast = model.forecast(2)?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! You can also directly access models without going through the prelude or models module:
+//!
+//! ```rust
+//! // Direct access to models
+//! use oxidiviner::{TimeSeriesData, Forecaster, ARModel, HoltWintersModel, MAModel};
+//!
+//! # fn main() -> oxidiviner::Result<()> {
+//! // Now you can use models directly without nested imports
+//! let mut ma_model = MAModel::new(3)?;
+//! let mut arima = oxidiviner::ARIMAModel::new(1, 1, 1, true)?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! For more direct access to specific subcrates, you can use the direct exports:
+//!
+//! ```rust
+//! // Direct access to subcrates
+//! use oxidiviner::moving_average::MAModel;
+//! use oxidiviner::exponential_smoothing::HoltWintersModel;
+//! use oxidiviner::autoregressive::ARIMAModel;
+//! use oxidiviner::math::metrics::rmse;
+//!
+//! # fn main() {
+//! // Now you can use types directly without going through the models module
+//! # }
+//! ```
+//!
+//! ## Benefits of Multiple Import Options
+//!
+//! OxiDiviner offers these different import methods to support various usage patterns:
+//!
+//! * **Prelude**: Ideal for quick prototyping and simplicity
+//! * **Direct Model Imports**: Clean and concise for focused model usage
+//! * **Subcrate Access**: Provides granular control for advanced users
+//!
+//! This approach allows you to choose the style that best fits your project's needs.
+//!
 //! ## Project Organization
 //!
 //! OxiDiviner uses a monorepo architecture where:
-//! 
+//!
 //! * The main `oxidiviner` crate is the only publicly published package
 //! * Internal crates provide modular organization during development
 //! * All internal crate source code is included in the main crate's package
@@ -172,6 +237,18 @@ pub use oxidiviner_core::*;
 #[doc(inline)]
 pub use oxidiviner_math as math;
 
+// Direct access to subcrates for power users
+#[doc(inline)]
+pub use oxidiviner_autoregressive as autoregressive;
+#[doc(inline)]
+pub use oxidiviner_core as core;
+#[doc(inline)]
+pub use oxidiviner_exponential_smoothing as exponential_smoothing;
+#[doc(inline)]
+pub use oxidiviner_garch as garch;
+#[doc(inline)]
+pub use oxidiviner_moving_average as moving_average;
+
 // Re-export models from module-specific crates
 pub mod models {
     /// Moving average models for capturing short-term patterns
@@ -199,6 +276,12 @@ pub mod models {
     }
 }
 
+// Direct re-exports of all model types for maximum convenience
+pub use models::autoregressive::{ARIMAModel, ARModel, SARIMAModel};
+pub use models::exponential_smoothing::{HoltWintersModel, SimpleESModel};
+pub use models::garch::{EGARCHModel, GARCHModel, GJRGARCHModel};
+pub use models::moving_average::MAModel;
+
 /// Prelude module that re-exports the most commonly used types and traits
 ///
 /// This module is intended to be glob-imported with `use oxidiviner::prelude::*`
@@ -215,8 +298,18 @@ pub mod prelude {
     // Common models
     pub use crate::models::autoregressive::ARIMAModel;
     pub use crate::models::autoregressive::ARModel;
+    pub use crate::models::autoregressive::SARIMAModel;
     pub use crate::models::exponential_smoothing::HoltWintersModel;
     pub use crate::models::exponential_smoothing::SimpleESModel as SESModel;
+    pub use crate::models::garch::EGARCHModel;
     pub use crate::models::garch::GARCHModel;
+    pub use crate::models::garch::GJRGARCHModel;
     pub use crate::models::moving_average::MAModel;
+
+    // Common math utilities
+    pub use crate::math::metrics::{mae, mape, mse, rmse, smape};
+    pub use crate::math::transforms::difference;
+
+    // Time-related
+    pub use chrono::{DateTime, Duration, TimeZone, Utc};
 }

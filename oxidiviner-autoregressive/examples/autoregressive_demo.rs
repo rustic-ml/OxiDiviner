@@ -1,8 +1,8 @@
 use oxidiviner_autoregressive::{ARIMAModel, ARMAModel, ARModel, SARIMAModel, VARModel};
 use oxidiviner_core::TimeSeriesData;
 use std::collections::HashMap;
-use std::f64::consts::PI;
 use std::error::Error;
+use std::f64::consts::PI;
 
 fn main() -> std::result::Result<(), Box<dyn Error>> {
     println!("Autoregressive Models Example");
@@ -11,23 +11,23 @@ fn main() -> std::result::Result<(), Box<dyn Error>> {
     // Generate some test data
     let n = 120;
     let train_size = 100;
-    
+
     // Generate trend, seasonal, and two response variables
     let (trend_data, seasonal_data, y1_data, y2_data) = generate_test_data(n);
-    
+
     // Split into training and test sets
     let train_trend = slice_time_series(&trend_data, 0, train_size);
     let test_trend = slice_time_series(&trend_data, train_size, n);
-    
+
     let train_seasonal = slice_time_series(&seasonal_data, 0, train_size);
     let test_seasonal = slice_time_series(&seasonal_data, train_size, n);
-    
+
     let train_y1 = slice_time_series(&y1_data, 0, train_size);
     let test_y1 = slice_time_series(&y1_data, train_size, n);
-    
+
     let train_y2 = slice_time_series(&y2_data, 0, train_size);
     let test_y2 = slice_time_series(&y2_data, train_size, n);
-    
+
     // Test horizon
     let horizon = n - train_size;
 
@@ -137,17 +137,24 @@ fn slice_time_series(data: &TimeSeriesData, start: usize, end: usize) -> TimeSer
 }
 
 // Generate test data for the AR models
-fn generate_test_data(n: usize) -> (TimeSeriesData, TimeSeriesData, TimeSeriesData, TimeSeriesData) {
+fn generate_test_data(
+    n: usize,
+) -> (
+    TimeSeriesData,
+    TimeSeriesData,
+    TimeSeriesData,
+    TimeSeriesData,
+) {
     let now = chrono::Utc::now();
-    
+
     // Generate timestamps (daily data)
     let timestamps: Vec<chrono::DateTime<chrono::Utc>> = (0..n)
         .map(|i| now + chrono::Duration::days(i as i64))
         .collect();
-    
+
     // 1. Linear trend data for AR, ARMA, and ARIMA models
     let trend_values: Vec<f64> = (1..=n as i64).map(|i| i as f64).collect();
-    
+
     // 2. Seasonal data for SARIMA
     let mut seasonal_values = Vec::with_capacity(n);
     for i in 0..n {
@@ -155,35 +162,35 @@ fn generate_test_data(n: usize) -> (TimeSeriesData, TimeSeriesData, TimeSeriesDa
         let seasonal = 10.0 * (2.0 * PI * (i % 12) as f64 / 12.0).sin(); // Seasonal component
         seasonal_values.push(trend + seasonal);
     }
-    
+
     // 3. Two related series for VAR
     let y1_values = trend_values.clone();
     let y2_values: Vec<f64> = trend_values.iter().map(|&x| 2.0 * x + 5.0).collect();
-    
+
     // Create TimeSeriesData objects
     let trend_data = TimeSeriesData {
         timestamps: timestamps.clone(),
         values: trend_values,
         name: "trend_series".to_string(),
     };
-    
+
     let seasonal_data = TimeSeriesData {
         timestamps: timestamps.clone(),
         values: seasonal_values,
         name: "seasonal_series".to_string(),
     };
-    
+
     let y1_data = TimeSeriesData {
         timestamps: timestamps.clone(),
         values: y1_values,
         name: "y1".to_string(),
     };
-    
+
     let y2_data = TimeSeriesData {
         timestamps: timestamps.clone(),
         values: y2_values,
         name: "y2".to_string(),
     };
-    
+
     (trend_data, seasonal_data, y1_data, y2_data)
 }

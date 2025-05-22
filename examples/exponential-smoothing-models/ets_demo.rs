@@ -27,30 +27,30 @@ impl std::fmt::Display for ETSComponent {
 fn main() -> Result<(), Box<dyn Error>> {
     println!("ETS (Error-Trend-Seasonality) Demo");
     println!("===================================\n");
-    
+
     // Generate synthetic data
     println!("Generating synthetic daily data...");
     let daily_data = generate_synthetic_daily_data();
     println!("Generated {} daily data points", daily_data.len());
-    
+
     println!("\nGenerating synthetic minute data...");
     let minute_data = generate_synthetic_minute_data();
     println!("Generated {} minute data points", minute_data.len());
-    
+
     // Since we can't use the actual ETS model implementations due to import issues,
     // we'll just demonstrate the concept with a simplified explanation
-    
+
     println!("\nETS Model Overview");
     println!("-----------------");
     println!("ETS models represent time series with three components:");
     println!("1. Error (E): How random fluctuations are modeled (Additive or Multiplicative)");
     println!("2. Trend (T): How the series changes over time (None, Additive, Multiplicative, or Damped)");
     println!("3. Seasonal (S): How seasonal patterns affect the series (None, Additive, or Multiplicative)");
-    
+
     // Demo interpretation functions
     println!("\nExample Interpretation");
     println!("---------------------");
-    
+
     // Example parameters for interpretation
     let error_type = ETSComponent::Additive;
     let trend_type = ETSComponent::Additive;
@@ -62,26 +62,38 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mae = 1.5;
     let rmse = 2.3;
     let mape = 5.2;
-    
-    println!("Model: ETS({},{},{})", error_type, trend_type, seasonal_type);
-    println!("Parameters: α={:.2}, β={:.2}, γ={:.2}, φ={:.2}", alpha, beta, gamma, phi);
-    
+
+    println!(
+        "Model: ETS({},{},{})",
+        error_type, trend_type, seasonal_type
+    );
+    println!(
+        "Parameters: α={:.2}, β={:.2}, γ={:.2}, φ={:.2}",
+        alpha, beta, gamma, phi
+    );
+
     // Call the interpretation functions
     println!("\nTrend Analysis:");
-    println!("{}", interpret_trend("Example", trend_type, Some(beta), Some(phi), mae));
-    
+    println!(
+        "{}",
+        interpret_trend("Example", trend_type, Some(beta), Some(phi), mae)
+    );
+
     println!("\nSeasonality Analysis:");
-    println!("{}", interpret_seasonality(seasonal_type, Some(7), Some(gamma)));
-    
+    println!(
+        "{}",
+        interpret_seasonality(seasonal_type, Some(7), Some(gamma))
+    );
+
     println!("\nVolatility Analysis:");
     println!("{}", interpret_volatility(error_type, alpha, rmse));
-    
+
     println!("\nTrading Insights:");
     println!("{}", trading_insights(trend_type, seasonal_type, mape));
-    
+
     println!("\nRisk Assessment:");
     println!("{}", risk_assessment(error_type, trend_type, mape, rmse));
-    
+
     println!("\nNote: This is a simplified demo. For actual implementations, use the OxiDiviner library directly.");
     Ok(())
 }
@@ -91,32 +103,27 @@ fn generate_synthetic_daily_data() -> TimeSeriesData {
     let mut rng = rand::thread_rng();
     let now = Utc::now();
     let n = 365; // 1 year of daily data
-    
+
     let base_date = now - Duration::days(n as i64);
-    
+
     let mut timestamps = Vec::with_capacity(n);
     let mut values = Vec::with_capacity(n);
-    
+
     for i in 0..n {
         // Generate timestamp (daily data)
         let timestamp = base_date + Duration::days(i as i64);
         timestamps.push(timestamp);
-        
+
         // Generate value with trend, seasonality, and noise
         let trend_component = 0.5 * i as f64;
-        let season_component = 
-            10.0 * (2.0 * std::f64::consts::PI * (i % 30) as f64 / 30.0).sin();
+        let season_component = 10.0 * (2.0 * std::f64::consts::PI * (i % 30) as f64 / 30.0).sin();
         let noise = 3.0 * (rng.gen_range(0.0..1.0) - 0.5);
-        
-        let value = 100.0 + trend_component + season_component + noise;        
+
+        let value = 100.0 + trend_component + season_component + noise;
         values.push(value);
     }
-    
-    TimeSeriesData::new(
-        timestamps,
-        values,
-        "Synthetic daily data",
-    ).unwrap() // Unwrapping is safe here since we ensure lengths are equal
+
+    TimeSeriesData::new(timestamps, values, "Synthetic daily data").unwrap() // Unwrapping is safe here since we ensure lengths are equal
 }
 
 // Generate synthetic minute time series data
@@ -124,32 +131,27 @@ fn generate_synthetic_minute_data() -> TimeSeriesData {
     let mut rng = rand::thread_rng();
     let now = Utc::now();
     let n = 60 * 8; // 8 hours of minute data
-    
+
     let base_date = now - Duration::minutes(n as i64);
-    
+
     let mut timestamps = Vec::with_capacity(n);
     let mut values = Vec::with_capacity(n);
-    
+
     for i in 0..n {
         // Generate timestamp (minute data)
         let timestamp = base_date + Duration::minutes(i as i64);
         timestamps.push(timestamp);
-        
+
         // Generate value with trend, seasonality, and noise
         let trend_component = 0.001 * i as f64;
-        let season_component = 
-            1.0 * (2.0 * std::f64::consts::PI * (i % 60) as f64 / 60.0).sin();
+        let season_component = 1.0 * (2.0 * std::f64::consts::PI * (i % 60) as f64 / 60.0).sin();
         let noise = 0.5 * (rng.gen_range(0.0..1.0) - 0.5);
-        
+
         let value = 100.0 + trend_component + season_component + noise;
         values.push(value);
     }
-    
-    TimeSeriesData::new(
-        timestamps,
-        values,
-        "Synthetic minute data",
-    ).unwrap() // Unwrapping is safe here since we ensure lengths are equal
+
+    TimeSeriesData::new(timestamps, values, "Synthetic minute data").unwrap() // Unwrapping is safe here since we ensure lengths are equal
 }
 
 /// Interpret trend characteristics from ETS model
@@ -317,7 +319,9 @@ fn interpret_volatility(error_type: ETSComponent, alpha: f64, rmse: f64) -> Stri
             analysis.push_str("regardless of the level. ");
         }
         ETSComponent::Multiplicative => {
-            analysis.push_str("The multiplicative error structure indicates that volatility scales with level. ");
+            analysis.push_str(
+                "The multiplicative error structure indicates that volatility scales with level. ",
+            );
             analysis.push_str("Higher values correspond to larger fluctuations. ");
         }
         _ => {
@@ -361,7 +365,8 @@ fn trading_insights(trend_type: ETSComponent, seasonal_type: ETSComponent, mape:
             analysis.push_str("Trading strategies could focus on range-bound approaches. ");
         }
         (ETSComponent::None, _) => {
-            analysis.push_str("With seasonality but no trend, this series shows cyclical patterns ");
+            analysis
+                .push_str("With seasonality but no trend, this series shows cyclical patterns ");
             analysis.push_str("around a stable mean. Calendar-based strategies ");
             analysis.push_str("that anticipate seasonal moves could be effective. ");
         }
@@ -373,7 +378,9 @@ fn trading_insights(trend_type: ETSComponent, seasonal_type: ETSComponent, mape:
         (_, _) => {
             analysis.push_str("This series exhibits both trend and seasonality, ");
             analysis.push_str("suggesting complex but potentially predictable behavior. ");
-            analysis.push_str("Consider strategies that combine trend-following with seasonal adjustments. ");
+            analysis.push_str(
+                "Consider strategies that combine trend-following with seasonal adjustments. ",
+            );
         }
     }
 

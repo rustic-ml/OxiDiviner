@@ -36,12 +36,12 @@ include = [
 [dependencies]
 # Use path dependencies for local development, but specify version for publishing
 # Use the latest published versions (0.3.3) as references on crates.io
-oxidiviner-core = { version = "0.3.3", path = "../oxidiviner-core" }
-oxidiviner-math = { version = "0.3.3", path = "../oxidiviner-math" }
-oxidiviner-moving-average = { version = "0.3.3", path = "../oxidiviner-moving-average" }
-oxidiviner-exponential-smoothing = { version = "0.3.3", path = "../oxidiviner-exponential-smoothing" }
-oxidiviner-autoregressive = { version = "0.3.3", path = "../oxidiviner-autoregressive" }
-oxidiviner-garch = { version = "0.3.3", path = "../oxidiviner-garch" } 
+oxidiviner-core = { path = "../oxidiviner-core" }
+oxidiviner-math = { path = "../oxidiviner-math" }
+oxidiviner-moving-average = { path = "../oxidiviner-moving-average" }
+oxidiviner-exponential-smoothing = { path = "../oxidiviner-exponential-smoothing" }
+oxidiviner-autoregressive = { path = "../oxidiviner-autoregressive" }
+oxidiviner-garch = { path = "../oxidiviner-garch" } 
 rand = "0.9.1"
 rand_distr = "0.5.0"
 chrono = { version = "0.4.41", features = ["serde"] }

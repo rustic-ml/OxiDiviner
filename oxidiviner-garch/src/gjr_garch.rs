@@ -279,10 +279,10 @@ impl GJRGARCHModel {
 
         // Initialize the first elements with historical values
         let max_lag = p.max(q);
-        
+
         // Initialize with unconditional variance
         let unconditional_variance = residuals.iter().map(|&r| r * r).sum::<f64>() / n as f64;
-        
+
         // Instead of a range loop, use an iterator on the slice
         for variance_item in variance.iter_mut().take(max_lag) {
             *variance_item = unconditional_variance;

@@ -432,7 +432,7 @@ impl ARMAModel {
 
         // Copy AR coefficients
         ar_coeffs[..self.p].copy_from_slice(&phi[..self.p]);
-        
+
         Ok(())
     }
 
@@ -448,7 +448,7 @@ impl ARMAModel {
         for (q, coeff) in ma_coeffs.iter_mut().enumerate().take(self.q) {
             *coeff = theta[q];
         }
-        
+
         Ok(())
     }
 }
@@ -566,7 +566,9 @@ mod tests {
     use chrono::{DateTime, TimeZone, Utc};
 
     #[test]
-    #[should_panic(expected = "Forecast 7.543756067132845 should be close to 10.0 for near-constant data")]
+    #[should_panic(
+        expected = "Forecast 7.543756067132845 should be close to 10.0 for near-constant data"
+    )]
     fn test_arma_model_constant_data() {
         // Create near-constant time series with small variation
         let now = Utc::now();
@@ -642,7 +644,7 @@ mod tests {
             );
             prev = *forecast;
         }
-        
+
         // Also verify the first forecast is reasonably higher than the last training point
         assert!(
             forecasts[0] > 19.0,

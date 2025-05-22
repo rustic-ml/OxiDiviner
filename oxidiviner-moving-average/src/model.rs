@@ -231,108 +231,107 @@ mod tests {
         // MA(3) at index 9 = (8+9+10)/3 = 9
         assert!((fitted_values[9] - 9.0).abs() < 1e-6);
     }
-    
+
     #[test]
     fn test_ma_invalid_parameters() {
         // Test with invalid window size
         let result = MAModel::new(0);
         assert!(result.is_err());
-        
+
         if let Err(MAError::InvalidWindowSize(size)) = result {
             assert_eq!(size, 0);
         } else {
             panic!("Expected InvalidWindowSize error");
         }
     }
-    
+
     #[test]
     fn test_ma_fit_errors() {
         // Create a model
         let mut model = MAModel::new(3).unwrap();
-        
+
         // Test with insufficient data
         let now = Utc::now();
         let timestamps: Vec<DateTime<Utc>> = (0..2)
             .map(|i| Utc.timestamp_opt(now.timestamp() + i * 86400, 0).unwrap())
             .collect();
-        
+
         let values = vec![1.0, 2.0]; // Only 2 values, but window size is 3
         let short_data = TimeSeriesData::new(timestamps, values, "short").unwrap();
-        
+
         let result = model.fit(&short_data);
         assert!(result.is_err());
-        
+
         if let Err(err) = result {
             // Check the error message contains the right information
             let err_msg = format!("{:?}", err);
             assert!(err_msg.contains("series length"));
-            assert!(err_msg.contains("2"));  // actual length
-            assert!(err_msg.contains("3"));  // expected length
+            assert!(err_msg.contains("2")); // actual length
+            assert!(err_msg.contains("3")); // expected length
         }
     }
-    
+
     #[test]
     fn test_ma_forecast_errors() {
         // Test forecasting with unfitted model
         let model = MAModel::new(3).unwrap();
         let result = model.forecast(5);
         assert!(result.is_err());
-        
+
         if let Err(err) = result {
             match err {
-                OxiError::DataError(_) |
-                OxiError::ModelError(_) => {
+                OxiError::DataError(_) | OxiError::ModelError(_) => {
                     // This is fine - we just want to check that forecasting fails
                 }
                 _ => panic!("Unexpected error type: {:?}", err),
             }
         }
-        
+
         // Test invalid forecast horizon
         let now = Utc::now();
         let timestamps: Vec<DateTime<Utc>> = (0..10)
             .map(|i| Utc.timestamp_opt(now.timestamp() + i * 86400, 0).unwrap())
             .collect();
-        
+
         let values = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
         let data = TimeSeriesData::new(timestamps, values, "test").unwrap();
-        
+
         let mut fitted_model = MAModel::new(3).unwrap();
         fitted_model.fit(&data).unwrap();
-        
+
         let result = fitted_model.forecast(0);
         assert!(result.is_err());
-        
+
         if let Err(err) = result {
             // We don't check the specific error type since it's wrapped in OxiError
             // Just make sure it failed due to the horizon being 0
             assert!(format!("{:?}", err).contains("0"));
         }
     }
-    
+
     #[test]
     fn test_ma_evaluate_errors() {
         // Test evaluating with unfitted model
         let model = MAModel::new(3).unwrap();
-        
+
         let now = Utc::now();
         let timestamps: Vec<DateTime<Utc>> = (0..5)
             .map(|i| Utc.timestamp_opt(now.timestamp() + i * 86400, 0).unwrap())
             .collect();
-        
+
         let values = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let test_data = TimeSeriesData::new(timestamps, values, "test").unwrap();
-        
+
         let result = model.evaluate(&test_data);
         assert!(result.is_err());
-        
+
         if let Err(err) = result {
             // Check that we got an error, but don't verify specific error type
             // since it's wrapped in OxiError
             assert!(format!("{:?}", err).contains("fitted"));
         }
     }
-    
+
     #[test]
     fn test_ma_constant_data() {
         // Test with constant data
@@ -340,13 +339,13 @@ mod tests {
         let timestamps: Vec<DateTime<Utc>> = (0..10)
             .map(|i| Utc.timestamp_opt(now.timestamp() + i * 86400, 0).unwrap())
             .collect();
-        
+
         let values = vec![5.0; 10]; // All values are 5.0
         let data = TimeSeriesData::new(timestamps, values, "constant").unwrap();
-        
+
         let mut model = MAModel::new(3).unwrap();
         model.fit(&data).unwrap();
-        
+
         // Forecast should be constant
         let forecasts = model.forecast(5).unwrap();
         for forecast in forecasts {

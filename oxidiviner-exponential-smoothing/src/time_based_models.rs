@@ -1,5 +1,5 @@
 use crate::error::ESError;
-use crate::ets::{ErrorType, ETSModel, SeasonalType, TrendType};
+use crate::ets::{ETSModel, ErrorType, SeasonalType, TrendType};
 use chrono::{DateTime, Utc};
 use oxidiviner_core::{OHLCVData, OxiError, Result, TimeSeriesData};
 use std::collections::HashMap;
@@ -667,7 +667,7 @@ impl MinuteETSModel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     // Helper function to create test daily data
     fn create_test_daily_data() -> OHLCVData {
         let now = Utc::now();
@@ -677,27 +677,27 @@ mod tests {
         let mut low = Vec::with_capacity(100);
         let mut close = Vec::with_capacity(100);
         let mut volume = Vec::with_capacity(100);
-        
+
         // Create 100 days of synthetic data with trend and seasonality
         for i in 0..100 {
             let day = now + Duration::days(i);
             timestamps.push(day);
-            
+
             // Add trend (0.5 per day) and seasonality (7-day cycle)
             let trend = 0.5 * i as f64;
             let season = 5.0 * (2.0 * std::f64::consts::PI * (i % 7) as f64 / 7.0).sin();
             let noise = (i % 10) as f64 * 0.2 - 1.0; // Deterministic "noise"
-            
+
             let base_price = 100.0 + trend + season + noise;
             let daily_range = base_price * 0.02; // 2% daily range
-            
+
             open.push(base_price - daily_range / 2.0);
             close.push(base_price + daily_range / 2.0);
             high.push(base_price + daily_range);
             low.push(base_price - daily_range);
             volume.push(1000.0 + (i % 100) as f64 * 10.0);
         }
-        
+
         OHLCVData {
             symbol: "TEST_DAILY".to_string(),
             timestamps,
@@ -709,7 +709,7 @@ mod tests {
             adjusted_close: None,
         }
     }
-    
+
     // Helper function to create test minute data
     fn create_test_minute_data() -> OHLCVData {
         let now = Utc::now();
@@ -719,28 +719,29 @@ mod tests {
         let mut low = Vec::with_capacity(480);
         let mut close = Vec::with_capacity(480);
         let mut volume = Vec::with_capacity(480);
-        
+
         // Create 8 hours of 1-minute data with trend and hourly patterns
         for i in 0..480 {
             let minute = now + Duration::minutes(i);
             timestamps.push(minute);
-            
+
             // Add small trend + hourly seasonality
             let trend = 0.001 * i as f64;
             let minute_in_hour = i % 60;
-            let hour_cycle = 1.0 * (2.0 * std::f64::consts::PI * minute_in_hour as f64 / 60.0).sin();
+            let hour_cycle =
+                1.0 * (2.0 * std::f64::consts::PI * minute_in_hour as f64 / 60.0).sin();
             let noise = (i % 5) as f64 * 0.05 - 0.125; // Deterministic "noise"
-            
+
             let base_price = 100.0 + trend + hour_cycle + noise;
             let minute_range = base_price * 0.001; // Smaller range for minute data
-            
+
             open.push(base_price - minute_range);
             close.push(base_price + minute_range);
             high.push(base_price + minute_range * 1.5);
             low.push(base_price - minute_range * 1.5);
             volume.push(100.0 + (i % 60) as f64);
         }
-        
+
         OHLCVData {
             symbol: "TEST_MINUTE".to_string(),
             timestamps,
@@ -757,38 +758,36 @@ mod tests {
     fn test_daily_model_creation() {
         // Test simple model creation
         let _model = DailyETSModel::simple(0.3, None).unwrap();
-        
+
         // Test holt model creation
         let _model = DailyETSModel::holt(0.3, 0.1, None).unwrap();
-        
+
         // Test holt-winters model creation
         let _model = DailyETSModel::holt_winters_additive(0.3, 0.1, 0.1, 7, None).unwrap();
     }
-    
+
     #[test]
     fn test_daily_model_with_data() {
         let data = create_test_daily_data();
-        
+
         // Create and fit the model
-        let mut model = DailyETSModel::holt_winters_additive(
-            0.3, 0.1, 0.1, 7, None
-        ).unwrap();
-        
+        let mut model = DailyETSModel::holt_winters_additive(0.3, 0.1, 0.1, 7, None).unwrap();
+
         // Should fit successfully
         assert!(model.fit(&data).is_ok());
-        
+
         // Should generate forecasts
         let forecasts = model.forecast(30).unwrap();
         assert_eq!(forecasts.len(), 30);
-        
+
         // Fitted values should be available
         let fitted = model.fitted_values().unwrap();
         assert_eq!(fitted.len(), data.len());
-        
+
         // Test with different target columns
         let mut high_model = DailyETSModel::simple(0.3, Some("high".to_string())).unwrap();
         assert!(high_model.fit(&data).is_ok());
-        
+
         let mut volume_model = DailyETSModel::simple(0.3, Some("volume".to_string())).unwrap();
         assert!(volume_model.fit(&data).is_ok());
     }
@@ -797,35 +796,36 @@ mod tests {
     fn test_minute_model_creation() {
         // Test simple model creation
         let _model = MinuteETSModel::simple(0.3, None, None).unwrap();
-        
+
         // Test with aggregation
         let model = MinuteETSModel::simple(0.3, None, Some(5)).unwrap();
         assert_eq!(model.aggregation_minutes(), 5);
-        
+
         // Test hourly seasonality with aggregation
-        let _model = MinuteETSModel::holt_winters_additive(0.3, 0.1, 0.1, 60, None, Some(5)).unwrap();
+        let _model =
+            MinuteETSModel::holt_winters_additive(0.3, 0.1, 0.1, 60, None, Some(5)).unwrap();
     }
-    
+
     #[test]
     fn test_minute_model_with_data() {
         let data = create_test_minute_data();
-        
+
         // Create and fit a model with 5-minute aggregation
         let mut model = MinuteETSModel::simple(0.3, None, Some(5)).unwrap();
         assert!(model.fit(&data).is_ok());
-        
+
         // Generate forecasts
         let forecasts = model.forecast(60).unwrap();
         assert_eq!(forecasts.len(), 60);
-        
+
         // Create and fit a model with 15-minute seasonality
-        let mut seasonal_model = MinuteETSModel::holt_winters_additive(
-            0.3, 0.1, 0.1, 15, None, Some(5)
-        ).unwrap();
+        let mut seasonal_model =
+            MinuteETSModel::holt_winters_additive(0.3, 0.1, 0.1, 15, None, Some(5)).unwrap();
         assert!(seasonal_model.fit(&data).is_ok());
-        
+
         // Test with different target columns
-        let mut high_model = MinuteETSModel::simple(0.3, Some("high".to_string()), Some(5)).unwrap();
+        let mut high_model =
+            MinuteETSModel::simple(0.3, Some("high".to_string()), Some(5)).unwrap();
         assert!(high_model.fit(&data).is_ok());
     }
 
@@ -835,47 +835,54 @@ mod tests {
         let now = Utc::now();
         let mut timestamps = Vec::new();
         let mut values = Vec::new();
-        
+
         // Create 15 minutes of data
         for i in 0..15 {
             timestamps.push(now + Duration::minutes(i));
             values.push(i as f64);
         }
-        
+
         // Create model with 5-minute aggregation
         let model = MinuteETSModel::simple(0.3, None, Some(5)).unwrap();
-        
+
         // Aggregate data
-        let agg_data = model.aggregate_minute_data(&timestamps, &values, 5).unwrap();
-        
+        let agg_data = model
+            .aggregate_minute_data(&timestamps, &values, 5)
+            .unwrap();
+
         // Debug output
         println!("Original timestamps count: {}", timestamps.len());
         println!("Aggregated timestamps count: {}", agg_data.timestamps.len());
-        
+
         // Instead of checking exact count, check that aggregation reduces data points
         // There should be fewer aggregated timestamps than original
-        assert!(agg_data.timestamps.len() < timestamps.len(), 
-            "Aggregation should reduce the number of data points");
-            
+        assert!(
+            agg_data.timestamps.len() < timestamps.len(),
+            "Aggregation should reduce the number of data points"
+        );
+
         // We expect approximately 15/5 = 3 points, but allow for boundary conditions
-        assert!(agg_data.timestamps.len() >= 3 && agg_data.timestamps.len() <= 4,
-            "Expected 3-4 aggregated timestamps, got {}", agg_data.timestamps.len());
+        assert!(
+            agg_data.timestamps.len() >= 3 && agg_data.timestamps.len() <= 4,
+            "Expected 3-4 aggregated timestamps, got {}",
+            agg_data.timestamps.len()
+        );
     }
-    
+
     #[test]
     fn test_invalid_parameters() {
         // Test invalid alpha
         assert!(DailyETSModel::simple(1.5, None).is_err());
-        
+
         // Test invalid beta
         assert!(DailyETSModel::holt(0.3, 1.5, None).is_err());
-        
+
         // Test invalid seasonal period
         assert!(DailyETSModel::holt_winters_additive(0.3, 0.1, 0.1, 1, None).is_err());
-        
+
         // Test invalid aggregation minutes
         assert!(MinuteETSModel::simple(0.3, None, Some(0)).is_err());
-        
+
         // Test missing required parameters for seasonal model
         assert!(DailyETSModel::new(
             ETSComponent::Additive,
@@ -887,32 +894,32 @@ mod tests {
             None,
             Some(7),
             None
-        ).is_err());
+        )
+        .is_err());
     }
-    
+
     #[test]
     fn test_compare_models() {
         let daily_data = create_test_daily_data();
-        
+
         // Create and fit models with different configurations
         let mut simple_model = DailyETSModel::simple(0.3, None).unwrap();
         simple_model.fit(&daily_data).unwrap();
-        
+
         let mut trend_model = DailyETSModel::holt(0.3, 0.1, None).unwrap();
         trend_model.fit(&daily_data).unwrap();
-        
+
         // Use a stronger seasonality to ensure differences
-        let mut seasonal_model = DailyETSModel::holt_winters_additive(
-            0.3, 0.1, 0.5, 7, None
-        ).unwrap();
+        let mut seasonal_model =
+            DailyETSModel::holt_winters_additive(0.3, 0.1, 0.5, 7, None).unwrap();
         seasonal_model.fit(&daily_data).unwrap();
-        
+
         // Get forecasts - looking further ahead to see more pronounced differences
         let horizon = 20;
         let simple_forecast = simple_model.forecast(horizon).unwrap();
         let _trend_forecast = trend_model.forecast(horizon).unwrap();
         let seasonal_forecast = seasonal_model.forecast(horizon).unwrap();
-        
+
         // Check that at least some forecasts differ significantly
         let mut differences_found = false;
         for i in 10..horizon {
@@ -922,6 +929,9 @@ mod tests {
                 break;
             }
         }
-        assert!(differences_found, "Models should produce different forecasts");
+        assert!(
+            differences_found,
+            "Models should produce different forecasts"
+        );
     }
-} 
+}

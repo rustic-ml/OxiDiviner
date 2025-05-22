@@ -80,11 +80,11 @@ pub type Result<T> = std::result::Result<T, ARError>;
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_ar_error_conversions() {
         // Test conversion of each error type to OxiError
-        
+
         // EmptyData
         let ar_err = ARError::EmptyData;
         let oxi_err = OxiError::from(ar_err);
@@ -93,7 +93,7 @@ mod tests {
         } else {
             panic!("Expected DataError");
         }
-        
+
         // InvalidLagOrder
         let ar_err = ARError::InvalidLagOrder(0);
         let oxi_err = OxiError::from(ar_err);
@@ -103,7 +103,7 @@ mod tests {
         } else {
             panic!("Expected InvalidParameter");
         }
-        
+
         // InvalidHorizon
         let ar_err = ARError::InvalidHorizon(0);
         let oxi_err = OxiError::from(ar_err);
@@ -113,9 +113,12 @@ mod tests {
         } else {
             panic!("Expected InvalidParameter");
         }
-        
+
         // InsufficientData
-        let ar_err = ARError::InsufficientData { actual: 2, expected: 5 };
+        let ar_err = ARError::InsufficientData {
+            actual: 2,
+            expected: 5,
+        };
         let oxi_err = OxiError::from(ar_err);
         if let OxiError::DataError(msg) = oxi_err {
             assert!(msg.contains("Insufficient data"));
@@ -124,7 +127,7 @@ mod tests {
         } else {
             panic!("Expected DataError");
         }
-        
+
         // NotFitted
         let ar_err = ARError::NotFitted;
         let oxi_err = OxiError::from(ar_err);
@@ -133,7 +136,7 @@ mod tests {
         } else {
             panic!("Expected ModelError");
         }
-        
+
         // LinearSolveError
         let ar_err = ARError::LinearSolveError("singular matrix".to_string());
         let oxi_err = OxiError::from(ar_err);
@@ -143,7 +146,7 @@ mod tests {
         } else {
             panic!("Expected ModelError");
         }
-        
+
         // InvalidCoefficient
         let ar_err = ARError::InvalidCoefficient;
         let oxi_err = OxiError::from(ar_err);
@@ -153,7 +156,7 @@ mod tests {
         } else {
             panic!("Expected ModelError");
         }
-        
+
         // InvalidParameter
         let ar_err = ARError::InvalidParameter("bad parameter".to_string());
         let oxi_err = OxiError::from(ar_err);
@@ -162,7 +165,7 @@ mod tests {
         } else {
             panic!("Expected InvalidParameter");
         }
-        
+
         // MissingVariable
         let ar_err = ARError::MissingVariable("price".to_string());
         let oxi_err = OxiError::from(ar_err);
@@ -172,7 +175,7 @@ mod tests {
         } else {
             panic!("Expected DataError");
         }
-        
+
         // InconsistentTimestamps
         let ar_err = ARError::InconsistentTimestamps;
         let oxi_err = OxiError::from(ar_err);
@@ -181,7 +184,7 @@ mod tests {
         } else {
             panic!("Expected DataError");
         }
-        
+
         // InvalidSeasonalPeriod
         let ar_err = ARError::InvalidSeasonalPeriod(0);
         let oxi_err = OxiError::from(ar_err);
@@ -192,20 +195,29 @@ mod tests {
             panic!("Expected InvalidParameter");
         }
     }
-    
+
     #[test]
     fn test_ar_error_display() {
         // Test the display implementation for a few error types
         let err = ARError::EmptyData;
         assert_eq!(format!("{}", err), "Empty data provided");
-        
+
         let err = ARError::InvalidLagOrder(0);
         assert_eq!(format!("{}", err), "Invalid lag order p: 0");
-        
-        let err = ARError::InsufficientData { actual: 3, expected: 10 };
-        assert_eq!(format!("{}", err), "Insufficient data: 3 points provided, 10 required");
-        
+
+        let err = ARError::InsufficientData {
+            actual: 3,
+            expected: 10,
+        };
+        assert_eq!(
+            format!("{}", err),
+            "Insufficient data: 3 points provided, 10 required"
+        );
+
         let err = ARError::MissingVariable("volume".to_string());
-        assert_eq!(format!("{}", err), "Missing variable in multivariate model: volume");
+        assert_eq!(
+            format!("{}", err),
+            "Missing variable in multivariate model: volume"
+        );
     }
 }

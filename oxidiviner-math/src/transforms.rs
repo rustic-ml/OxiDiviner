@@ -156,7 +156,7 @@ mod tests {
         // Window size larger than input
         let too_large = moving_average(&values, 6);
         assert!(too_large.is_empty());
-        
+
         // Zero window size
         let zero_window = moving_average(&values, 0);
         assert!(zero_window.is_empty());
@@ -190,98 +190,98 @@ mod tests {
         let empty = exponential_moving_average(&[], 0.3);
         assert!(empty.is_empty());
     }
-    
+
     #[test]
     fn test_standardize() {
         // Test normal case
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let (standardized, mean_val, std_dev_val) = standardize(&data);
-        
+
         assert_eq!(mean_val, 3.0);
         assert!((std_dev_val - std_dev(&data)).abs() < 1e-6);
         assert_eq!(standardized.len(), data.len());
-        
+
         // Check standardized values (should have mean=0, std=1)
         let std_mean = mean(&standardized);
         let std_std = std_dev(&standardized);
         assert!(std_mean.abs() < 1e-6); // Should be approximately 0
         assert!((std_std - 1.0).abs() < 1e-6); // Should be approximately 1
-        
+
         // Test with constant data (should handle 0 std dev)
         let constant_data = vec![2.0, 2.0, 2.0];
         let (standardized_const, mean_const, std_dev_const) = standardize(&constant_data);
-        
+
         assert_eq!(mean_const, 2.0);
         assert_eq!(std_dev_const, 0.0);
         assert_eq!(standardized_const, vec![0.0, 0.0, 0.0]);
     }
-    
+
     #[test]
     fn test_destandardize() {
         // Standardize and then destandardize should give original data
         let data = vec![10.0, 20.0, 30.0, 40.0, 50.0];
         let (standardized, mean_val, std_dev_val) = standardize(&data);
-        
+
         let destandardized = destandardize(&standardized, mean_val, std_dev_val);
-        
+
         assert_eq!(destandardized.len(), data.len());
-        
+
         // Check values are close to original (within rounding error)
         for i in 0..data.len() {
             assert!((destandardized[i] - data[i]).abs() < 1e-6);
         }
     }
-    
+
     #[test]
     fn test_difference() {
         // Test normal case
         let data = vec![1.0, 3.0, 6.0, 10.0, 15.0];
         let diffs = difference(&data);
-        
+
         assert_eq!(diffs.len(), data.len() - 1);
         assert_eq!(diffs, vec![2.0, 3.0, 4.0, 5.0]);
-        
+
         // Test empty input
         let empty = difference(&[]);
         assert!(empty.is_empty());
-        
+
         // Test single value
         let single = difference(&[5.0]);
         assert!(single.is_empty());
     }
-    
+
     #[test]
     fn test_undifference() {
         // Test normal case
         let diffs = vec![2.0, 3.0, 4.0, 5.0];
         let first_value = 1.0;
-        
+
         let original = undifference(&diffs, first_value);
-        
+
         assert_eq!(original.len(), diffs.len() + 1);
         assert_eq!(original, vec![1.0, 3.0, 6.0, 10.0, 15.0]);
-        
+
         // Test empty input
         let empty = undifference(&[], 5.0);
         assert!(empty.is_empty());
     }
-    
+
     #[test]
     fn test_stationarity_measure() {
         // Stationary data - constant differences
         let stationary = vec![1.0, 2.0, 3.0, 4.0, 5.0]; // Differences are all 1.0
         let stationary_measure = stationarity_measure(&stationary);
         assert_eq!(stationary_measure, 0.0); // Standard deviation of differences is 0
-        
+
         // Non-stationary data - increasing differences
         let non_stationary = vec![1.0, 2.0, 4.0, 7.0, 11.0]; // Differences: 1, 2, 3, 4
         let non_stationary_measure = stationarity_measure(&non_stationary);
         assert!(non_stationary_measure > 0.0);
-        
+
         // Test with too few values
         let too_small = stationarity_measure(&[1.0]);
         assert_eq!(too_small, 0.0);
-        
+
         // Test with zeroes (mean of differences is zero)
         let zeros = vec![0.0, 0.0, 0.0, 0.0];
         let zeros_measure = stationarity_measure(&zeros);

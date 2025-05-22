@@ -1,4 +1,3 @@
-
 mod damped_trend;
 mod error;
 mod ets;
