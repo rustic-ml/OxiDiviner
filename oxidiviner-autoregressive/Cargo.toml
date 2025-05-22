@@ -13,8 +13,8 @@ description = "Autoregressive models for OxiDiviner time series analysis library
 publish = false
 
 [dependencies]
-oxidiviner-core = { path = "../oxidiviner-core", version = "0.4.0" }
-oxidiviner-math = { path = "../oxidiviner-math", version = "0.4.0" }
+oxidiviner-core = { path = "../oxidiviner-core", version = "0.4.1" }
+oxidiviner-math = { path = "../oxidiviner-math", version = "0.4.1" }
 thiserror.workspace = true
 chrono.workspace = true
 

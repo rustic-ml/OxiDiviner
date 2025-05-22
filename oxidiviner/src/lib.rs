@@ -277,9 +277,12 @@ pub mod models {
 }
 
 // Direct re-exports of all model types for maximum convenience
-pub use models::autoregressive::{ARIMAModel, ARModel, SARIMAModel};
-pub use models::exponential_smoothing::{HoltWintersModel, SimpleESModel};
-pub use models::garch::{EGARCHModel, GARCHModel, GJRGARCHModel};
+pub use models::autoregressive::{ARIMAModel, ARMAModel, ARModel, SARIMAModel, VARModel};
+pub use models::exponential_smoothing::{
+    DailyETSModel, DampedTrendModel, ETSComponent, ETSModel, HoltLinearModel, HoltWintersModel,
+    MinuteETSModel, SimpleESModel,
+};
+pub use models::garch::{EGARCHModel, GARCHMModel, GARCHModel, GJRGARCHModel, RiskPremiumType};
 pub use models::moving_average::MAModel;
 
 /// Prelude module that re-exports the most commonly used types and traits
@@ -297,13 +300,26 @@ pub mod prelude {
 
     // Common models
     pub use crate::models::autoregressive::ARIMAModel;
+    pub use crate::models::autoregressive::ARMAModel;
     pub use crate::models::autoregressive::ARModel;
     pub use crate::models::autoregressive::SARIMAModel;
+    pub use crate::models::autoregressive::VARModel;
+
+    pub use crate::models::exponential_smoothing::DailyETSModel;
+    pub use crate::models::exponential_smoothing::DampedTrendModel;
+    pub use crate::models::exponential_smoothing::ETSComponent;
+    pub use crate::models::exponential_smoothing::ETSModel;
+    pub use crate::models::exponential_smoothing::HoltLinearModel;
     pub use crate::models::exponential_smoothing::HoltWintersModel;
+    pub use crate::models::exponential_smoothing::MinuteETSModel;
     pub use crate::models::exponential_smoothing::SimpleESModel as SESModel;
+
     pub use crate::models::garch::EGARCHModel;
+    pub use crate::models::garch::GARCHMModel;
     pub use crate::models::garch::GARCHModel;
     pub use crate::models::garch::GJRGARCHModel;
+    pub use crate::models::garch::RiskPremiumType;
+
     pub use crate::models::moving_average::MAModel;
 
     // Common math utilities
