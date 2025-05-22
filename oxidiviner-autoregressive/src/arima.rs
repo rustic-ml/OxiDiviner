@@ -213,7 +213,7 @@ impl Forecaster for ARIMAModel {
 
         // Create and fit an ARMA model on the differenced data
         let mut arma = ARMAModel::new(self.p, self.q, self.include_intercept)
-            .map_err(|e| OxiError::from(e))?;
+            .map_err(OxiError::from)?;
 
         arma.fit(&differenced_series)?;
 
@@ -355,7 +355,7 @@ mod tests {
         let forecasts = model.forecast(forecast_horizon).unwrap();
 
         // Expected next values: 256, 289, 324
-        let expected = vec![256.0, 289.0, 324.0];
+        let expected = [256.0, 289.0, 324.0];
 
         for (i, forecast) in forecasts.iter().enumerate() {
             assert!(

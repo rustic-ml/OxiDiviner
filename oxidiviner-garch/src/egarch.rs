@@ -1,6 +1,5 @@
 use crate::error::{GARCHError, Result};
 use chrono::{DateTime, Utc};
-use statrs::statistics::Statistics;
 use std::fmt;
 
 /// EGARCH(p,q) Model - Exponential Generalized Autoregressive Conditional Heteroskedasticity
@@ -146,7 +145,7 @@ impl EGARCHModel {
     }
 
     /// Validate EGARCH parameters for stationarity
-    fn validate_parameters(alpha: &[f64], beta: &[f64]) -> Result<()> {
+    fn validate_parameters(_alpha: &[f64], beta: &[f64]) -> Result<()> {
         // Check stationarity condition: sum of beta < 1
         let sum_beta: f64 = beta.iter().sum();
         if sum_beta >= 1.0 {

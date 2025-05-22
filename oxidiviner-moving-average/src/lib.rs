@@ -1,5 +1,3 @@
-use oxidiviner_core::{Forecaster, ModelEvaluation, ModelOutput, TimeSeriesData};
-use oxidiviner_math::transforms::moving_average;
 
 mod error;
 mod model;

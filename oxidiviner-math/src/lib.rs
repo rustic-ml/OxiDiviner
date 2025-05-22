@@ -1,7 +1,5 @@
 #[cfg(feature = "ndarray_support")]
 use ndarray::Array1;
-use statrs::statistics::Data;
-use statrs::statistics::Distribution;
 
 // Internal modules
 mod error;

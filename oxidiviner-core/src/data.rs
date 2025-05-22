@@ -53,7 +53,7 @@ impl OHLCVData {
         timestamp_format: &str,
         has_header: bool,
     ) -> Result<Self> {
-        let file = File::open(&path).map_err(|e| OxiError::IoError(e))?;
+        let file = File::open(&path).map_err(OxiError::IoError)?;
         let reader = BufReader::new(file);
         let mut lines = reader.lines();
 
@@ -79,7 +79,7 @@ impl OHLCVData {
         let mut volume = Vec::new();
 
         for line in lines {
-            let line = line.map_err(|e| OxiError::IoError(e))?;
+            let line = line.map_err(OxiError::IoError)?;
             let fields: Vec<&str> = line.split(',').collect();
 
             if fields.len() < 6 {
@@ -119,11 +119,9 @@ impl OHLCVData {
                 .map_err(|e| OxiError::DataError(format!("Error parsing volume: {}", e)))?;
 
             // If we have a 7th column, it might be the symbol or adjusted close
-            if fields.len() > 6 {
-                if symbol == "unknown" {
-                    // Try to use the 7th field as the symbol
-                    symbol = fields[6].trim().to_string();
-                }
+            if fields.len() > 6 && symbol == "unknown" {
+                // Try to use the 7th field as the symbol
+                symbol = fields[6].trim().to_string();
             }
 
             timestamps.push(timestamp);

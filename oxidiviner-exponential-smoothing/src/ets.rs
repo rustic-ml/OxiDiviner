@@ -440,7 +440,7 @@ impl Forecaster for ETSModel {
             (TrendType::Additive | TrendType::DampedAdditive, SeasonalType::Additive) => {
                 let period = self.period.unwrap();
                 let level = self.level.unwrap();
-                let trend = self.trend.unwrap();
+                let _trend = self.trend.unwrap();
                 let seasonal = self.seasonal.as_ref().unwrap();
 
                 for i in 0..period {
@@ -476,7 +476,7 @@ impl Forecaster for ETSModel {
 
         for i in start_idx..n {
             let s_idx = if self.seasonal_type != SeasonalType::None {
-                (i % self.period.unwrap())
+                i % self.period.unwrap()
             } else {
                 0
             };
@@ -599,7 +599,7 @@ impl Forecaster for ETSModel {
         }
 
         let level = self.level.unwrap();
-        let trend = self.trend.unwrap_or(0.0);
+        let _trend = self.trend.unwrap_or(0.0);
 
         let mut forecasts = Vec::with_capacity(horizon);
 
@@ -614,7 +614,7 @@ impl Forecaster for ETSModel {
             (TrendType::Additive, SeasonalType::None) => {
                 // Linear increase
                 for h in 1..=horizon {
-                    forecasts.push(level + h as f64 * trend);
+                    forecasts.push(level + h as f64 * _trend);
                 }
             }
 
@@ -631,7 +631,7 @@ impl Forecaster for ETSModel {
                         phi_power *= phi;
                     }
 
-                    forecasts.push(level + damping_sum * trend);
+                    forecasts.push(level + damping_sum * _trend);
                 }
             }
 
@@ -642,7 +642,7 @@ impl Forecaster for ETSModel {
 
                     for h in 1..=horizon {
                         let s_idx = (h - 1) % period;
-                        forecasts.push(level + h as f64 * trend + seasonal[s_idx]);
+                        forecasts.push(level + h as f64 * _trend + seasonal[s_idx]);
                     }
                 } else {
                     return Err(OxiError::from(ESError::NotFitted));
@@ -656,7 +656,7 @@ impl Forecaster for ETSModel {
 
                     for h in 1..=horizon {
                         let s_idx = (h - 1) % period;
-                        forecasts.push((level + h as f64 * trend) * seasonal[s_idx]);
+                        forecasts.push((level + h as f64 * _trend) * seasonal[s_idx]);
                     }
                 } else {
                     return Err(OxiError::from(ESError::NotFitted));

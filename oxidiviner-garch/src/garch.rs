@@ -1,7 +1,5 @@
 use crate::error::{GARCHError, Result};
 use chrono::{DateTime, Utc};
-use ndarray::{Array1, Array2};
-use statrs::statistics::Statistics;
 use std::fmt;
 
 /// GARCH(p,q) Model - Generalized Autoregressive Conditional Heteroskedasticity

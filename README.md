@@ -1,6 +1,6 @@
 # OxiDiviner
 
-![OxiDiviner Logo](OxiDiviner_250px.JPG)
+![OxiDiviner Logo](https://raw.githubusercontent.com/rustic-ml/OxiDiviner/main/OxiDiviner_250px.JPG)
 
 [![Crates.io](https://img.shields.io/crates/v/oxidiviner.svg)](https://crates.io/crates/oxidiviner)
 [![Documentation](https://docs.rs/oxidiviner/badge.svg)](https://docs.rs/oxidiviner)
@@ -8,6 +8,22 @@
 [![GitHub](https://img.shields.io/badge/github-rustic--ml/OxiDiviner-8da0cb?logo=github)](https://github.com/rustic-ml/OxiDiviner)
 
 OxiDiviner is a Rust library for time series analysis and forecasting, designed to be a comprehensive toolkit for traders and data scientists.
+
+## The OxiDiviner: A Prophetic Approach to Forecasting
+
+In ancient times, diviners were revered for their ability to predict the future through careful observation of patterns and signs. The OxiDiviner carries this tradition into the modern era, but instead of reading animal entrails or celestial alignments, it reads the patterns hidden within time series data.
+
+Like the oracles of old, OxiDiviner draws upon time-tested methods to glimpse what lies beyond the horizon. It combines the wisdom of traditional statistical forecasting techniques with the precision and efficiency of Rust:
+
+- **Moving Average models** act as the diviner's smoothing stone, revealing the underlying currents beneath chaotic market waters
+- **Exponential Smoothing methods** serve as the weighted scales, balancing recent observations against historical patterns
+- **Autoregressive models** function as the prophet's memory, recalling how past values influence future ones
+- **ARIMA and SARIMA models** operate as the sage's differencing tools, finding stability in seemingly unstable trends
+- **GARCH models** work as the seer's volatility crystal, detecting clusters of turbulence in financial markets
+
+OxiDiviner doesn't rely on mysticism but on mathematical rigor. Each model is carefully implemented with statistical precision, providing not just forecasts but confidence intervals, error metrics, and diagnostic information. This approach allows traders and analysts to make decisions with both intuition and evidence—the hallmarks of true divination.
+
+Whether you're tracking stock prices, predicting sales, or analyzing any time-dependent data, OxiDiviner offers the tools to see beyond the present moment into possible futures, all while maintaining the rational foundation of established forecasting methodologies.
 
 ## Standardized Model Interface
 
@@ -63,15 +79,17 @@ if let Some(ma_eval) = ma_output.evaluation {
   - Simple Exponential Smoothing (SES)
   - Moving Average (MA)
   - Exponential Smoothing models with trend and seasonality
-  - Autoregressive (AR) and ARIMA models
-  - GARCH models for volatility forecasting
+  - Autoregressive (AR), ARIMA, and SARIMA models
+  - Vector Autoregression (VAR) for multivariate time series
+  - GARCH models and variants (GJR-GARCH, EGARCH, GARCH-M) for volatility forecasting
   - Specialized models for daily and minute-level financial data
 
 - **Data handling**: Import and manage OHLCV (Open-High-Low-Close-Volume) stock data
 - **Time series processing**: Tools for manipulating and analyzing time series data
 - **Standardized model interface** via the `Forecaster` trait
+- **Convenient prelude module** for easy importing of commonly used types and models
 - **Consistent output format** via the `ModelOutput` struct
-- **Comprehensive model evaluation metrics**
+- **Comprehensive model evaluation metrics** (MAE, MSE, RMSE, MAPE, SMAPE)
 - **Utilities for data loading, preprocessing, and visualization**
 
 ## Getting Started
@@ -80,7 +98,7 @@ Add OxiDiviner to your Cargo.toml:
 
 ```toml
 [dependencies]
-oxidiviner = "0.3.6"
+oxidiviner = "0.3.7"
 ```
 
 See the examples directory for complete usage examples.
@@ -517,7 +535,7 @@ Enable features in your Cargo.toml:
 
 ```toml
 [dependencies]
-oxidiviner = { version = "0.3.6", features = ["plotting", "polars_integration"] }
+oxidiviner = { version = "0.3.7", features = ["plotting", "polars_integration"] }
 ```
 
 ## License

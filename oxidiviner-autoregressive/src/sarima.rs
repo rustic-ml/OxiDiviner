@@ -32,11 +32,11 @@ pub struct SARIMAModel {
     /// Non-seasonal MA order (q)
     q: usize,
     /// Seasonal AR order (P)
-    P: usize,
+    seasonal_p: usize,
     /// Seasonal differencing order (D)
-    D: usize,
+    seasonal_d: usize,
     /// Seasonal MA order (Q)
-    Q: usize,
+    seasonal_q: usize,
     /// Seasonal period (s)
     s: usize,
     /// Include intercept/constant term
@@ -45,12 +45,10 @@ pub struct SARIMAModel {
     arima_model: Option<ARIMAModel>,
     /// Last seasonal values for forecasting
     last_values: Option<Vec<f64>>,
-    /// Last seasonal differences for integration
-    last_seasonal_diffs: Option<Vec<f64>>,
 }
 
 impl SARIMAModel {
-    /// Creates a new SARIMA model.
+    /// Create a new SARIMA model.
     ///
     /// # Arguments
     /// * `p` - Non-seasonal AR order
@@ -68,14 +66,14 @@ impl SARIMAModel {
         p: usize,
         d: usize,
         q: usize,
-        P: usize,
-        D: usize,
-        Q: usize,
+        seasonal_p: usize,
+        seasonal_d: usize,
+        seasonal_q: usize,
         s: usize,
         include_intercept: bool,
     ) -> ARResult<Self> {
         // Validate parameters
-        if p == 0 && q == 0 && P == 0 && Q == 0 {
+        if p == 0 && q == 0 && seasonal_p == 0 && seasonal_q == 0 {
             return Err(ARError::InvalidLagOrder(0));
         }
 
@@ -89,10 +87,10 @@ impl SARIMAModel {
         let name = if include_intercept {
             format!(
                 "SARIMA({},{},{})({},{},{}){}+intercept",
-                p, d, q, P, D, Q, s
+                p, d, q, seasonal_p, seasonal_d, seasonal_q, s
             )
         } else {
-            format!("SARIMA({},{},{})({},{},{}){}", p, d, q, P, D, Q, s)
+            format!("SARIMA({},{},{})({},{},{}){}", p, d, q, seasonal_p, seasonal_d, seasonal_q, s)
         };
 
         Ok(SARIMAModel {
@@ -100,28 +98,26 @@ impl SARIMAModel {
             p,
             d,
             q,
-            P,
-            D,
-            Q,
+            seasonal_p,
+            seasonal_d,
+            seasonal_q,
             s,
             include_intercept,
             arima_model: None,
             last_values: None,
-            last_seasonal_diffs: None,
         })
     }
 
-    /// Apply seasonal differencing to a time series.
-    /// Returns the seasonally differenced series.
-    fn seasonal_difference(&self, data: &[f64], D: usize, s: usize) -> Vec<f64> {
-        if D == 0 || data.len() <= s * D {
+    /// Apply seasonal differencing to make the series more stationary
+    fn seasonal_difference(&self, data: &[f64], d: usize, s: usize) -> Vec<f64> {
+        if d == 0 || data.len() <= s * d {
             return data.to_vec();
         }
 
         let mut result = data.to_vec();
 
-        // Apply D-order seasonal differencing
-        for _ in 0..D {
+        // Apply d-order seasonal differencing
+        for _ in 0..d {
             let mut temp = Vec::with_capacity(result.len() - s);
             for i in s..result.len() {
                 temp.push(result[i] - result[i - s]);
@@ -134,7 +130,7 @@ impl SARIMAModel {
 
     /// Reverse seasonal differencing to get forecasts in original scale
     fn seasonal_integrate(&self, forecast: &[f64], last_values: &[f64]) -> Vec<f64> {
-        if self.D == 0 || last_values.len() < self.s * self.D {
+        if self.seasonal_d == 0 || last_values.len() < self.s * self.seasonal_d {
             return forecast.to_vec();
         }
 
@@ -142,7 +138,7 @@ impl SARIMAModel {
         let mut result = forecast.to_vec();
 
         // For each level of seasonal differencing (working backwards)
-        for diff_level in (1..=self.D).rev() {
+        for diff_level in (1..=self.seasonal_d).rev() {
             let mut integrated = Vec::with_capacity(result.len());
 
             // For each forecast point
@@ -209,18 +205,18 @@ impl SARIMAModel {
     }
 
     /// Get the seasonal AR order (P)
-    pub fn P(&self) -> usize {
-        self.P
+    pub fn seasonal_p(&self) -> usize {
+        self.seasonal_p
     }
 
     /// Get the seasonal differencing order (D)
-    pub fn D(&self) -> usize {
-        self.D
+    pub fn seasonal_d(&self) -> usize {
+        self.seasonal_d
     }
 
     /// Get the seasonal MA order (Q)
-    pub fn Q(&self) -> usize {
-        self.Q
+    pub fn seasonal_q(&self) -> usize {
+        self.seasonal_q
     }
 
     /// Get the seasonal period (s)
@@ -253,7 +249,7 @@ impl Forecaster for SARIMAModel {
 
         // Need enough data for both seasonal and non-seasonal components
         let min_required =
-            self.s * self.D + self.d + self.p.max(self.P * self.s).max(self.q).max(self.Q * self.s);
+            self.s * self.seasonal_d + self.d + self.p.max(self.seasonal_p * self.s).max(self.q).max(self.seasonal_q * self.s);
 
         if n <= min_required {
             return Err(OxiError::from(ARError::InsufficientData {
@@ -263,20 +259,20 @@ impl Forecaster for SARIMAModel {
         }
 
         // First apply seasonal differencing
-        let seasonally_differenced = self.seasonal_difference(&data.values, self.D, self.s);
+        let seasonally_differenced = self.seasonal_difference(&data.values, self.seasonal_d, self.s);
 
         // Store original values for later integration during forecasting
-        self.last_values = Some(data.values[(n - self.s * self.D - 1)..].to_vec());
+        self.last_values = Some(data.values[(n - self.s * self.seasonal_d - 1)..].to_vec());
 
         // Create combined orders for the ARIMA model to handle both regular and seasonal components
         // In a full implementation, this would use polynomial multiplication of the AR and MA operators
         // Here we use a simplified approach where we combine the orders
-        let combined_p = self.p + self.P * self.s;
-        let combined_q = self.q + self.Q * self.s;
+        let combined_p = self.p + self.seasonal_p * self.s;
+        let combined_q = self.q + self.seasonal_q * self.s;
 
         // Create timestamps for the seasonally differenced series
-        let differenced_timestamps = data.timestamps[(self.s * self.D)..].to_vec();
-        let diff_series_name = format!("seasonally_diff_{}_of_{}", self.D, data.name);
+        let differenced_timestamps = data.timestamps[(self.s * self.seasonal_d)..].to_vec();
+        let diff_series_name = format!("seasonally_diff_{}_of_{}", self.seasonal_d, data.name);
 
         let differenced_series = TimeSeriesData::new(
             differenced_timestamps,
@@ -287,7 +283,7 @@ impl Forecaster for SARIMAModel {
 
         // Create and fit an ARIMA model on the seasonally differenced data
         let mut arima = ARIMAModel::new(combined_p, self.d, combined_q, self.include_intercept)
-            .map_err(|e| OxiError::from(e))?;
+            .map_err(OxiError::from)?;
 
         arima.fit(&differenced_series)?;
 

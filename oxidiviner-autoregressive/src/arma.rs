@@ -172,7 +172,7 @@ impl ARMAModel {
 
         // Calculate initial residuals using AR model
         for t in max_lag..n {
-            let mut y_hat = self.include_intercept.then(|| mean).unwrap_or(0.0);
+            let mut y_hat = if self.include_intercept { mean } else { 0.0 };
 
             // Add AR component
             for i in 0..self.p {
@@ -194,7 +194,7 @@ impl ARMAModel {
         for _ in 0..5 {
             // Recalculate residuals using both AR and MA components
             for t in max_lag..n {
-                let mut y_hat = self.include_intercept.then(|| mean).unwrap_or(0.0);
+                let mut y_hat = if self.include_intercept { mean } else { 0.0 };
 
                 // Add AR component
                 for i in 0..self.p {
@@ -228,7 +228,7 @@ impl ARMAModel {
         let mut fitted_values = vec![f64::NAN; max_lag]; // First values cannot be predicted
 
         for t in max_lag..n {
-            let mut prediction = self.include_intercept.then(|| mean).unwrap_or(0.0);
+            let mut prediction = if self.include_intercept { mean } else { 0.0 };
 
             // Add AR component
             for i in 0..self.p {
@@ -297,7 +297,7 @@ impl ARMAModel {
         let mut matrix = vec![vec![0.0; self.p]; self.p];
         for i in 0..self.p {
             for j in 0..self.p {
-                matrix[i][j] = autocorr[(i as isize - j as isize).abs() as usize];
+                matrix[i][j] = autocorr[(i as isize - j as isize).unsigned_abs()];
             }
         }
 
@@ -446,7 +446,7 @@ impl Forecaster for ARMAModel {
 
         // Fit the ARMA model parameters
         self.fit_arma_parameters(&data.values)
-            .map_err(|e| OxiError::from(e))?;
+            .map_err(OxiError::from)?;
 
         Ok(())
     }

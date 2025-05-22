@@ -31,7 +31,7 @@
 //! use oxidiviner::{TimeSeriesData, Forecaster};
 //! use chrono::{Utc, TimeZone};
 //!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn main() -> oxidiviner::Result<()> {
 //! // Create sample time series data
 //! let dates = vec![
 //!     Utc.with_ymd_and_hms(2023, 1, 1, 0, 0, 0).unwrap(),
@@ -39,7 +39,7 @@
 //!     Utc.with_ymd_and_hms(2023, 1, 3, 0, 0, 0).unwrap(),
 //! ];
 //! let values = vec![1.0, 1.5, 2.0];
-//! let data = TimeSeriesData::new(dates, values)?;
+//! let data = TimeSeriesData::new(dates, values, "test_series")?;
 //!
 //! // Create and fit an MA(1) model
 //! let mut model = MAModel::new(1)?;
@@ -60,7 +60,7 @@
 //! use oxidiviner::{TimeSeriesData, Forecaster};
 //! use chrono::{Utc, TimeZone};
 //!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn main() -> oxidiviner::Result<()> {
 //! // Create sample time series data
 //! let dates = vec![
 //!     // Dates would go here
@@ -69,7 +69,7 @@
 //!     Utc.with_ymd_and_hms(2023, 1, 3, 0, 0, 0).unwrap(),
 //! ];
 //! let values = vec![10.0, 11.0, 9.5];
-//! let data = TimeSeriesData::new(dates, values)?;
+//! let data = TimeSeriesData::new(dates, values, "test_series")?;
 //!
 //! // Create simple exponential smoothing model
 //! let mut model = SimpleESModel::new(0.3)?;
@@ -83,16 +83,19 @@
 //! Autoregressive models capture data that depends on its own previous values.
 //!
 //! ```rust
-//! use oxidiviner::models::autoregressive::{ARModel, ARIMAModel};
+//! use oxidiviner::models::autoregressive::{ARModel, ARIMAModel, SARIMAModel};
 //! use oxidiviner::{TimeSeriesData, Forecaster};
 //! use chrono::{Utc, TimeZone};
 //!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # fn main() -> oxidiviner::Result<()> {
 //! // Create an AR(2) model
-//! let mut ar_model = ARModel::new(2)?;
+//! let mut ar_model = ARModel::new(2, true)?;
 //!
 //! // Create an ARIMA(1,1,1) model
-//! let mut arima_model = ARIMAModel::new(1, 1, 1)?;
+//! let mut arima_model = ARIMAModel::new(1, 1, 1, true)?;
+//! 
+//! // Create a SARIMA(1,1,1)(1,1,0)12 model for monthly data with yearly seasonality
+//! let mut sarima_model = SARIMAModel::new(1, 1, 1, 1, 1, 0, 12, true)?;
 //! # Ok(())
 //! # }
 //! ```
@@ -102,21 +105,21 @@
 //! GARCH models are specialized for volatility forecasting in financial time series.
 //!
 //! ```rust
-//! use oxidiviner::models::garch::{GARCHModel, EGARCHModel};
-//! use oxidiviner::Forecaster;
+//! use oxidiviner::prelude::*;
+//! use oxidiviner::models::garch::{GARCHModel, GJRGARCHModel, EGARCHModel, GARCHMModel, RiskPremiumType};
 //!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! // Create a GARCH(1,1) model
-//! let mut model = GARCHModel::new(1, 1, None)?;
-//!
-//! // Sample financial returns data
-//! let returns = vec![0.01, -0.02, 0.03, -0.01, 0.02, -0.03, 0.01];
-//!
-//! // Fit the model
-//! model.fit(&returns, None)?;
-//!
-//! // Forecast volatility
-//! let volatility_forecast = model.forecast_variance(5)?;
+//! # fn main() -> oxidiviner::Result<()> {
+//! // Create a basic GARCH(1,1) model
+//! let mut garch_model = GARCHModel::new(1, 1, None).unwrap();
+//! 
+//! // Create a GJR-GARCH(1,1) model for asymmetric volatility
+//! let mut gjr_garch_model = GJRGARCHModel::new(1, 1, None).unwrap();
+//! 
+//! // Create an EGARCH(1,1) model
+//! let mut egarch_model = EGARCHModel::new(1, 1, None).unwrap();
+//! 
+//! // Create a GARCH-M(1,1) model with risk premium as variance
+//! let mut garch_m_model = GARCHMModel::new(1, 1, RiskPremiumType::Variance, None).unwrap();
 //! # Ok(())
 //! # }
 //! ```
@@ -126,20 +129,28 @@
 //! OxiDiviner provides various mathematical utilities for time series analysis.
 //!
 //! ```rust
-//! use oxidiviner::math::transforms::{difference, log_transform};
-//! use oxidiviner::math::metrics::{mean_absolute_error, mean_squared_error};
+//! use oxidiviner::math;
+//! use oxidiviner::math::metrics::{mae, mse, rmse, mape, smape};
 //!
 //! # fn main() {
 //! // Apply transformations
 //! let data = vec![10.5, 11.2, 10.8, 11.5, 12.0];
-//! let differenced = difference(&data, 1);
-//! let log_data = log_transform(&data);
+//! let differenced = oxidiviner::math::transforms::difference(&data);
+//! let log_data: Vec<f64> = data.iter().map(|&x| x.ln()).collect();
 //!
-//! // Calculate forecast accuracy
+//! // Calculate forecast accuracy metrics
 //! let actual = vec![10.0, 11.0, 12.0];
 //! let predicted = vec![10.2, 10.8, 11.5];
-//! let mae = mean_absolute_error(&actual, &predicted);
-//! let mse = mean_squared_error(&actual, &predicted);
+//!
+//! // Using the library's metric functions
+//! let mae_value = mae(&actual, &predicted);
+//! let mse_value = mse(&actual, &predicted);
+//! let rmse_value = rmse(&actual, &predicted);
+//! let mape_value = mape(&actual, &predicted);
+//! let smape_value = smape(&actual, &predicted);
+//!
+//! println!("MAE: {:.4}, MSE: {:.4}, RMSE: {:.4}", mae_value, mse_value, rmse_value);
+//! println!("MAPE: {:.2}%, SMAPE: {:.2}%", mape_value * 100.0, smape_value * 100.0);
 //! # }
 //! ```
 

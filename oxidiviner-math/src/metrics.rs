@@ -1,4 +1,3 @@
-use crate::statistics::mean;
 
 /// Calculate the mean absolute error (MAE) between actual and predicted values
 pub fn mae(actual: &[f64], predicted: &[f64]) -> f64 {

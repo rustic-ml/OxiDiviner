@@ -151,7 +151,7 @@ impl ARModel {
         let mut matrix = vec![vec![0.0; self.p]; self.p];
         for i in 0..self.p {
             for j in 0..self.p {
-                matrix[i][j] = autocorr[(i as isize - j as isize).abs() as usize];
+                matrix[i][j] = autocorr[(i as isize - j as isize).unsigned_abs()];
             }
         }
 
@@ -276,7 +276,7 @@ impl Forecaster for ARModel {
 
         // Fit the model using Yule-Walker equations
         self.fit_yule_walker(&data.values)
-            .map_err(|e| OxiError::from(e))?;
+            .map_err(OxiError::from)?;
 
         // Calculate fitted values
         let mut fitted_values = vec![f64::NAN; self.p]; // First p values cannot be predicted

@@ -1,5 +1,3 @@
-use oxidiviner_core::{Forecaster, ModelEvaluation, ModelOutput, TimeSeriesData};
-use oxidiviner_math::transforms::exponential_moving_average;
 
 mod damped_trend;
 mod error;

@@ -1,11 +1,10 @@
-use chrono::{DateTime, Duration, Utc};
 use oxidiviner_autoregressive::{ARIMAModel, ARMAModel, ARModel, SARIMAModel, VARModel};
-use oxidiviner_core::{Forecaster, TimeSeriesData};
+use oxidiviner_core::TimeSeriesData;
 use std::collections::HashMap;
 use std::f64::consts::PI;
-use std::result::Result;
+use std::error::Error;
 
-fn main() -> Result<()> {
+fn main() -> std::result::Result<(), Box<dyn Error>> {
     println!("Autoregressive Models Example");
     println!("============================\n");
 

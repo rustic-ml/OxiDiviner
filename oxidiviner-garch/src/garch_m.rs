@@ -1,6 +1,5 @@
 use crate::error::{GARCHError, Result};
 use chrono::{DateTime, Utc};
-use statrs::statistics::Statistics;
 use std::fmt;
 
 /// GARCH-M(p,q) Model - GARCH-in-Mean
@@ -352,7 +351,7 @@ impl GARCHMModel {
     }
 
     /// Calculate log-likelihood and information criteria
-    fn calculate_statistics(&mut self, data: &[f64]) -> Result<()> {
+    fn calculate_statistics(&mut self, _data: &[f64]) -> Result<()> {
         let residuals = match &self.residuals {
             Some(r) => r,
             None => return Err(GARCHError::EstimationError("Model not fitted".to_string())),

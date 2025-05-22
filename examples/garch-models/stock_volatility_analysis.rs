@@ -1,7 +1,6 @@
-use chrono::{Days, Duration, NaiveDate};
-use oxidiviner_garch::{GARCHModel, GJRGARCHModel};
-use rand::Rng;
+use chrono::{Days, NaiveDate};
 use std::error::Error;
+use rand::Rng;
 
 fn main() -> Result<(), Box<dyn Error>> {
     println!("Stock Volatility Analysis with GARCH Models");
@@ -9,7 +8,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     
     // Generate synthetic volatility data
     println!("Generating synthetic daily return data with volatility clustering...");
-    let (dates, returns, volatility) = generate_synthetic_returns();
+    let (_dates, returns, volatility) = generate_synthetic_returns();
     println!("Generated {} data points\n", returns.len());
     
     // In a real application, you would use the actual GARCH models

@@ -16,12 +16,12 @@ publish = false
 chrono.workspace = true
 thiserror.workspace = true
 serde.workspace = true
-oxidiviner-math = { path = "../oxidiviner-math", version = "0.3.3" }
+oxidiviner-math = { path = "../oxidiviner-math", version = "0.3.7" }
 rand.workspace = true
 ndarray = { workspace = true, optional = true }
 
 [dev-dependencies]
-oxidiviner-math = { path = "../oxidiviner-math", version = "0.3.3" }
+oxidiviner-math = { path = "../oxidiviner-math", version = "0.3.7" }
 # Removed circular dependencies for publishing
 rand = { workspace = true }
 chrono = { workspace = true }

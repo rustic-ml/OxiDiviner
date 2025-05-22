@@ -17,11 +17,11 @@ docs-rs-all-features = true
 publish-only-main-crate = true
 
 [workspace.package]
-name = "OxiDiviner"
-version = "0.3.6"
+version = "0.3.7"
 edition = "2021"
 license = "MIT"
 authors = ["OxiDiviner Team"]
+readme = "README.md"
 description = "A comprehensive Rust library for time series analysis and forecasting including moving average, exponential smoothing, autoregressive, and GARCH models"
 repository = "https://github.com/rustic-ml/OxiDiviner"
 homepage = "https://github.com/rustic-ml/OxiDiviner"
@@ -32,8 +32,6 @@ exclude = [
     ".cursor/**",
     "Cargo.lock",
     "target/**",
-    "OxiDiviner_original.JPG",
-    "OxiDiviner.JPG",    
     "update_examples.sh",
     ".git/**",
     ".gitignore",

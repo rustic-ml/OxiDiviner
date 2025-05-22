@@ -13,8 +13,8 @@ description = "Exponential smoothing models for OxiDiviner time series analysis 
 publish = false
 
 [dependencies]
-oxidiviner-core = { path = "../oxidiviner-core", version = "0.3.3" }
-oxidiviner-math = { path = "../oxidiviner-math", version = "0.3.3" }
+oxidiviner-core = { path = "../oxidiviner-core", version = "0.3.7" }
+oxidiviner-math = { path = "../oxidiviner-math", version = "0.3.7" }
 thiserror.workspace = true
 chrono.workspace = true
 

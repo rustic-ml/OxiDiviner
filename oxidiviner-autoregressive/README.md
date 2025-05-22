@@ -27,6 +27,15 @@ This crate provides a comprehensive collection of autoregressive models for time
 - Diagnostic checking and residual analysis
 - Season detection and handling
 
+## Known Issues
+
+Some test cases in this crate may fail under certain conditions:
+- AR and ARMA models may fail for constant data due to matrix singularity
+- Tests with trending data may have inconsistent forecasts
+- ARIMA tests with certain parameters may fail with validation errors
+
+These issues are being tracked and will be addressed in future updates. The core functionality remains usable for most practical applications.
+
 ## Usage
 
 Add this to your `Cargo.toml`:

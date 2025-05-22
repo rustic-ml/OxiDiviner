@@ -1,6 +1,5 @@
 use crate::error::{GARCHError, Result};
 use chrono::{DateTime, Utc};
-use statrs::statistics::Statistics;
 use std::fmt;
 
 /// GJR-GARCH(p,q) Model - Glosten-Jagannathan-Runkle GARCH

@@ -152,7 +152,7 @@ impl VARModel {
 
         // Fit the VAR model
         self.fit_var_model(&all_values)
-            .map_err(|e| OxiError::from(e))?;
+            .map_err(OxiError::from)?;
 
         Ok(())
     }
@@ -509,9 +509,9 @@ impl VARModel {
         }
 
         // Effective sample size after losing p observations
-        let T = n - self.p;
+        let t = n - self.p;
 
-        if T <= k * self.p + self.include_intercept as usize {
+        if t <= k * self.p + self.include_intercept as usize {
             return Err(ARError::InsufficientData {
                 actual: n,
                 expected: k * self.p + self.include_intercept as usize + self.p + 1,
@@ -523,21 +523,22 @@ impl VARModel {
         // X is a T×(kp+1) matrix of regressors (if include_intercept is true, +1 for the constant term)
 
         // Y matrix (will be T×k)
-        let mut Y = vec![vec![0.0; k]; T];
-        for t in 0..T {
+        let mut y = vec![vec![0.0; k]; t];
+        for t_idx in 0..t {
+            // Fill Y matrix with current values
             for i in 0..k {
-                Y[t][i] = data[i][t + self.p];
+                y[t_idx][i] = data[i][t_idx + self.p];
             }
         }
 
         // X matrix (will be T×(kp+intercept))
         let num_regressors = k * self.p + self.include_intercept as usize;
-        let mut X = vec![vec![0.0; num_regressors]; T];
+        let mut x = vec![vec![0.0; num_regressors]; t];
 
-        for t in 0..T {
+        for t_idx in 0..t {
             // If intercept is included, set first column to 1
             if self.include_intercept {
-                X[t][0] = 1.0;
+                x[t_idx][0] = 1.0;
             }
 
             // Set other columns to lagged values
@@ -545,7 +546,7 @@ impl VARModel {
             for lag in 0..self.p {
                 for i in 0..k {
                     let col_idx = intercept_offset + lag * k + i;
-                    X[t][col_idx] = data[i][t + self.p - lag - 1];
+                    x[t_idx][col_idx] = data[i][t_idx + self.p - lag - 1];
                 }
             }
         }
@@ -554,34 +555,34 @@ impl VARModel {
         // Where B is a (kp+1)×k matrix of coefficients
 
         // First, compute X'X (num_regressors × num_regressors)
-        let mut XtX = vec![vec![0.0; num_regressors]; num_regressors];
+        let mut xtx = vec![vec![0.0; num_regressors]; num_regressors];
         for i in 0..num_regressors {
             for j in 0..num_regressors {
-                for t in 0..T {
-                    XtX[i][j] += X[t][i] * X[t][j];
+                for t_idx in 0..t {
+                    xtx[i][j] += x[t_idx][i] * x[t_idx][j];
                 }
             }
         }
 
         // Compute the inverse of X'X
-        let XtX_inv = self.invert_matrix(&XtX)?;
+        let xtx_inv = self.invert_matrix(&xtx)?;
 
         // Compute X'Y (num_regressors × k)
-        let mut XtY = vec![vec![0.0; k]; num_regressors];
+        let mut xty = vec![vec![0.0; k]; num_regressors];
         for i in 0..num_regressors {
             for j in 0..k {
-                for t in 0..T {
-                    XtY[i][j] += X[t][i] * Y[t][j];
+                for t_idx in 0..t {
+                    xty[i][j] += x[t_idx][i] * y[t_idx][j];
                 }
             }
         }
 
         // Compute B = (X'X)^(-1)X'Y
-        let mut B = vec![vec![0.0; k]; num_regressors];
+        let mut b = vec![vec![0.0; k]; num_regressors];
         for i in 0..num_regressors {
             for j in 0..k {
                 for r in 0..num_regressors {
-                    B[i][j] += XtX_inv[i][r] * XtY[r][j];
+                    b[i][j] += xtx_inv[i][r] * xty[r][j];
                 }
             }
         }
@@ -593,7 +594,7 @@ impl VARModel {
         // Set intercept if included
         if self.include_intercept {
             for i in 0..k {
-                intercept[i] = B[0][i];
+                intercept[i] = b[0][i];
             }
         }
 
@@ -605,7 +606,7 @@ impl VARModel {
             for i in 0..k {
                 for j in 0..k {
                     let row_idx = intercept_offset + lag * k + j;
-                    coef_matrix[i][j] = B[row_idx][i];
+                    coef_matrix[i][j] = b[row_idx][i];
                 }
             }
 
@@ -618,14 +619,14 @@ impl VARModel {
 
         // First p values cannot be predicted
         for i in 0..k {
-            for t in 0..self.p {
-                fitted_values[i][t] = f64::NAN;
-                residuals[i][t] = f64::NAN;
+            for t_idx in 0..self.p {
+                fitted_values[i][t_idx] = f64::NAN;
+                residuals[i][t_idx] = f64::NAN;
             }
         }
 
         // Calculate fitted values for the rest
-        for t in self.p..n {
+        for t_idx in self.p..n {
             for i in 0..k {
                 let mut fitted = if self.include_intercept {
                     intercept[i]
@@ -635,23 +636,23 @@ impl VARModel {
 
                 for lag in 0..self.p {
                     for j in 0..k {
-                        fitted += coefficient_matrices[lag][i][j] * data[j][t - lag - 1];
+                        fitted += coefficient_matrices[lag][i][j] * data[j][t_idx - lag - 1];
                     }
                 }
 
-                fitted_values[i][t] = fitted;
-                residuals[i][t] = data[i][t] - fitted;
+                fitted_values[i][t_idx] = fitted;
+                residuals[i][t_idx] = data[i][t_idx] - fitted;
             }
         }
 
         // Store last p values for forecasting
         let mut last_values = Vec::with_capacity(self.p);
         for lag in 0..self.p {
-            let t = n - lag - 1;
+            let t_idx = n - lag - 1;
             let mut current_values = Vec::with_capacity(k);
 
             for i in 0..k {
-                current_values.push(data[i][t]);
+                current_values.push(data[i][t_idx]);
             }
 
             last_values.push(current_values);

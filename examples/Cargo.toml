@@ -1,7 +1,7 @@
 [package]
 name = "oxidiviner-examples"
-version = "0.3.3"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 publish = false
 
 [dependencies]
