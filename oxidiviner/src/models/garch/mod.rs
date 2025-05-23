@@ -954,7 +954,7 @@ mod error_tests {
 
     #[test]
     fn test_garch_error_types() {
-        use crate::error::GARCHError;
+        use crate::models::GARCHError;
         
         // Test InvalidParameters error
         let invalid_params_error = GARCHError::InvalidParameters("test message".to_string());
@@ -968,11 +968,11 @@ mod error_tests {
     #[test]
     fn test_error_propagation() {
         // Test that errors propagate correctly through the Result type
-        let result: Result<()> = Err(GARCHError::InvalidParameters("test".to_string()));
+        let result: Result<()> = Err(OxiError::from(GARCHError::InvalidParameters("test".to_string()));
         assert!(result.is_err());
         
         match result {
-            Err(GARCHError::InvalidParameters(msg)) => assert_eq!(msg, "test"),
+            Err(OxiError::from(GARCHError::InvalidParameters(msg)) => assert_eq!(msg, "test"),
             _ => panic!("Expected InvalidParameters error"),
         }
     }

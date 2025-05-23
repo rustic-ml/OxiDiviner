@@ -1,6 +1,6 @@
-use crate::error::ESError;
-use oxidiviner_core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
-use oxidiviner_math::metrics::{mae, mape, mse, rmse, smape};
+use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
+use crate::math::metrics::{mae, mape, mse, rmse, smape};
+use crate::models::exponential_smoothing::error::ESError;
 
 /// Damped Trend Model, an extension of Holt's Linear method.
 ///
@@ -51,15 +51,15 @@ impl DampedTrendModel {
     pub fn new(alpha: f64, beta: f64, phi: f64) -> std::result::Result<Self, ESError> {
         // Validate parameters
         if alpha <= 0.0 || alpha >= 1.0 {
-            return Err(ESError::InvalidAlpha(alpha));
+            return Err(OxiError::from(ESError::InvalidAlpha(alpha));
         }
 
         if beta <= 0.0 || beta >= 1.0 {
-            return Err(ESError::InvalidBeta(beta));
+            return Err(OxiError::from(ESError::InvalidBeta(beta));
         }
 
         if phi <= 0.0 || phi >= 1.0 {
-            return Err(ESError::InvalidDampingFactor(phi));
+            return Err(OxiError::from(ESError::InvalidDampingFactor(phi));
         }
 
         let name = format!("DampedTrend(α={:.3}, β={:.3}, φ={:.3})", alpha, beta, phi);

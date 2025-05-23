@@ -1,9 +1,9 @@
 #![allow(clippy::needless_range_loop)]
 
-use crate::arima::ARIMAModel;
-use crate::error::{ARError, Result as ARResult};
-use oxidiviner_core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
-use oxidiviner_math::metrics::{mae, mape, mse, rmse, smape};
+use crate::models::autoregressive::arima::ARIMAModel;
+use crate::models::autoregressive::error::ARError;
+use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
+use crate::math::metrics::{mae, mape, mse, rmse, smape};
 
 /// Seasonal Autoregressive Integrated Moving Average (SARIMA) model for time series forecasting.
 ///
@@ -74,14 +74,14 @@ impl SARIMAModel {
         seasonal_q: usize,
         s: usize,
         include_intercept: bool,
-    ) -> ARResult<Self> {
+    ) -> Result<Self> {
         // Validate parameters
         if p == 0 && q == 0 && seasonal_p == 0 && seasonal_q == 0 {
-            return Err(ARError::InvalidLagOrder(0));
+            return Err(OxiError::from(ARError::InvalidLagOrder(0));
         }
 
         if s < 2 {
-            return Err(ARError::InvalidParameter(format!(
+            return Err(OxiError::from(ARError::InvalidParameter(format!(
                 "Seasonal period must be at least 2, got {}",
                 s
             )));

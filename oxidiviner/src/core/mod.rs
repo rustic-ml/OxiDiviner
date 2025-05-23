@@ -24,7 +24,7 @@ interfaces, and utility traits used across all forecasting models.
 ## Usage Example
 
 ```rust
-use oxidiviner_core::{TimeSeriesData, Forecaster, Result};
+use crate::core::{TimeSeriesData, Forecaster, Result};
 use chrono::{Utc, TimeZone};
 
 // Create a custom forecasting model
@@ -514,7 +514,7 @@ pub trait ConfidenceForecaster: QuickForecaster {
 ///
 /// # Example
 /// ```rust
-/// # use oxidiviner_core::{ModelBuilder, Result};
+/// # use crate::core::{ModelBuilder, Result};
 /// # fn example() -> Result<()> {
 /// let config = ModelBuilder::arima()
 ///     .with_ar(2)

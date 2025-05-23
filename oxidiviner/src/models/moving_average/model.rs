@@ -1,7 +1,7 @@
-use crate::error::MAError;
-use oxidiviner_core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
-use oxidiviner_math::metrics::{mae, mape, mse, rmse, smape};
-use oxidiviner_math::transforms::moving_average;
+use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
+use crate::math::metrics::{mae, mape, mse, rmse, smape};
+use crate::math::transforms::moving_average;
+use crate::models::moving_average::error::MAError;
 
 /// Moving Average model for time series forecasting.
 ///
@@ -29,7 +29,7 @@ impl MAModel {
     pub fn new(window_size: usize) -> std::result::Result<Self, MAError> {
         // Validate parameters
         if window_size == 0 {
-            return Err(MAError::InvalidWindowSize(window_size));
+            return Err(OxiError::from(MAError::InvalidWindowSize(window_size)));
         }
 
         let name = format!("MA({})", window_size);
@@ -236,10 +236,9 @@ mod tests {
     fn test_ma_invalid_parameters() {
         // Test with invalid window size
         let result = MAModel::new(0);
-        assert!(result.is_err());
-
-        if let Err(MAError::InvalidWindowSize(size)) = result {
-            assert_eq!(size, 0);
+        if let Err(err) = result {
+            // Check that we got the right error type
+            assert!(format!("{:?}", err).contains("InvalidWindowSize"));
         } else {
             panic!("Expected InvalidWindowSize error");
         }

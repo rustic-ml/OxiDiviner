@@ -37,7 +37,7 @@ impl ValidationUtils {
     ///
     /// # Example
     /// ```rust
-    /// # use oxidiviner_core::{TimeSeriesData, validation::ValidationUtils};
+    /// # use crate::core::{TimeSeriesData, validation::ValidationUtils};
     /// # use chrono::Utc;
     /// # fn example() -> oxidiviner_core::Result<()> {
     /// # let data = TimeSeriesData::new(vec![Utc::now()], vec![1.0], "test")?;

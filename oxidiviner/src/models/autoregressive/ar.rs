@@ -1,8 +1,8 @@
 #![allow(clippy::needless_range_loop)]
 
-use crate::error::ARError;
-use oxidiviner_core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
-use oxidiviner_math::metrics::{mae, mape, mse, rmse, smape};
+use crate::models::ARError;
+use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
+use crate::math::metrics::{mae, mape, mse, rmse, smape};
 
 /// Autoregressive (AR) model for time series forecasting.
 ///

@@ -1,4 +1,4 @@
-use oxidiviner_core::OxiError;
+use crate::core::OxiError;
 use thiserror::Error;
 
 /// Error type for exponential smoothing models

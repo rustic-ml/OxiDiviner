@@ -1,6 +1,6 @@
-use crate::error::ESError;
-use oxidiviner_core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
-use oxidiviner_math::metrics::{mae, mape, mse, rmse, smape};
+use crate::models::ESError;
+use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
+use crate::math::metrics::{mae, mape, mse, rmse, smape};
 
 /// Simple Exponential Smoothing (SES) model for forecasting.
 ///
@@ -38,7 +38,7 @@ impl SimpleESModel {
     pub fn new(alpha: f64) -> std::result::Result<Self, ESError> {
         // Validate parameters
         if alpha <= 0.0 || alpha >= 1.0 {
-            return Err(ESError::InvalidAlpha(alpha));
+            return Err(OxiError::from(ESError::InvalidAlpha(alpha));
         }
 
         let name = format!("SES(α={:.3})", alpha);

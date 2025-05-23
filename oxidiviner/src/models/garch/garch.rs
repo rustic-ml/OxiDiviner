@@ -1,4 +1,4 @@
-use crate::error::{GARCHError, Result};
+use crate::models::{GARCHError, Result};
 use chrono::{DateTime, Utc};
 use std::fmt;
 
@@ -54,7 +54,7 @@ impl GARCHModel {
     pub fn new(p: usize, q: usize, params: Option<Vec<f64>>) -> Result<Self> {
         // Validate p and q
         if p == 0 && q == 0 {
-            return Err(GARCHError::InvalidParameters(
+            return Err(OxiError::from(GARCHError::InvalidParameters(
                 "Both p and q cannot be zero".to_string(),
             ));
         }
@@ -67,7 +67,7 @@ impl GARCHModel {
         let model = if let Some(params) = params {
             // Validate parameters length
             if params.len() != 1 + 1 + p + q {
-                return Err(GARCHError::InvalidParameters(format!(
+                return Err(OxiError::from(GARCHError::InvalidParameters(format!(
                     "Expected {} parameters, got {}",
                     1 + 1 + p + q,
                     params.len()
@@ -127,14 +127,14 @@ impl GARCHModel {
     fn validate_parameters(omega: &f64, alpha: &[f64], beta: &[f64]) -> Result<()> {
         // Check positivity constraints
         if *omega <= 0.0 {
-            return Err(GARCHError::InvalidParameters(
+            return Err(OxiError::from(GARCHError::InvalidParameters(
                 "Omega must be positive".to_string(),
             ));
         }
 
         for &a in alpha {
             if a < 0.0 {
-                return Err(GARCHError::InvalidParameters(
+                return Err(OxiError::from(GARCHError::InvalidParameters(
                     "Alpha parameters must be non-negative".to_string(),
                 ));
             }
@@ -142,7 +142,7 @@ impl GARCHModel {
 
         for &b in beta {
             if b < 0.0 {
-                return Err(GARCHError::InvalidParameters(
+                return Err(OxiError::from(GARCHError::InvalidParameters(
                     "Beta parameters must be non-negative".to_string(),
                 ));
             }
@@ -151,7 +151,7 @@ impl GARCHModel {
         // Check stationarity condition: sum of alpha and beta < 1
         let sum: f64 = alpha.iter().sum::<f64>() + beta.iter().sum::<f64>();
         if sum >= 1.0 {
-            return Err(GARCHError::InvalidParameters(
+            return Err(OxiError::from(GARCHError::InvalidParameters(
                 "Sum of alpha and beta must be less than 1 for stationarity".to_string(),
             ));
         }
@@ -171,7 +171,7 @@ impl GARCHModel {
     /// A Result indicating success or failure
     pub fn fit(&mut self, data: &[f64], timestamps: Option<&[DateTime<Utc>]>) -> Result<()> {
         if data.len() < 2 {
-            return Err(GARCHError::InvalidData(
+            return Err(OxiError::from(GARCHError::InvalidData(
                 "Data must have at least 2 points".to_string(),
             ));
         }
@@ -230,7 +230,7 @@ impl GARCHModel {
         let max_lag = p.max(q);
 
         if n <= max_lag {
-            return Err(GARCHError::InvalidData(
+            return Err(OxiError::from(GARCHError::InvalidData(
                 "Not enough data points for the specified model".to_string(),
             ));
         }
@@ -272,12 +272,12 @@ impl GARCHModel {
     fn calculate_statistics(&mut self) -> Result<()> {
         let residuals = match &self.residuals {
             Some(r) => r,
-            None => return Err(GARCHError::EstimationError("Model not fitted".to_string())),
+            None => return Err(OxiError::from(GARCHError::EstimationError("Model not fitted".to_string())),
         };
 
         let variance = match &self.fitted_variance {
             Some(v) => v,
-            None => return Err(GARCHError::EstimationError("Model not fitted".to_string())),
+            None => return Err(OxiError::from(GARCHError::EstimationError("Model not fitted".to_string())),
         };
 
         let n = residuals.len();
@@ -289,7 +289,7 @@ impl GARCHModel {
         let mut log_likelihood = 0.0;
         for t in 0..n {
             if variance[t] <= 0.0 {
-                return Err(GARCHError::NumericalError(
+                return Err(OxiError::from(GARCHError::NumericalError(
                     "Negative or zero variance encountered".to_string(),
                 ));
             }
@@ -328,12 +328,12 @@ impl GARCHModel {
 
         let residuals = match &self.residuals {
             Some(r) => r,
-            None => return Err(GARCHError::ForecastError("Model not fitted".to_string())),
+            None => return Err(OxiError::from(GARCHError::ForecastError("Model not fitted".to_string())),
         };
 
         let variance = match &self.fitted_variance {
             Some(v) => v,
-            None => return Err(GARCHError::ForecastError("Model not fitted".to_string())),
+            None => return Err(OxiError::from(GARCHError::ForecastError("Model not fitted".to_string())),
         };
 
         let n = residuals.len();

@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
-use crate::error::OxiError;
+use crate::core::error::OxiError;
 use crate::Result;
 
 /// Represents financial OHLCV (Open, High, Low, Close, Volume) data.

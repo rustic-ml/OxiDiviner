@@ -1,8 +1,8 @@
 #![allow(clippy::needless_range_loop)]
 
-use crate::error::ESError;
-use oxidiviner_core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
-use oxidiviner_math::metrics::{mae, mape, mse, rmse, smape};
+use crate::models::ESError;
+use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
+use crate::math::metrics::{mae, mape, mse, rmse, smape};
 use std::fmt;
 
 /// Error component type for ETS models
@@ -149,17 +149,17 @@ impl ETSModel {
     ) -> std::result::Result<Self, ESError> {
         // Validate parameters
         if alpha <= 0.0 || alpha >= 1.0 {
-            return Err(ESError::InvalidAlpha(alpha));
+            return Err(OxiError::from(ESError::InvalidAlpha(alpha));
         }
 
         // Validate beta if trend is present
         if trend_type != TrendType::None {
             if let Some(beta_val) = beta {
                 if beta_val <= 0.0 || beta_val >= 1.0 {
-                    return Err(ESError::InvalidBeta(beta_val));
+                    return Err(OxiError::from(ESError::InvalidBeta(beta_val));
                 }
             } else {
-                return Err(ESError::MissingParameter("beta".to_string()));
+                return Err(OxiError::from(ESError::MissingParameter("beta".to_string()));
             }
         }
 
@@ -168,10 +168,10 @@ impl ETSModel {
         {
             if let Some(phi_val) = phi {
                 if phi_val <= 0.0 || phi_val >= 1.0 {
-                    return Err(ESError::InvalidDampingFactor(phi_val));
+                    return Err(OxiError::from(ESError::InvalidDampingFactor(phi_val));
                 }
             } else {
-                return Err(ESError::MissingParameter("phi".to_string()));
+                return Err(OxiError::from(ESError::MissingParameter("phi".to_string()));
             }
         }
 
@@ -179,18 +179,18 @@ impl ETSModel {
         if seasonal_type != SeasonalType::None {
             if let Some(gamma_val) = gamma {
                 if gamma_val <= 0.0 || gamma_val >= 1.0 {
-                    return Err(ESError::InvalidGamma(gamma_val));
+                    return Err(OxiError::from(ESError::InvalidGamma(gamma_val));
                 }
             } else {
-                return Err(ESError::MissingParameter("gamma".to_string()));
+                return Err(OxiError::from(ESError::MissingParameter("gamma".to_string()));
             }
 
             if let Some(period_val) = period {
                 if period_val < 2 {
-                    return Err(ESError::InvalidPeriod(period_val));
+                    return Err(OxiError::from(ESError::InvalidPeriod(period_val));
                 }
             } else {
-                return Err(ESError::MissingParameter("period".to_string()));
+                return Err(OxiError::from(ESError::MissingParameter("period".to_string()));
             }
         }
 

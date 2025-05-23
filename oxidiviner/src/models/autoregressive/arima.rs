@@ -1,7 +1,7 @@
-use crate::arma::ARMAModel;
-use crate::error::{ARError, Result as ARResult};
-use oxidiviner_core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
-use oxidiviner_math::metrics::{mae, mape, mse, rmse, smape};
+use crate::models::autoregressive::arma::ARMAModel;
+use crate::models::autoregressive::error::ARError;
+use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
+use crate::math::metrics::{mae, mape, mse, rmse, smape};
 
 /// Autoregressive Integrated Moving Average (ARIMA) model for time series forecasting.
 ///
@@ -49,10 +49,12 @@ impl ARIMAModel {
     ///
     /// # Returns
     /// * `Result<Self>` - A new ARIMA model if parameters are valid
-    pub fn new(p: usize, d: usize, q: usize, include_intercept: bool) -> ARResult<Self> {
+    pub fn new(p: usize, d: usize, q: usize, include_intercept: bool) -> Result<Self> {
         // Validate parameters
         if p == 0 && q == 0 {
-            return Err(ARError::InvalidLagOrder(0));
+            return Err(OxiError::from(ARError::InvalidParameters(
+                "At least one of p or q must be greater than 0".to_string(),
+            )));
         }
 
         let name = if include_intercept {

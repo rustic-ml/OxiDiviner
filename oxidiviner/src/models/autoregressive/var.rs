@@ -1,8 +1,8 @@
 #![allow(clippy::needless_range_loop)]
 
-use crate::error::{ARError, Result as ARResult};
-use oxidiviner_core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
-use oxidiviner_math::metrics::{mae, mape, mse, rmse, smape};
+use crate::models::{ARError, Result as ARResult};
+use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
+use crate::math::metrics::{mae, mape, mse, rmse, smape};
 use std::collections::HashMap;
 
 /// Vector Autoregression (VAR) model for multivariate time series forecasting.

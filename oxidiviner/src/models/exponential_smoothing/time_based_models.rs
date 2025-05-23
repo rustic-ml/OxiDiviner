@@ -1,7 +1,7 @@
-use crate::error::ESError;
-use crate::ets::{ETSModel, ErrorType, SeasonalType, TrendType};
+use crate::models::ESError;
+use crate::models::exponential_smoothing::ets::{ETSModel, ErrorType, SeasonalType, TrendType};
 use chrono::{DateTime, Utc};
-use oxidiviner_core::{OHLCVData, OxiError, Result, TimeSeriesData};
+use crate::core::{OHLCVData, OxiError, Result, TimeSeriesData};
 use std::collections::HashMap;
 
 #[cfg(test)]
@@ -94,7 +94,7 @@ impl From<ETSComponent> for SeasonalType {
 /// # Examples
 ///
 /// ```
-/// use oxidiviner_core::OHLCVData;
+/// use crate::core::OHLCVData;
 /// use oxidiviner_exponential_smoothing::DailyETSModel;
 ///
 /// // Load your OHLCV data
@@ -362,7 +362,7 @@ impl DailyETSModel {
 /// # Examples
 ///
 /// ```
-/// use oxidiviner_core::OHLCVData;
+/// use crate::core::OHLCVData;
 /// use oxidiviner_exponential_smoothing::MinuteETSModel;
 ///
 /// // Load your minute OHLCV data
@@ -436,7 +436,7 @@ impl MinuteETSModel {
         // Validate aggregation_minutes if provided
         if let Some(agg) = aggregation_minutes {
             if agg < 1 {
-                return Err(ESError::InvalidParameter(format!(
+                return Err(OxiError::from(ESError::InvalidParameter(format!(
                     "Aggregation minutes must be at least 1, got {}",
                     agg
                 )));

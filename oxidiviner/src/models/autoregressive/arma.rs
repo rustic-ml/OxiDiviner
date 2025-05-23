@@ -1,8 +1,8 @@
 #![allow(clippy::needless_range_loop)]
 
-use crate::error::{ARError, Result as ARResult};
-use oxidiviner_core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
-use oxidiviner_math::metrics::{mae, mape, mse, rmse, smape};
+use crate::models::autoregressive::error::ARError;
+use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
+use crate::math::metrics::{mae, mape, mse, rmse, smape};
 
 /// Autoregressive Moving Average (ARMA) model for time series forecasting.
 ///
@@ -61,10 +61,10 @@ impl ARMAModel {
     ///
     /// # Returns
     /// * `Result<Self>` - A new ARMA model if parameters are valid
-    pub fn new(p: usize, q: usize, include_intercept: bool) -> ARResult<Self> {
+    pub fn new(p: usize, q: usize, include_intercept: bool) -> Result<Self> {
         // Validate parameters
         if p == 0 && q == 0 {
-            return Err(ARError::InvalidLagOrder(0));
+            return Err(OxiError::from(ARError::InvalidLagOrder(0)));
         }
 
         let name = if include_intercept {
@@ -150,7 +150,7 @@ impl ARMAModel {
     /// Estimate ARMA parameters using an iterative method
     /// Note: For a production-ready implementation, you might want to use
     /// more sophisticated estimation methods like maximum likelihood
-    fn fit_arma_parameters(&mut self, data: &[f64]) -> ARResult<()> {
+    fn fit_arma_parameters(&mut self, data: &[f64]) -> Result<()> {
         let n = data.len();
         let mean = data.iter().sum::<f64>() / n as f64;
 
@@ -267,7 +267,7 @@ impl ARMAModel {
     }
 
     /// Fit AR component using Yule-Walker equations
-    fn fit_ar_component(&self, data: &[f64], ar_coeffs: &mut [f64]) -> ARResult<()> {
+    fn fit_ar_component(&self, data: &[f64], ar_coeffs: &mut [f64]) -> Result<()> {
         if self.p == 0 {
             return Ok(());
         }
@@ -317,7 +317,7 @@ impl ARMAModel {
 
     /// Fit MA component using a simplified approach
     /// Note: In a production system, you'd use a more sophisticated method
-    fn fit_ma_component(&self, residuals: &[f64], ma_coeffs: &mut [f64]) -> ARResult<()> {
+    fn fit_ma_component(&self, residuals: &[f64], ma_coeffs: &mut [f64]) -> Result<()> {
         if self.q == 0 {
             return Ok(());
         }
@@ -340,7 +340,7 @@ impl ARMAModel {
 
             // Check for invalid coefficients
             if ma_coeffs[q].is_nan() || ma_coeffs[q].is_infinite() {
-                return Err(ARError::InvalidCoefficient);
+                return Err(OxiError::from(ARError::InvalidCoefficient)));
             }
 
             // MA coefficients should typically be between -1 and 1
@@ -351,10 +351,10 @@ impl ARMAModel {
     }
 
     /// Solve a linear system Ax = b using Gaussian elimination with partial pivoting.
-    fn solve_linear_system(&self, a: &[Vec<f64>], b: &[f64]) -> ARResult<Vec<f64>> {
+    fn solve_linear_system(&self, a: &[Vec<f64>], b: &[f64]) -> Result<Vec<f64>> {
         let n = a.len();
         if n == 0 || a[0].len() != n || b.len() != n {
-            return Err(ARError::LinearSolveError(
+            return Err(OxiError::from(ARError::LinearSolveError(
                 "Invalid matrix dimensions".to_string(),
             ));
         }
@@ -383,7 +383,7 @@ impl ARMAModel {
 
             // Check if matrix is singular
             if max_val.abs() < 1e-10 {
-                return Err(ARError::LinearSolveError(
+                return Err(OxiError::from(ARError::LinearSolveError(
                     "Singular matrix detected".to_string(),
                 ));
             }
@@ -415,7 +415,7 @@ impl ARMAModel {
 
             // Check for invalid coefficients
             if x[i].is_nan() || x[i].is_infinite() {
-                return Err(ARError::InvalidCoefficient);
+                return Err(OxiError::from(ARError::InvalidCoefficient)));
             }
         }
 
@@ -423,9 +423,9 @@ impl ARMAModel {
     }
 
     #[allow(dead_code)]
-    fn extract_ar_coefficients(&self, phi: &[f64], ar_coeffs: &mut [f64]) -> ARResult<()> {
+    fn extract_ar_coefficients(&self, phi: &[f64], ar_coeffs: &mut [f64]) -> Result<()> {
         if ar_coeffs.len() < self.p {
-            return Err(ARError::InvalidParameter(
+            return Err(OxiError::from(ARError::InvalidParameter(
                 "AR coefficients array too small".to_string(),
             ));
         }
@@ -438,9 +438,9 @@ impl ARMAModel {
 
     /// Extract MA coefficients
     #[allow(dead_code)]
-    fn extract_ma_coefficients(&self, theta: &[f64], ma_coeffs: &mut [f64]) -> ARResult<()> {
+    fn extract_ma_coefficients(&self, theta: &[f64], ma_coeffs: &mut [f64]) -> Result<()> {
         if ma_coeffs.len() < self.q {
-            return Err(ARError::InvalidParameter(
+            return Err(OxiError::from(ARError::InvalidParameter(
                 "MA coefficients array too small".to_string(),
             ));
         }

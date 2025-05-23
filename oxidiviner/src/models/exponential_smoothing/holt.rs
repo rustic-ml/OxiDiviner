@@ -1,6 +1,6 @@
-use crate::error::ESError;
-use oxidiviner_core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
-use oxidiviner_math::metrics::{mae, mape, mse, rmse, smape};
+use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
+use crate::math::metrics::{mae, mape, mse, rmse, smape};
+use crate::models::exponential_smoothing::error::ESError;
 
 /// Holt Linear (Double Exponential Smoothing) model for forecasting time series with trend.
 ///
@@ -46,11 +46,11 @@ impl HoltLinearModel {
     pub fn new(alpha: f64, beta: f64) -> std::result::Result<Self, ESError> {
         // Validate parameters
         if alpha <= 0.0 || alpha >= 1.0 {
-            return Err(ESError::InvalidAlpha(alpha));
+            return Err(OxiError::from(ESError::InvalidAlpha(alpha));
         }
 
         if beta <= 0.0 || beta >= 1.0 {
-            return Err(ESError::InvalidBeta(beta));
+            return Err(OxiError::from(ESError::InvalidBeta(beta));
         }
 
         let name = format!("Holt(α={:.3}, β={:.3})", alpha, beta);
