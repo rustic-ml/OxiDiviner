@@ -1,98 +1,151 @@
 # OxiDiviner Publishing Plan for Crates.io
 
 ## Overview
-OxiDiviner 0.4.2 is ready for publishing to crates.io with significant improvements in test coverage and code quality.
+OxiDiviner 0.4.2 is ready for publishing to crates.io with significant improvements in test coverage and code quality. **Only the main crate will be published** - all subcrates remain internal to provide a single, clean entry point.
+
+## Architecture Strategy
+- **Single Entry Point**: Only `oxidiviner` crate published to crates.io
+- **Internal Code Organization**: Subcrates used for development organization only
+- **Clean API Surface**: Users only need to depend on one crate
+- **Simplified Maintenance**: No version synchronization issues across multiple published crates
+
+## Current Challenge & Solution
+
+### The Problem
+The current workspace setup uses path dependencies (e.g. `oxidiviner-core = { path = "../oxidiviner-core" }`), which won't work when published to crates.io because external users won't have access to the subcrate source code.
+
+### The Solution
+Convert the main crate to include all subcrate functionality directly without external dependencies. This can be achieved through:
+
+1. **Option 1**: Copy all subcrate source code into `oxidiviner/src/` with module organization
+2. **Option 2**: Use `include!()` macros to bring in subcrate source files during compilation
+
+We'll use **Option 1** as it's cleaner and more maintainable.
 
 ## Current Status
 - **Version**: 0.4.2 (bumped from 0.4.1)
-- **Main Crate**: Already published at 0.4.1, ready for 0.4.2 update
-- **Subcrates**: Published at version 0.0.0, need proper versioning
+- **Main Crate**: Currently uses path dependencies (needs modification)
+- **Subcrates**: Internal workspace crates only (NOT published to crates.io)
 - **Tests**: 26/33 passing (significant improvement)
 - **Coverage**: Estimated 63-65% overall (improved from 57.98%)
 
-## Publishing Strategy
+## Implementation Plan
 
-### 1. Pre-Publishing Checklist
+### Step 1: Restructure Main Crate
+Reorganize the main crate to include all functionality directly:
 
-#### Quality Assurance
-- [x] All crates compile successfully
-- [x] Main integration tests pass
-- [x] Examples run correctly
-- [x] Documentation generates without errors
-- [x] Version bumped to 0.4.2
-- [x] Changelog updated
-- [x] Git committed
+```
+oxidiviner/src/
+├── lib.rs              (main entry point)
+├── core/               (from oxidiviner-core)
+│   ├── mod.rs
+│   ├── data.rs
+│   ├── error.rs
+│   └── validation.rs
+├── math/               (from oxidiviner-math)
+│   ├── mod.rs
+│   ├── metrics.rs
+│   ├── statistics.rs
+│   └── transforms.rs
+├── models/
+│   ├── mod.rs
+│   ├── moving_average/ (from oxidiviner-moving-average)
+│   ├── exponential_smoothing/ (from oxidiviner-exponential-smoothing)
+│   ├── autoregressive/ (from oxidiviner-autoregressive)
+│   └── garch/          (from oxidiviner-garch)
+├── financial.rs        (financial utilities)
+├── api.rs              (high-level API)
+├── batch.rs            (batch processing)
+├── quick.rs            (quick API functions)
+└── prelude.rs          (convenience imports)
+```
 
-#### Publishing Dependencies
-- [ ] Ensure crates.io account is set up
-- [ ] Generate API token: `cargo login`
-- [ ] Verify workspace publishing order
+### Step 2: Update Dependencies
+Remove all path dependencies from `oxidiviner/Cargo.toml` and include only external crates:
 
-### 2. Publishing Order
+```toml
+[dependencies]
+chrono = { version = "0.4.41", features = ["serde"] }
+rand = "0.9.1"
+rand_distr = "0.5.0"
+thiserror = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+statrs = "0.18"
+nalgebra = "0.33"
+ndarray = { version = "0.16", optional = true }
+```
 
-Since this is a workspace with internal dependencies, we need to publish in dependency order:
-
-1. **Core Dependencies** (independent):
-   - `oxidiviner-math`
-   - `oxidiviner-core`
-
-2. **Model Crates** (depend on core):
-   - `oxidiviner-moving-average`
-   - `oxidiviner-exponential-smoothing`
-   - `oxidiviner-autoregressive`
-   - `oxidiviner-garch`
-
-3. **Main Crate** (depends on all):
-   - `oxidiviner`
-
-### 3. Publishing Commands
+### Step 3: Publishing Commands
 
 ```bash
-# 1. Publish core dependencies first
-cargo publish -p oxidiviner-math
-cargo publish -p oxidiviner-core
+# Test the restructured crate
+cargo build -p oxidiviner
+cargo test -p oxidiviner
+cargo doc -p oxidiviner
 
-# 2. Publish model crates
-cargo publish -p oxidiviner-moving-average
-cargo publish -p oxidiviner-exponential-smoothing
-cargo publish -p oxidiviner-autoregressive
-cargo publish -p oxidiviner-garch
+# Package and verify
+cargo package -p oxidiviner --list
+cargo package -p oxidiviner --allow-dirty
 
-# 3. Publish main crate
+# Publish to crates.io
 cargo publish -p oxidiviner
 ```
 
-### 4. Verification Steps
+## User Experience Benefits
 
-After each publish:
-```bash
-# Check if package is available
-cargo search oxidiviner-<crate-name>
-
-# Test installation in a clean environment
-cargo new test-project
-cd test-project
-cargo add oxidiviner@0.4.2
-cargo build
+### Single Dependency
+```toml
+[dependencies]
+oxidiviner = "0.4.2"
 ```
 
-### 5. Post-Publishing Tasks
+### Multiple Import Options Remain the Same
+```rust
+// Option 1: Prelude (recommended for most users)
+use oxidiviner::prelude::*;
 
-#### Documentation
-- [ ] Verify docs.rs builds correctly
-- [ ] Check all links work properly
-- [ ] Ensure examples render correctly
+// Option 2: Direct model access
+use oxidiviner::models::garch::GARCHModel;
+use oxidiviner::models::autoregressive::ARModel;
 
-#### Communication
-- [ ] Update README.md with new version
-- [ ] Create GitHub release with changelog
-- [ ] Update project homepage/documentation
-- [ ] Consider blog post about improvements
+// Option 3: Module-style access
+use oxidiviner::garch::GARCHModel;
+use oxidiviner::autoregressive::ARModel;
+```
 
-#### Monitoring
-- [ ] Monitor for issues in first 24 hours
-- [ ] Respond to any user feedback
-- [ ] Track download statistics
+## Technical Advantages
+
+1. **No External Dependencies**: Users get everything in one package
+2. **Faster Installation**: Single download instead of multiple crates
+3. **Easier Maintenance**: One version to track and publish
+4. **Better Compilation**: No dependency resolution between internal crates
+5. **Simplified CI/CD**: Single publish step
+
+## Migration Effort Estimate
+
+- **Code Copying**: ~2-3 hours to copy and organize source files
+- **Module System**: ~1-2 hours to set up proper module declarations
+- **Testing**: ~1 hour to verify all functionality works
+- **Documentation**: ~30 minutes to update any path references
+
+**Total**: ~4-6 hours of work
+
+## Success Criteria
+
+- [x] All subcrates have `publish = false`
+- [ ] Main crate builds without path dependencies
+- [ ] All tests pass in the main crate
+- [ ] Examples work with the reorganized code
+- [ ] Documentation generates correctly
+- [ ] Package verification succeeds
+- [ ] Publishing to crates.io succeeds
+
+## Next Steps
+
+1. **Today**: Implement the code reorganization
+2. **Today**: Test and verify the new structure
+3. **Today**: Publish to crates.io
+4. **This Week**: Monitor for any issues and user feedback
 
 ## Key Improvements in 0.4.2
 
@@ -160,13 +213,6 @@ cargo build
 2. Fix issue in patch release
 3. Publish fixed version ASAP
 4. Communicate with users
-
-## Next Steps
-
-1. **Immediate**: Set up crates.io authentication
-2. **Today**: Publish core crates first
-3. **This Week**: Complete full publishing cycle
-4. **Next Week**: Monitor and address any issues
 
 ## Contact & Support
 
