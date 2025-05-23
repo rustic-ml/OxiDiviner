@@ -40,3 +40,15 @@ Cargo.lock
 tag_version.sh
 
 Cargo.lock
+
+# Code coverage reports
+target/coverage/
+target/tarpaulin/
+*.profraw
+tarpaulin-report.html
+lcov.info
+coverage.json
+
+# Platform-specific
+.DS_Store
+Thumbs.db

@@ -109,172 +109,173 @@ pub struct ModelValidator;
 
 impl ModelValidator {
     /// Validate ARIMA model parameters
-    /// 
+    ///
     /// # Arguments
     /// * `p` - Autoregressive order
     /// * `d` - Differencing order
     /// * `q` - Moving average order
-    /// 
+    ///
     /// # Returns
     /// * `Result<()>` - Success or validation error
     pub fn validate_arima_params(p: usize, d: usize, q: usize) -> Result<()> {
         if p > 10 {
             return Err(OxiError::InvalidParameter(
-                "AR order (p) too high (max 10). Consider using a simpler model.".into()
+                "AR order (p) too high (max 10). Consider using a simpler model.".into(),
             ));
         }
-        
+
         if d > 2 {
             return Err(OxiError::InvalidParameter(
-                "Differencing order (d) too high (max 2). Higher orders rarely needed.".into()
+                "Differencing order (d) too high (max 2). Higher orders rarely needed.".into(),
             ));
         }
-        
+
         if q > 10 {
             return Err(OxiError::InvalidParameter(
-                "MA order (q) too high (max 10). Consider using a simpler model.".into()
+                "MA order (q) too high (max 10). Consider using a simpler model.".into(),
             ));
         }
-        
+
         if p == 0 && d == 0 && q == 0 {
             return Err(OxiError::InvalidParameter(
-                "At least one of p, d, or q must be greater than 0".into()
+                "At least one of p, d, or q must be greater than 0".into(),
             ));
         }
-        
+
         Ok(())
     }
-    
+
     /// Validate autoregressive model parameters
-    /// 
+    ///
     /// # Arguments
     /// * `order` - AR model order
-    /// 
+    ///
     /// # Returns
     /// * `Result<()>` - Success or validation error
     pub fn validate_ar_params(order: usize) -> Result<()> {
         if order == 0 {
             return Err(OxiError::InvalidParameter(
-                "AR order must be greater than 0".into()
+                "AR order must be greater than 0".into(),
             ));
         }
-        
+
         if order > 20 {
             return Err(OxiError::InvalidParameter(
-                "AR order too high (max 20). Consider using ARIMA or other models.".into()
+                "AR order too high (max 20). Consider using ARIMA or other models.".into(),
             ));
         }
-        
+
         Ok(())
     }
-    
+
     /// Validate moving average model parameters
-    /// 
+    ///
     /// # Arguments
     /// * `window` - Moving average window size
-    /// 
+    ///
     /// # Returns
     /// * `Result<()>` - Success or validation error
     pub fn validate_ma_params(window: usize) -> Result<()> {
         if window == 0 {
             return Err(OxiError::InvalidParameter(
-                "Moving average window must be greater than 0".into()
+                "Moving average window must be greater than 0".into(),
             ));
         }
-        
+
         if window > 100 {
             return Err(OxiError::InvalidParameter(
-                "Moving average window too large (max 100). Large windows may not be meaningful.".into()
+                "Moving average window too large (max 100). Large windows may not be meaningful."
+                    .into(),
             ));
         }
-        
+
         Ok(())
     }
-    
+
     /// Validate exponential smoothing parameters
-    /// 
+    ///
     /// # Arguments
     /// * `alpha` - Smoothing parameter for level
     /// * `beta` - Optional smoothing parameter for trend
     /// * `gamma` - Optional smoothing parameter for seasonality
-    /// 
+    ///
     /// # Returns
     /// * `Result<()>` - Success or validation error
     pub fn validate_exponential_smoothing_params(
-        alpha: f64, 
-        beta: Option<f64>, 
-        gamma: Option<f64>
+        alpha: f64,
+        beta: Option<f64>,
+        gamma: Option<f64>,
     ) -> Result<()> {
         if !(0.0..=1.0).contains(&alpha) {
             return Err(OxiError::InvalidParameter(
-                "Alpha parameter must be between 0 and 1".into()
+                "Alpha parameter must be between 0 and 1".into(),
             ));
         }
-        
+
         if let Some(beta) = beta {
             if !(0.0..=1.0).contains(&beta) {
                 return Err(OxiError::InvalidParameter(
-                    "Beta parameter must be between 0 and 1".into()
+                    "Beta parameter must be between 0 and 1".into(),
                 ));
             }
         }
-        
+
         if let Some(gamma) = gamma {
             if !(0.0..=1.0).contains(&gamma) {
                 return Err(OxiError::InvalidParameter(
-                    "Gamma parameter must be between 0 and 1".into()
+                    "Gamma parameter must be between 0 and 1".into(),
                 ));
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Validate GARCH model parameters
-    /// 
+    ///
     /// # Arguments
     /// * `p` - GARCH order
     /// * `q` - ARCH order
-    /// 
+    ///
     /// # Returns
     /// * `Result<()>` - Success or validation error
     pub fn validate_garch_params(p: usize, q: usize) -> Result<()> {
         if p == 0 && q == 0 {
             return Err(OxiError::InvalidParameter(
-                "At least one of GARCH order (p) or ARCH order (q) must be greater than 0".into()
+                "At least one of GARCH order (p) or ARCH order (q) must be greater than 0".into(),
             ));
         }
-        
+
         if p > 5 {
             return Err(OxiError::InvalidParameter(
-                "GARCH order (p) too high (max 5). Higher orders rarely improve fit.".into()
+                "GARCH order (p) too high (max 5). Higher orders rarely improve fit.".into(),
             ));
         }
-        
+
         if q > 5 {
             return Err(OxiError::InvalidParameter(
-                "ARCH order (q) too high (max 5). Higher orders rarely improve fit.".into()
+                "ARCH order (q) too high (max 5). Higher orders rarely improve fit.".into(),
             ));
         }
-        
+
         Ok(())
     }
-    
+
     /// Validate forecast horizon
-    /// 
+    ///
     /// # Arguments
     /// * `horizon` - Number of periods to forecast
     /// * `data_size` - Size of training data
-    /// 
+    ///
     /// # Returns
     /// * `Result<()>` - Success or validation error
     pub fn validate_forecast_horizon(horizon: usize, data_size: usize) -> Result<()> {
         if horizon == 0 {
             return Err(OxiError::InvalidParameter(
-                "Forecast horizon must be greater than 0".into()
+                "Forecast horizon must be greater than 0".into(),
             ));
         }
-        
+
         if horizon > data_size / 2 {
             return Err(OxiError::InvalidParameter(
                 format!(
@@ -283,29 +284,31 @@ impl ModelValidator {
                 )
             ));
         }
-        
+
         Ok(())
     }
-    
+
     /// Validate minimum data requirements
-    /// 
+    ///
     /// # Arguments
     /// * `data_size` - Size of available data
     /// * `min_required` - Minimum required data points
     /// * `model_name` - Name of the model for error messages
-    /// 
+    ///
     /// # Returns
     /// * `Result<()>` - Success or validation error
-    pub fn validate_minimum_data(data_size: usize, min_required: usize, model_name: &str) -> Result<()> {
+    pub fn validate_minimum_data(
+        data_size: usize,
+        min_required: usize,
+        model_name: &str,
+    ) -> Result<()> {
         if data_size < min_required {
-            return Err(OxiError::DataError(
-                format!(
-                    "{} requires at least {} data points, but only {} provided",
-                    model_name, min_required, data_size
-                )
-            ));
+            return Err(OxiError::DataError(format!(
+                "{} requires at least {} data points, but only {} provided",
+                model_name, min_required, data_size
+            )));
         }
-        
+
         Ok(())
     }
 }
@@ -410,7 +413,7 @@ pub struct ModelOutput {
 }
 
 /// Simplified, unified forecasting trait for easy external consumption
-/// 
+///
 /// This trait provides a standardized interface across all models with:
 /// - Simplified configuration via associated Config types
 /// - Unified fit/forecast signatures
@@ -419,49 +422,55 @@ pub struct ModelOutput {
 pub trait QuickForecaster {
     /// Configuration type for this model (must implement Default)
     type Config: Default;
-    
+
     /// Create a new model instance with optional configuration
-    /// 
+    ///
     /// # Arguments
     /// * `config` - Optional configuration, uses Default if None
-    /// 
+    ///
     /// # Returns
     /// * `Result<Self>` - Model instance or error
-    fn quick_new(config: Option<Self::Config>) -> Result<Self> where Self: Sized;
-    
+    fn quick_new(config: Option<Self::Config>) -> Result<Self>
+    where
+        Self: Sized;
+
     /// Fit the model to training data
-    /// 
+    ///
     /// # Arguments
     /// * `data` - Time series data to fit the model to
-    /// 
+    ///
     /// # Returns
     /// * `Result<()>` - Success or error during fitting
     fn quick_fit(&mut self, data: &TimeSeriesData) -> Result<()>;
-    
+
     /// Generate forecasts for the specified number of periods
-    /// 
+    ///
     /// # Arguments
     /// * `periods` - Number of future periods to forecast
-    /// 
+    ///
     /// # Returns
     /// * `Result<Vec<f64>>` - Forecasted values or error
     fn quick_forecast(&self, periods: usize) -> Result<Vec<f64>>;
-    
+
     /// Get the human-readable name of this model
-    /// 
+    ///
     /// # Returns
     /// * `&'static str` - Model name for identification
     fn model_name(&self) -> &'static str;
-    
+
     /// Convenience method to fit and forecast in one step
-    /// 
+    ///
     /// # Arguments
     /// * `data` - Time series data to fit the model to
     /// * `periods` - Number of future periods to forecast
-    /// 
+    ///
     /// # Returns
     /// * `Result<Vec<f64>>` - Forecasted values or error
-    fn quick_fit_and_forecast(&mut self, data: &TimeSeriesData, periods: usize) -> Result<Vec<f64>> {
+    fn quick_fit_and_forecast(
+        &mut self,
+        data: &TimeSeriesData,
+        periods: usize,
+    ) -> Result<Vec<f64>> {
         self.quick_fit(data)?;
         self.quick_forecast(periods)
     }
@@ -483,35 +492,35 @@ pub struct ForecastResult {
 }
 
 /// Extended forecasting trait with confidence intervals
-/// 
+///
 /// Models that implement this trait can provide uncertainty estimates
 /// alongside their point forecasts.
 pub trait ConfidenceForecaster: QuickForecaster {
     /// Generate forecasts with confidence intervals
-    /// 
+    ///
     /// # Arguments
     /// * `periods` - Number of future periods to forecast
     /// * `confidence` - Confidence level (e.g., 0.95 for 95% confidence)
-    /// 
+    ///
     /// # Returns
     /// * `Result<ForecastResult>` - Forecast with confidence bounds or error
     fn forecast_with_confidence(&self, periods: usize, confidence: f64) -> Result<ForecastResult>;
 }
 
 /// Builder pattern for creating forecasting models with fluent interface
-/// 
+///
 /// This provides a convenient way to configure and create models with
 /// a clean, readable syntax.
-/// 
+///
 /// # Example
 /// ```rust
 /// # use oxidiviner_core::{ModelBuilder, Result};
 /// # fn example() -> Result<()> {
-/// let model = ModelBuilder::arima()
+/// let config = ModelBuilder::arima()
 ///     .with_ar(2)
 ///     .with_differencing(1)
 ///     .with_ma(1)
-///     .build()?;
+///     .build_config();
 /// # Ok(())
 /// # }
 /// ```
@@ -528,7 +537,7 @@ impl ModelBuilder {
             parameters: std::collections::HashMap::new(),
         }
     }
-    
+
     /// Start building an AR model
     pub fn ar() -> Self {
         Self {
@@ -536,7 +545,7 @@ impl ModelBuilder {
             parameters: std::collections::HashMap::new(),
         }
     }
-    
+
     /// Start building a Moving Average model
     pub fn moving_average() -> Self {
         Self {
@@ -544,7 +553,7 @@ impl ModelBuilder {
             parameters: std::collections::HashMap::new(),
         }
     }
-    
+
     /// Start building an Exponential Smoothing model
     pub fn exponential_smoothing() -> Self {
         Self {
@@ -552,7 +561,7 @@ impl ModelBuilder {
             parameters: std::collections::HashMap::new(),
         }
     }
-    
+
     /// Start building a GARCH model
     pub fn garch() -> Self {
         Self {
@@ -560,79 +569,79 @@ impl ModelBuilder {
             parameters: std::collections::HashMap::new(),
         }
     }
-    
+
     /// Set autoregressive order (for ARIMA/AR models)
     pub fn with_ar(mut self, p: usize) -> Self {
         self.parameters.insert("p".to_string(), p as f64);
         self
     }
-    
+
     /// Set differencing order (for ARIMA models)
     pub fn with_differencing(mut self, d: usize) -> Self {
         self.parameters.insert("d".to_string(), d as f64);
         self
     }
-    
+
     /// Set moving average order (for ARIMA models)
     pub fn with_ma(mut self, q: usize) -> Self {
         self.parameters.insert("q".to_string(), q as f64);
         self
     }
-    
+
     /// Set window size (for MA models)
     pub fn with_window(mut self, window: usize) -> Self {
         self.parameters.insert("window".to_string(), window as f64);
         self
     }
-    
+
     /// Set alpha parameter (for ES models)
     pub fn with_alpha(mut self, alpha: f64) -> Self {
         self.parameters.insert("alpha".to_string(), alpha);
         self
     }
-    
+
     /// Set beta parameter (for ES models with trend)
     pub fn with_beta(mut self, beta: f64) -> Self {
         self.parameters.insert("beta".to_string(), beta);
         self
     }
-    
+
     /// Set gamma parameter (for ES models with seasonality)
     pub fn with_gamma(mut self, gamma: f64) -> Self {
         self.parameters.insert("gamma".to_string(), gamma);
         self
     }
-    
+
     /// Set GARCH order (for GARCH models)
     pub fn with_garch_order(mut self, p: usize) -> Self {
         self.parameters.insert("garch_p".to_string(), p as f64);
         self
     }
-    
+
     /// Set ARCH order (for GARCH models)
     pub fn with_arch_order(mut self, q: usize) -> Self {
         self.parameters.insert("arch_q".to_string(), q as f64);
         self
     }
-    
+
     /// Add a custom parameter
     pub fn with_parameter(mut self, name: &str, value: f64) -> Self {
         self.parameters.insert(name.to_string(), value);
         self
     }
-    
+
     /// Get the model type
     pub fn model_type(&self) -> &str {
         &self.model_type
     }
-    
+
     /// Get the parameters
     pub fn parameters(&self) -> &std::collections::HashMap<String, f64> {
         &self.parameters
     }
-    
+
     /// Build the model (placeholder - actual implementation would depend on available models)
-    /// 
+    ///
     /// Note: The actual build() method would need to be implemented in the main crate
     /// where all model types are available.
     pub fn build_config(self) -> ModelConfig {
@@ -668,7 +677,7 @@ pub enum SelectionCriteria {
 }
 
 /// Smart model selection for automatic forecasting
-/// 
+///
 /// This utility tries multiple models and selects the best one based
 /// on specified criteria.
 pub struct AutoSelector {
@@ -684,7 +693,7 @@ impl AutoSelector {
             candidate_models: Self::default_candidates(),
         }
     }
-    
+
     /// Create a new auto selector with BIC criterion
     pub fn with_bic() -> Self {
         Self {
@@ -692,7 +701,7 @@ impl AutoSelector {
             candidate_models: Self::default_candidates(),
         }
     }
-    
+
     /// Create a new auto selector with cross-validation
     pub fn with_cross_validation(folds: usize) -> Self {
         Self {
@@ -700,7 +709,7 @@ impl AutoSelector {
             candidate_models: Self::default_candidates(),
         }
     }
-    
+
     /// Create a new auto selector with hold-out validation
     pub fn with_hold_out(test_ratio: f64) -> Self {
         Self {
@@ -708,51 +717,66 @@ impl AutoSelector {
             candidate_models: Self::default_candidates(),
         }
     }
-    
+
     /// Add a custom model to the candidates
     pub fn add_candidate(mut self, config: ModelConfig) -> Self {
         self.candidate_models.push(config);
         self
     }
-    
+
     /// Set custom candidate models (replaces defaults)
     pub fn with_candidates(mut self, candidates: Vec<ModelConfig>) -> Self {
         self.candidate_models = candidates;
         self
     }
-    
+
     /// Get the selection criteria
     pub fn criteria(&self) -> &SelectionCriteria {
         &self.criteria
     }
-    
+
     /// Get the candidate models
     pub fn candidates(&self) -> &[ModelConfig] {
         &self.candidate_models
     }
-    
+
     /// Default set of candidate models to try
     fn default_candidates() -> Vec<ModelConfig> {
         vec![
             // ARIMA models
-            ModelBuilder::arima().with_ar(1).with_differencing(1).with_ma(1).build_config(),
-            ModelBuilder::arima().with_ar(2).with_differencing(1).with_ma(1).build_config(),
-            ModelBuilder::arima().with_ar(1).with_differencing(1).with_ma(2).build_config(),
-            
+            ModelBuilder::arima()
+                .with_ar(1)
+                .with_differencing(1)
+                .with_ma(1)
+                .build_config(),
+            ModelBuilder::arima()
+                .with_ar(2)
+                .with_differencing(1)
+                .with_ma(1)
+                .build_config(),
+            ModelBuilder::arima()
+                .with_ar(1)
+                .with_differencing(1)
+                .with_ma(2)
+                .build_config(),
             // AR models
             ModelBuilder::ar().with_ar(1).build_config(),
             ModelBuilder::ar().with_ar(2).build_config(),
             ModelBuilder::ar().with_ar(3).build_config(),
-            
             // MA models
             ModelBuilder::moving_average().with_window(3).build_config(),
             ModelBuilder::moving_average().with_window(5).build_config(),
             ModelBuilder::moving_average().with_window(7).build_config(),
-            
             // ES models
-            ModelBuilder::exponential_smoothing().with_alpha(0.3).build_config(),
-            ModelBuilder::exponential_smoothing().with_alpha(0.5).build_config(),
-            ModelBuilder::exponential_smoothing().with_alpha(0.7).build_config(),
+            ModelBuilder::exponential_smoothing()
+                .with_alpha(0.3)
+                .build_config(),
+            ModelBuilder::exponential_smoothing()
+                .with_alpha(0.5)
+                .build_config(),
+            ModelBuilder::exponential_smoothing()
+                .with_alpha(0.7)
+                .build_config(),
         ]
     }
 }

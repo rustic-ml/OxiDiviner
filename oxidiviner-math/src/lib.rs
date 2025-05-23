@@ -1,6 +1,3 @@
-#[cfg(feature = "ndarray_support")]
-use ndarray::Array1;
-
 // Internal modules
 mod error;
 pub mod metrics;

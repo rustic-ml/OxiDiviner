@@ -1,6 +1,9 @@
+#![allow(deprecated)]
+#![allow(dead_code)]
+#![allow(unused_imports)]
+
 use chrono::{Duration, Utc};
 use oxidiviner_core::TimeSeriesData;
-use oxidiviner_exponential_smoothing::ETSModel;
 use rand::Rng;
 use std::error::Error;
 

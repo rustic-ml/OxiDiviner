@@ -1,3 +1,5 @@
+#![allow(clippy::needless_range_loop)]
+
 use crate::error::{ARError, Result as ARResult};
 use oxidiviner_core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
 use oxidiviner_math::metrics::{mae, mape, mse, rmse, smape};

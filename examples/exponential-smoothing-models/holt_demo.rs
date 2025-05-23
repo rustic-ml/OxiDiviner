@@ -1,4 +1,7 @@
-use chrono::{Duration, Utc};
+#![allow(clippy::needless_range_loop)]
+#![allow(unused_imports)]
+
+use chrono::{DateTime, Duration, Utc};
 use oxidiviner_core::TimeSeriesData;
 use oxidiviner_exponential_smoothing::HoltLinearModel;
 use std::error::Error;

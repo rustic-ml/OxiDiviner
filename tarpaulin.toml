@@ -1,0 +1,77 @@
+# Code Coverage Configuration for OxiDiviner Workspace
+# Run with: cargo tarpaulin --config tarpaulin.toml
+
+[report]
+# Output formats
+out = ["Html", "Lcov", "Json", "Stdout"]
+
+# Output directory for reports
+output-dir = "target/coverage"
+
+# Minimum coverage threshold (50% is more realistic for complex algorithms)
+fail-under = 50.0
+
+[run]
+# Include all workspace members
+workspace = true
+
+# Test all features
+all-features = true
+
+# Include doctests in coverage
+count-doc-tests = true
+
+# Timeout for tests (5 minutes)
+timeout = "300s"
+
+# Exclude files/directories from coverage
+exclude = [
+    # Test files
+    "*/tests/*",
+    "*/benches/*",
+    
+    # Example files that are demos only
+    "examples/exponential-smoothing-models/ses_model_example.rs",
+    "examples/exponential-smoothing-models/ses_parameter_tuning.rs",
+    "examples/exponential-smoothing-models/es_parameter_tuning.rs",
+    "examples/exponential-smoothing-models/ets_model_demo.rs",
+    "examples/exponential-smoothing-models/ets_demo.rs",
+    "examples/exponential-smoothing-models/ses_demo.rs",
+    "examples/exponential-smoothing-models/holt_demo.rs",
+    "examples/garch-models/*",
+    "examples/ohlcv-handling/*",
+    "examples/standard_interface_demo.rs",
+    "examples/ohlcv_forecasting_example.rs",
+    
+    # Generated files
+    "target/*",
+    
+    # Documentation and config files
+    "*.md",
+    "*.toml"
+]
+
+# Include example files that test core APIs
+include = [
+    "examples/autoregressive-models/autoregressive_demo.rs",
+    "examples/autoregressive-models/ma_demo.rs", 
+    "examples/quick_start_improved.rs"
+]
+
+# Run types
+run-types = ["Tests", "Doctests"]
+
+[tool.coverage]
+# Line coverage
+line = true
+
+# Branch coverage  
+branch = true
+
+[target.'cfg(not(target_os = "windows"))']
+# Additional options for non-Windows systems
+engine = "llvm"
+
+[target.'cfg(target_os = "windows")']
+# Windows-specific options
+engine = "ptrace" 

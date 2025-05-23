@@ -92,8 +92,8 @@ pub fn autocorrelation(data: &[f64], lag: usize) -> f64 {
         numerator += (data[i] - mean_val) * (data[i + lag] - mean_val);
     }
 
-    for i in 0..data.len() {
-        denominator += (data[i] - mean_val) * (data[i] - mean_val);
+    for item in data {
+        denominator += (item - mean_val) * (item - mean_val);
     }
 
     if denominator == 0.0 {
@@ -109,7 +109,7 @@ pub fn quantile(data: &[f64], q: f64) -> f64 {
         return f64::NAN;
     }
 
-    if q < 0.0 || q > 1.0 {
+    if !(0.0..=1.0).contains(&q) {
         return f64::NAN;
     }
 

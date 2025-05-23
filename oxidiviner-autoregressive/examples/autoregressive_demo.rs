@@ -1,6 +1,6 @@
 use chrono::{DateTime, Duration, Utc};
 use oxidiviner_autoregressive::{ARIMAModel, ARMAModel, ARModel, SARIMAModel, VARModel};
-use oxidiviner_core::{ModelEvaluation, TimeSeriesData};
+use oxidiviner_core::TimeSeriesData;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
 use std::f64::consts::PI;
@@ -34,13 +34,13 @@ fn main() {
     // Add some random noise to break perfect correlation
     let y1_values: Vec<f64> = trend_values
         .iter()
-        .map(|&x| x + rng.gen_range(0.0..1.0) * 4.0 - 2.0)
+        .map(|&x| x + rng.random_range(0.0..1.0) * 4.0 - 2.0)
         .collect();
 
     // Make y2 correlated but not perfectly collinear with y1
     let y2_values: Vec<f64> = y1_values
         .iter()
-        .map(|&x| 2.0 * x + 5.0 + rng.gen_range(0.0..1.0) * 6.0 - 3.0)
+        .map(|&x| 2.0 * x + 5.0 + rng.random_range(0.0..1.0) * 6.0 - 3.0)
         .collect();
 
     // Create TimeSeriesData objects
@@ -52,7 +52,7 @@ fn main() {
         }
     };
 
-    let seasonal_data =
+    let _seasonal_data =
         match TimeSeriesData::new(timestamps.clone(), seasonal_values, "seasonal_series") {
             Ok(data) => data,
             Err(e) => {
@@ -231,7 +231,7 @@ fn main() {
     let arima_train_values: Vec<f64> = (0..train_size)
         .map(|i| {
             let trend = (i as f64) * 2.0;
-            let noise = rng.gen_range(-5.0..5.0);
+            let noise = rng.random_range(-5.0..5.0);
             trend + noise
         })
         .collect();
@@ -239,7 +239,7 @@ fn main() {
     let arima_test_values: Vec<f64> = (train_size..n)
         .map(|i| {
             let trend = (i as f64) * 2.0;
-            let noise = rng.gen_range(-5.0..5.0);
+            let noise = rng.random_range(-5.0..5.0);
             trend + noise
         })
         .collect();
@@ -273,7 +273,7 @@ fn main() {
         .map(|i| {
             let trend = (i as f64) * 0.5;
             let seasonal = 10.0 * (2.0 * PI * (i % 12) as f64 / 12.0).sin();
-            let noise = rng.gen_range(-2.0..2.0);
+            let noise = rng.random_range(-2.0..2.0);
             trend + seasonal + noise
         })
         .collect();
@@ -283,7 +283,7 @@ fn main() {
             let j = i + train_size;
             let trend = (j as f64) * 0.5;
             let seasonal = 10.0 * (2.0 * PI * (j % 12) as f64 / 12.0).sin();
-            let noise = rng.gen_range(-2.0..2.0);
+            let noise = rng.random_range(-2.0..2.0);
             trend + seasonal + noise
         })
         .collect();

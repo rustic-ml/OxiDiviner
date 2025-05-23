@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use chrono::{Days, NaiveDate};
 use rand::Rng;
 use std::error::Error;

@@ -1,3 +1,7 @@
+#![allow(clippy::needless_range_loop)]
+#![allow(unused_imports)]
+
+use chrono::{DateTime, Utc};
 use chrono::Timelike;
 use oxidiviner_core::{OHLCVData, Result};
 use oxidiviner_exponential_smoothing::{DailyETSModel, MinuteETSModel};

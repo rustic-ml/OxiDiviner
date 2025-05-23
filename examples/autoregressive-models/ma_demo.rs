@@ -1,7 +1,10 @@
+#![allow(deprecated)]
+#![allow(unused_variables)]
+
 /*!
 # Moving Average Models Example - Enhanced API Demo
 
-This example demonstrates both the traditional API and the new improved API 
+This example demonstrates both the traditional API and the new improved API
 features for moving average models in OxiDiviner.
 
 Run with:
@@ -11,9 +14,9 @@ cargo run --package oxidiviner-examples --bin ma_demo
 */
 
 use chrono::{Duration, Utc};
-use oxidiviner_core::{ModelEvaluation, TimeSeriesData, validation::ValidationUtils, ModelValidator};
-use oxidiviner_moving_average::MAModel;
 use oxidiviner::{quick, ModelBuilder};
+use oxidiviner_core::{validation::ValidationUtils, ModelValidator, TimeSeriesData};
+use oxidiviner_moving_average::MAModel;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 fn main() {
@@ -22,24 +25,30 @@ fn main() {
 
     // Create realistic sample data
     let data = create_sample_data();
-    println!("📊 Created sample dataset with {} points", data.values.len());
+    println!(
+        "📊 Created sample dataset with {} points",
+        data.values.len()
+    );
 
     // Split data using new validation utilities
-    let (train_data, test_data) = ValidationUtils::time_split(&data, 0.75)
-        .expect("Failed to split data");
+    let (train_data, test_data) =
+        ValidationUtils::time_split(&data, 0.75).expect("Failed to split data");
 
-    println!("📊 Data split: {} training, {} testing points", 
-        train_data.values.len(), test_data.values.len());
+    println!(
+        "📊 Data split: {} training, {} testing points",
+        train_data.values.len(),
+        test_data.values.len()
+    );
 
     // Demonstrate the new Quick API
     demonstrate_quick_api(&train_data, &test_data);
-    
+
     // Demonstrate Builder Pattern and Validation
     demonstrate_builder_and_validation(&train_data, &test_data);
-    
+
     // Demonstrate Validation Utilities
     demonstrate_validation_utilities(&data);
-    
+
     // Traditional API for comparison
     demonstrate_traditional_api(&train_data, &test_data);
 
@@ -83,8 +92,10 @@ fn demonstrate_quick_api(train_data: &TimeSeriesData, test_data: &TimeSeriesData
             Ok(forecast) => {
                 let metrics = ValidationUtils::accuracy_metrics(&test_data.values, &forecast, None)
                     .unwrap_or_else(|_| panic!("Failed to calculate metrics"));
-                println!("     MA({}) - MAE: {:.3}, RMSE: {:.3}, R²: {:.4}", 
-                    window, metrics.mae, metrics.rmse, metrics.r_squared);
+                println!(
+                    "     MA({}) - MAE: {:.3}, RMSE: {:.3}, R²: {:.4}",
+                    window, metrics.mae, metrics.rmse, metrics.r_squared
+                );
             }
             Err(e) => println!("     MA({}) Error: {}", window, e),
         }
@@ -96,7 +107,10 @@ fn demonstrate_quick_api(train_data: &TimeSeriesData, test_data: &TimeSeriesData
         Ok(forecast) => {
             let metrics = ValidationUtils::accuracy_metrics(&test_data.values, &forecast, None)
                 .unwrap_or_else(|_| panic!("Failed to calculate metrics"));
-            println!("     MA(default) - MAE: {:.3}, RMSE: {:.3}", metrics.mae, metrics.rmse);
+            println!(
+                "     MA(default) - MAE: {:.3}, RMSE: {:.3}",
+                metrics.mae, metrics.rmse
+            );
         }
         Err(e) => println!("     Error: {}", e),
     }
@@ -112,9 +126,20 @@ fn demonstrate_builder_and_validation(train_data: &TimeSeriesData, test_data: &T
     // Build different MA configurations
     println!("\n  🏗️  Testing MA configurations with Builder:");
     let configs = vec![
-        ("MA(3)", ModelBuilder::moving_average().with_window(3).build_config()),
-        ("MA(7)", ModelBuilder::moving_average().with_window(7).build_config()),
-        ("MA(12)", ModelBuilder::moving_average().with_window(12).build_config()),
+        (
+            "MA(3)",
+            ModelBuilder::moving_average().with_window(3).build_config(),
+        ),
+        (
+            "MA(7)",
+            ModelBuilder::moving_average().with_window(7).build_config(),
+        ),
+        (
+            "MA(12)",
+            ModelBuilder::moving_average()
+                .with_window(12)
+                .build_config(),
+        ),
     ];
 
     for (name, config) in configs {
@@ -122,7 +147,10 @@ fn demonstrate_builder_and_validation(train_data: &TimeSeriesData, test_data: &T
             Ok(forecast) => {
                 let metrics = ValidationUtils::accuracy_metrics(&test_data.values, &forecast, None)
                     .unwrap_or_else(|_| panic!("Failed to calculate metrics"));
-                println!("     {} - MAE: {:.3}, RMSE: {:.3}", name, metrics.mae, metrics.rmse);
+                println!(
+                    "     {} - MAE: {:.3}, RMSE: {:.3}",
+                    name, metrics.mae, metrics.rmse
+                );
             }
             Err(e) => println!("     {} Error: {}", name, e),
         }
@@ -130,7 +158,7 @@ fn demonstrate_builder_and_validation(train_data: &TimeSeriesData, test_data: &T
 
     // Demonstrate parameter validation
     println!("\n  ✅ Parameter validation examples:");
-    
+
     // Valid windows
     for window in [1, 5, 10] {
         match ModelValidator::validate_ma_params(window) {
@@ -157,36 +185,46 @@ fn demonstrate_validation_utilities(data: &TimeSeriesData) {
     println!("\n  🔄 Moving Average Cross-Validation:");
     match ValidationUtils::time_series_cv(data, 3, Some(20)) {
         Ok(splits) => {
-            println!("     Created {} CV splits for MA model evaluation:", splits.len());
-            
+            println!(
+                "     Created {} CV splits for MA model evaluation:",
+                splits.len()
+            );
+
             let mut best_window = 3;
             let mut best_mae = f64::INFINITY;
-            
+
             for window in [3, 5, 7] {
                 let mut total_mae = 0.0;
                 let mut valid_splits = 0;
-                
+
                 for (i, (train, test)) in splits.iter().enumerate() {
-                    if let Ok(forecast) = quick::moving_average(train.clone(), test.values.len(), Some(window)) {
-                        if let Ok(metrics) = ValidationUtils::accuracy_metrics(&test.values, &forecast, None) {
+                    if let Ok(forecast) =
+                        quick::moving_average(train.clone(), test.values.len(), Some(window))
+                    {
+                        if let Ok(metrics) =
+                            ValidationUtils::accuracy_metrics(&test.values, &forecast, None)
+                        {
                             total_mae += metrics.mae;
                             valid_splits += 1;
                         }
                     }
                 }
-                
+
                 if valid_splits > 0 {
                     let avg_mae = total_mae / valid_splits as f64;
                     println!("       MA({}) - Average CV MAE: {:.3}", window, avg_mae);
-                    
+
                     if avg_mae < best_mae {
                         best_mae = avg_mae;
                         best_window = window;
                     }
                 }
             }
-            
-            println!("     🏆 Best window size: MA({}) with MAE: {:.3}", best_window, best_mae);
+
+            println!(
+                "     🏆 Best window size: MA({}) with MAE: {:.3}",
+                best_window, best_mae
+            );
         }
         Err(e) => println!("     Error: {}", e),
     }
@@ -194,7 +232,7 @@ fn demonstrate_validation_utilities(data: &TimeSeriesData) {
     // Comprehensive accuracy metrics demonstration
     println!("\n  📏 Comprehensive accuracy metrics:");
     let (train, test) = ValidationUtils::time_split(data, 0.7).expect("Failed to split data");
-    
+
     if let Ok(forecast) = quick::moving_average(train, test.values.len(), Some(5)) {
         if let Ok(metrics) = ValidationUtils::accuracy_metrics(&test.values, &forecast, None) {
             println!("     MA(5) Performance Report:");
@@ -218,19 +256,19 @@ fn demonstrate_traditional_api(train_data: &TimeSeriesData, test_data: &TimeSeri
 
     // Traditional MA approach - more verbose
     println!("\n  📊 Traditional MA Model Creation and Fitting:");
-    
+
     match MAModel::new(5) {
         Ok(mut ma_model) => {
             println!("     ✓ Created MA(5) model");
-            
+
             match ma_model.fit(train_data) {
                 Ok(_) => {
                     println!("     ✓ Fitted model to training data");
-                    
+
                     match ma_model.forecast(horizon) {
                         Ok(_forecast) => {
                             println!("     ✓ Generated forecast");
-                            
+
                             match ma_model.evaluate(test_data) {
                                 Ok(eval) => {
                                     println!("     📊 Traditional API Results:");

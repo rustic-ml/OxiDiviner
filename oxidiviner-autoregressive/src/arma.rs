@@ -1,3 +1,5 @@
+#![allow(clippy::needless_range_loop)]
+
 use crate::error::{ARError, Result as ARResult};
 use oxidiviner_core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
 use oxidiviner_math::metrics::{mae, mape, mse, rmse, smape};
@@ -166,8 +168,8 @@ impl ARMAModel {
         let max_lag = self.p.max(self.q);
 
         // First max_lag residuals are set to zero (can't estimate)
-        for i in 0..max_lag {
-            residuals[i] = 0.0;
+        for residual in residuals.iter_mut().take(max_lag) {
+            *residual = 0.0;
         }
 
         // Calculate initial residuals using AR model
@@ -265,7 +267,7 @@ impl ARMAModel {
     }
 
     /// Fit AR component using Yule-Walker equations
-    fn fit_ar_component(&self, data: &[f64], ar_coeffs: &mut Vec<f64>) -> ARResult<()> {
+    fn fit_ar_component(&self, data: &[f64], ar_coeffs: &mut [f64]) -> ARResult<()> {
         if self.p == 0 {
             return Ok(());
         }
@@ -308,16 +310,14 @@ impl ARMAModel {
         let phi = self.solve_linear_system(&matrix, &rhs)?;
 
         // Update the AR coefficients
-        for i in 0..self.p {
-            ar_coeffs[i] = phi[i];
-        }
+        ar_coeffs[..self.p].copy_from_slice(&phi[..self.p]);
 
         Ok(())
     }
 
     /// Fit MA component using a simplified approach
     /// Note: In a production system, you'd use a more sophisticated method
-    fn fit_ma_component(&self, residuals: &[f64], ma_coeffs: &mut Vec<f64>) -> ARResult<()> {
+    fn fit_ma_component(&self, residuals: &[f64], ma_coeffs: &mut [f64]) -> ARResult<()> {
         if self.q == 0 {
             return Ok(());
         }
@@ -422,7 +422,7 @@ impl ARMAModel {
         Ok(x)
     }
 
-    /// Extract AR coefficients
+    #[allow(dead_code)]
     fn extract_ar_coefficients(&self, phi: &[f64], ar_coeffs: &mut [f64]) -> ARResult<()> {
         if ar_coeffs.len() < self.p {
             return Err(ARError::InvalidParameter(
@@ -437,6 +437,7 @@ impl ARMAModel {
     }
 
     /// Extract MA coefficients
+    #[allow(dead_code)]
     fn extract_ma_coefficients(&self, theta: &[f64], ma_coeffs: &mut [f64]) -> ARResult<()> {
         if ma_coeffs.len() < self.q {
             return Err(ARError::InvalidParameter(

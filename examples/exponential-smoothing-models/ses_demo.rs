@@ -1,3 +1,7 @@
+#![allow(deprecated)]
+#![allow(clippy::needless_range_loop)]
+#![allow(unused_imports)]
+
 use chrono::{Duration, Utc};
 use oxidiviner_core::TimeSeriesData;
 use oxidiviner_exponential_smoothing::SimpleESModel;

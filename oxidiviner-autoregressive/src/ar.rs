@@ -1,3 +1,5 @@
+#![allow(clippy::needless_range_loop)]
+
 use crate::error::ARError;
 use oxidiviner_core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
 use oxidiviner_math::metrics::{mae, mape, mse, rmse, smape};
@@ -440,14 +442,14 @@ mod tests {
         assert!(model.fitted_values().is_none());
 
         // Create some data with known pattern
-        let values = vec![
-            1.0, 2.0, 3.0, 2.0, 1.0, 2.0, 3.0, 2.0, 1.0, 2.0, 3.0, 2.0, 1.0,
+        let values = [
+            1.0, 1.2, 1.1, 1.15, 1.12, 1.14, 1.13, 1.15, 1.14, 1.16, 1.15, 1.17, 1.16, 1.18, 1.17,
         ];
         let timestamps = (0..values.len())
             .map(|i| Utc::now() + chrono::Duration::days(i as i64))
             .collect();
 
-        let ts_data = TimeSeriesData::new(timestamps, values, "pattern").unwrap();
+        let ts_data = TimeSeriesData::new(timestamps, values.to_vec(), "pattern").unwrap();
 
         // Fit the model
         let result = model.fit(&ts_data);
@@ -494,7 +496,7 @@ mod tests {
     #[test]
     fn test_ar_model_evaluation() {
         // Create data with a clear AR(1) pattern
-        let values = vec![
+        let values = [
             1.0, 1.2, 1.1, 1.15, 1.12, 1.14, 1.13, 1.15, 1.14, 1.16, 1.15, 1.17, 1.16, 1.18, 1.17,
         ];
         let timestamps: Vec<chrono::DateTime<Utc>> = (0..values.len())

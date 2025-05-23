@@ -1,7 +1,10 @@
-use chrono::{DateTime, TimeZone, Utc};
+#![allow(deprecated)]
+#![allow(unused_imports)]
+
 use oxidiviner::prelude::*;
 use rand::Rng;
 use std::error::Error;
+use chrono::{DateTime, Duration, Utc};
 
 // Main function to demonstrate OxiDiviner's standard interface
 fn main() -> std::result::Result<(), Box<dyn Error>> {
@@ -65,7 +68,7 @@ fn print_model_output(output: &ModelOutput) {
         println!("  MAPE: {:.2}%", eval.mape);
     }
 
-    println!("");
+    println!();
 }
 
 // Helper function to create sample time series data

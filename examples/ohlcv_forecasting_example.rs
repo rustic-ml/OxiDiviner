@@ -1,7 +1,10 @@
-use chrono::{DateTime, TimeZone, Utc};
+#![allow(deprecated)]
+#![allow(clippy::needless_range_loop)]
+#![allow(unused_imports)]
+
+use chrono::{DateTime, NaiveDate, Utc};
 use oxidiviner::prelude::*;
 use std::error::Error;
-use std::num::ParseFloatError;
 use std::path::Path;
 
 // Main function that demonstrates OHLCV data loading and forecasting
@@ -113,7 +116,7 @@ fn main() -> std::result::Result<(), Box<dyn Error>> {
     // Compare the best individual model with the ensemble
     println!("\nEnsemble vs Individual Models:");
 
-    let models = vec![
+    let models = [
         (
             "MA",
             ma_output.evaluation.as_ref().unwrap().mae,

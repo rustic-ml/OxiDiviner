@@ -1,4 +1,7 @@
-use chrono::Utc;
+#![allow(deprecated)]
+#![allow(unused_imports)]
+
+use chrono::{DateTime, Duration, Utc};
 use oxidiviner_garch::{EGARCHModel, GARCHMModel, GARCHModel, GJRGARCHModel, RiskPremiumType};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

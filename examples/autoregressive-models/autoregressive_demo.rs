@@ -1,8 +1,11 @@
+#![allow(deprecated)]
+#![allow(unused_variables)]
+
 /*!
 # Autoregressive Models Example - Enhanced API Demo
 
-This example demonstrates both the traditional API and the new improved API 
-features for autoregressive models in OxiDiviner, showing the dramatic 
+This example demonstrates both the traditional API and the new improved API
+features for autoregressive models in OxiDiviner, showing the dramatic
 improvements in usability and functionality.
 
 Run with:
@@ -12,9 +15,9 @@ cargo run --package oxidiviner-examples --bin autoregressive_demo
 */
 
 use chrono::{DateTime, Duration, Utc};
-use oxidiviner_autoregressive::{ARIMAModel, ARMAModel, ARModel, SARIMAModel, VARModel};
-use oxidiviner_core::{ModelEvaluation, TimeSeriesData, validation::ValidationUtils, ModelValidator};
-use oxidiviner::{quick, ModelBuilder, AutoSelector};
+use oxidiviner::{quick, AutoSelector, ModelBuilder};
+use oxidiviner_autoregressive::{ARIMAModel, ARModel, SARIMAModel, VARModel};
+use oxidiviner_core::{validation::ValidationUtils, ModelValidator, TimeSeriesData};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
 use std::f64::consts::PI;
@@ -25,36 +28,49 @@ fn main() {
 
     // Create sample data
     let (trend_data, seasonal_data, var_data) = create_sample_data();
-    
+
     println!("📊 Created sample datasets:");
     println!("  • Trend data: {} points", trend_data.values.len());
     println!("  • Seasonal data: {} points", seasonal_data.values.len());
-    println!("  • VAR data: {} series with {} points each", var_data.len(), var_data[0].values.len());
+    println!(
+        "  • VAR data: {} series with {} points each",
+        var_data.len(),
+        var_data[0].values.len()
+    );
 
     // Split data using new validation utilities
-    let (train_trend, test_trend) = ValidationUtils::time_split(&trend_data, 0.8)
-        .expect("Failed to split trend data");
-    let (train_seasonal, test_seasonal) = ValidationUtils::time_split(&seasonal_data, 0.8)
-        .expect("Failed to split seasonal data");
+    let (train_trend, test_trend) =
+        ValidationUtils::time_split(&trend_data, 0.8).expect("Failed to split trend data");
+    let (train_seasonal, test_seasonal) =
+        ValidationUtils::time_split(&seasonal_data, 0.8).expect("Failed to split seasonal data");
 
     println!("\n📊 Data split completed:");
-    println!("  • Training: {} points, Testing: {} points", 
-        train_trend.values.len(), test_trend.values.len());
+    println!(
+        "  • Training: {} points, Testing: {} points",
+        train_trend.values.len(),
+        test_trend.values.len()
+    );
 
     // Demonstrate the new Quick API
     demonstrate_quick_api(&train_trend, &test_trend);
-    
+
     // Demonstrate Builder Pattern
     demonstrate_builder_pattern(&train_trend, &test_trend);
-    
+
     // Demonstrate Smart Model Selection
     demonstrate_smart_selection(&trend_data);
-    
-    // Demonstrate Validation Utilities  
+
+    // Demonstrate Validation Utilities
     demonstrate_validation_utilities(&trend_data);
-    
+
     // Traditional API examples for comparison
-    demonstrate_traditional_api(&train_trend, &test_trend, &train_seasonal, &test_seasonal, &var_data);
+    demonstrate_traditional_api(
+        &train_trend,
+        &test_trend,
+        &train_seasonal,
+        &test_seasonal,
+        &var_data,
+    );
 
     println!("\n✨ Enhanced API Demo completed successfully!");
 }
@@ -97,11 +113,11 @@ fn create_sample_data() -> (TimeSeriesData, TimeSeriesData, Vec<TimeSeriesData>)
         .expect("Failed to create trend data");
     let seasonal_data = TimeSeriesData::new(timestamps.clone(), seasonal_values, "seasonal_series")
         .expect("Failed to create seasonal data");
-    
-    let y1_data = TimeSeriesData::new(timestamps.clone(), y1_values, "y1")
-        .expect("Failed to create y1 data");
-    let y2_data = TimeSeriesData::new(timestamps, y2_values, "y2")
-        .expect("Failed to create y2 data");
+
+    let y1_data =
+        TimeSeriesData::new(timestamps.clone(), y1_values, "y1").expect("Failed to create y1 data");
+    let y2_data =
+        TimeSeriesData::new(timestamps, y2_values, "y2").expect("Failed to create y2 data");
 
     (trend_data, seasonal_data, vec![y1_data, y2_data])
 }
@@ -119,7 +135,10 @@ fn demonstrate_quick_api(train_data: &TimeSeriesData, test_data: &TimeSeriesData
         Ok(forecast) => {
             let metrics = ValidationUtils::accuracy_metrics(&test_data.values, &forecast, None)
                 .unwrap_or_else(|_| panic!("Failed to calculate metrics"));
-            println!("     ARIMA(1,1,1) - MAE: {:.3}, RMSE: {:.3}", metrics.mae, metrics.rmse);
+            println!(
+                "     ARIMA(1,1,1) - MAE: {:.3}, RMSE: {:.3}",
+                metrics.mae, metrics.rmse
+            );
         }
         Err(e) => println!("     Error: {}", e),
     }
@@ -131,7 +150,10 @@ fn demonstrate_quick_api(train_data: &TimeSeriesData, test_data: &TimeSeriesData
             Ok(forecast) => {
                 let metrics = ValidationUtils::accuracy_metrics(&test_data.values, &forecast, None)
                     .unwrap_or_else(|_| panic!("Failed to calculate metrics"));
-                println!("     AR({}) - MAE: {:.3}, RMSE: {:.3}", order, metrics.mae, metrics.rmse);
+                println!(
+                    "     AR({}) - MAE: {:.3}, RMSE: {:.3}",
+                    order, metrics.mae, metrics.rmse
+                );
             }
             Err(e) => println!("     AR({}) Error: {}", order, e),
         }
@@ -147,9 +169,30 @@ fn demonstrate_builder_pattern(train_data: &TimeSeriesData, test_data: &TimeSeri
 
     // Build different ARIMA configurations
     let configs = vec![
-        ("ARIMA(1,1,1)", ModelBuilder::arima().with_ar(1).with_differencing(1).with_ma(1).build_config()),
-        ("ARIMA(2,1,1)", ModelBuilder::arima().with_ar(2).with_differencing(1).with_ma(1).build_config()),
-        ("ARIMA(1,1,2)", ModelBuilder::arima().with_ar(1).with_differencing(1).with_ma(2).build_config()),
+        (
+            "ARIMA(1,1,1)",
+            ModelBuilder::arima()
+                .with_ar(1)
+                .with_differencing(1)
+                .with_ma(1)
+                .build_config(),
+        ),
+        (
+            "ARIMA(2,1,1)",
+            ModelBuilder::arima()
+                .with_ar(2)
+                .with_differencing(1)
+                .with_ma(1)
+                .build_config(),
+        ),
+        (
+            "ARIMA(1,1,2)",
+            ModelBuilder::arima()
+                .with_ar(1)
+                .with_differencing(1)
+                .with_ma(2)
+                .build_config(),
+        ),
     ];
 
     println!("\n  🏗️  Testing different ARIMA configurations:");
@@ -158,7 +201,10 @@ fn demonstrate_builder_pattern(train_data: &TimeSeriesData, test_data: &TimeSeri
             Ok(forecast) => {
                 let metrics = ValidationUtils::accuracy_metrics(&test_data.values, &forecast, None)
                     .unwrap_or_else(|_| panic!("Failed to calculate metrics"));
-                println!("     {} - MAE: {:.3}, RMSE: {:.3}", name, metrics.mae, metrics.rmse);
+                println!(
+                    "     {} - MAE: {:.3}, RMSE: {:.3}",
+                    name, metrics.mae, metrics.rmse
+                );
             }
             Err(e) => println!("     {} Error: {}", name, e),
         }
@@ -187,8 +233,14 @@ fn demonstrate_smart_selection(data: &TimeSeriesData) {
     match quick::auto_select(data.clone(), 10) {
         Ok((forecast, best_model)) => {
             println!("     Best model: {}", best_model);
-            println!("     Forecast (first 5): {:?}", 
-                forecast.iter().take(5).map(|x| format!("{:.2}", x)).collect::<Vec<_>>());
+            println!(
+                "     Forecast (first 5): {:?}",
+                forecast
+                    .iter()
+                    .take(5)
+                    .map(|x| format!("{:.2}", x))
+                    .collect::<Vec<_>>()
+            );
         }
         Err(e) => println!("     Error: {}", e),
     }
@@ -198,7 +250,7 @@ fn demonstrate_smart_selection(data: &TimeSeriesData) {
     let selector = AutoSelector::with_cross_validation(3)
         .add_candidate(ModelBuilder::ar().with_ar(4).build_config())
         .add_candidate(ModelBuilder::ar().with_ar(5).build_config());
-    
+
     println!("     Selection criteria: {:?}", selector.criteria());
     println!("     Total candidates: {}", selector.candidates().len());
 }
@@ -214,8 +266,12 @@ fn demonstrate_validation_utilities(data: &TimeSeriesData) {
         Ok(splits) => {
             println!("     Created {} CV splits:", splits.len());
             for (i, (train, test)) in splits.iter().enumerate() {
-                println!("       Split {}: Train {} points, Test {} points", 
-                    i + 1, train.values.len(), test.values.len());
+                println!(
+                    "       Split {}: Train {} points, Test {} points",
+                    i + 1,
+                    train.values.len(),
+                    test.values.len()
+                );
             }
         }
         Err(e) => println!("     Error: {}", e),
@@ -224,7 +280,7 @@ fn demonstrate_validation_utilities(data: &TimeSeriesData) {
     // Demonstrate comprehensive accuracy metrics
     println!("\n  📏 Comprehensive accuracy metrics demo:");
     let (train, test) = ValidationUtils::time_split(data, 0.7).expect("Failed to split data");
-    
+
     // Create a simple forecast for demonstration
     if let Ok(forecast) = quick::moving_average(train, test.values.len(), Some(7)) {
         if let Ok(metrics) = ValidationUtils::accuracy_metrics(&test.values, &forecast, None) {
@@ -240,11 +296,11 @@ fn demonstrate_validation_utilities(data: &TimeSeriesData) {
 
 /// Demonstrate traditional API for comparison with the new improved API
 fn demonstrate_traditional_api(
-    train_trend: &TimeSeriesData, 
-    test_trend: &TimeSeriesData, 
-    train_seasonal: &TimeSeriesData, 
-    test_seasonal: &TimeSeriesData, 
-    var_data: &[TimeSeriesData]
+    train_trend: &TimeSeriesData,
+    test_trend: &TimeSeriesData,
+    train_seasonal: &TimeSeriesData,
+    test_seasonal: &TimeSeriesData,
+    var_data: &[TimeSeriesData],
 ) {
     println!("\n🔧 Traditional API Examples (for comparison):");
     println!("==============================================");
@@ -255,39 +311,51 @@ fn demonstrate_traditional_api(
     println!("\n  📊 Traditional AR Model:");
     let mut ar_model = ARModel::new(2, true).expect("Failed to create AR model");
     ar_model.fit(train_trend).expect("Failed to fit AR model");
-    let ar_forecast = ar_model.forecast(horizon).expect("Failed to forecast with AR model");
-    let ar_eval = ar_model.evaluate(test_trend).expect("Failed to evaluate AR model");
-    
-    println!("     AR(2) Traditional API - MAE: {:.3}, RMSE: {:.3}", ar_eval.mae, ar_eval.rmse);
+    let ar_forecast = ar_model
+        .forecast(horizon)
+        .expect("Failed to forecast with AR model");
+    let ar_eval = ar_model
+        .evaluate(test_trend)
+        .expect("Failed to evaluate AR model");
+
+    println!(
+        "     AR(2) Traditional API - MAE: {:.3}, RMSE: {:.3}",
+        ar_eval.mae, ar_eval.rmse
+    );
 
     // Traditional ARIMA Model
     println!("\n  📈 Traditional ARIMA Model:");
     let mut arima_model = ARIMAModel::new(1, 1, 1, true).expect("Failed to create ARIMA model");
-    arima_model.fit(train_trend).expect("Failed to fit ARIMA model");
-    let arima_forecast = arima_model.forecast(horizon).expect("Failed to forecast with ARIMA model");
-    let arima_eval = arima_model.evaluate(test_trend).expect("Failed to evaluate ARIMA model");
-    
-    println!("     ARIMA(1,1,1) Traditional API - MAE: {:.3}, RMSE: {:.3}", arima_eval.mae, arima_eval.rmse);
+    arima_model
+        .fit(train_trend)
+        .expect("Failed to fit ARIMA model");
+    let arima_forecast = arima_model
+        .forecast(horizon)
+        .expect("Failed to forecast with ARIMA model");
+    let arima_eval = arima_model
+        .evaluate(test_trend)
+        .expect("Failed to evaluate ARIMA model");
 
-    // Traditional SARIMA Model  
+    println!(
+        "     ARIMA(1,1,1) Traditional API - MAE: {:.3}, RMSE: {:.3}",
+        arima_eval.mae, arima_eval.rmse
+    );
+
+    // Traditional SARIMA Model
     println!("\n  🌊 Traditional SARIMA Model:");
     match SARIMAModel::new(0, 1, 1, 0, 1, 1, 12, true) {
         Ok(mut sarima_model) => {
             match sarima_model.fit(train_seasonal) {
-                Ok(_) => {
-                    match sarima_model.forecast(horizon) {
-                        Ok(_sarima_forecast) => {
-                            match sarima_model.evaluate(test_seasonal) {
-                                Ok(sarima_eval) => {
-                                    println!("     SARIMA(0,1,1)(0,1,1)12 Traditional API - MAE: {:.3}, RMSE: {:.3}", 
+                Ok(_) => match sarima_model.forecast(horizon) {
+                    Ok(_sarima_forecast) => match sarima_model.evaluate(test_seasonal) {
+                        Ok(sarima_eval) => {
+                            println!("     SARIMA(0,1,1)(0,1,1)12 Traditional API - MAE: {:.3}, RMSE: {:.3}", 
                                         sarima_eval.mae, sarima_eval.rmse);
-                                }
-                                Err(e) => println!("     Error evaluating SARIMA model: {}", e),
-                            }
                         }
-                        Err(e) => println!("     Error forecasting with SARIMA model: {}", e),
-                    }
-                }
+                        Err(e) => println!("     Error evaluating SARIMA model: {}", e),
+                    },
+                    Err(e) => println!("     Error forecasting with SARIMA model: {}", e),
+                },
                 Err(e) => println!("     Error fitting SARIMA model: {}", e),
             }
         }
@@ -300,10 +368,10 @@ fn demonstrate_traditional_api(
     match VARModel::new(1, variable_names, true) {
         Ok(mut var_model) => {
             // Split VAR data into train/test
-            let (train_y1, test_y1) = ValidationUtils::time_split(&var_data[0], 0.8)
-                .expect("Failed to split y1 data");
-            let (train_y2, test_y2) = ValidationUtils::time_split(&var_data[1], 0.8)
-                .expect("Failed to split y2 data");
+            let (train_y1, test_y1) =
+                ValidationUtils::time_split(&var_data[0], 0.8).expect("Failed to split y1 data");
+            let (train_y2, test_y2) =
+                ValidationUtils::time_split(&var_data[1], 0.8).expect("Failed to split y2 data");
 
             let mut train_data_map = HashMap::new();
             train_data_map.insert("y1".to_string(), train_y1);
@@ -314,15 +382,15 @@ fn demonstrate_traditional_api(
             test_data_map.insert("y2".to_string(), test_y2);
 
             match var_model.fit_multiple(&train_data_map) {
-                Ok(_) => {
-                    match var_model.evaluate_multiple(&test_data_map) {
-                        Ok(var_evals) => {
-                            println!("     VAR(1) Traditional API - y1 MAE: {:.3}, y2 MAE: {:.3}", 
-                                var_evals["y1"].mae, var_evals["y2"].mae);
-                        }
-                        Err(e) => println!("     Error evaluating VAR model: {}", e),
+                Ok(_) => match var_model.evaluate_multiple(&test_data_map) {
+                    Ok(var_evals) => {
+                        println!(
+                            "     VAR(1) Traditional API - y1 MAE: {:.3}, y2 MAE: {:.3}",
+                            var_evals["y1"].mae, var_evals["y2"].mae
+                        );
                     }
-                }
+                    Err(e) => println!("     Error evaluating VAR model: {}", e),
+                },
                 Err(e) => println!("     Error fitting VAR model: {}", e),
             }
         }

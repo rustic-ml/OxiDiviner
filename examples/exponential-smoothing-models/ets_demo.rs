@@ -1,8 +1,11 @@
-use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
+#![allow(deprecated)]
+#![allow(dead_code)]
+#![allow(unused_imports)]
+
+use chrono::{DateTime, Duration, Utc};
 use oxidiviner_core::TimeSeriesData;
 use rand::Rng;
 use std::error::Error;
-use std::path::Path;
 
 // Define our own enum for the demo since we can't import from ets module (it's private)
 #[derive(Debug, Clone, Copy, PartialEq)]

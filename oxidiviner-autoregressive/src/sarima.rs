@@ -1,3 +1,5 @@
+#![allow(clippy::needless_range_loop)]
+
 use crate::arima::ARIMAModel;
 use crate::error::{ARError, Result as ARResult};
 use oxidiviner_core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
@@ -62,6 +64,7 @@ impl SARIMAModel {
     ///
     /// # Returns
     /// * `Result<Self>` - A new SARIMA model if parameters are valid
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         p: usize,
         d: usize,

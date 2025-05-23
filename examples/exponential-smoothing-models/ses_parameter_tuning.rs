@@ -1,3 +1,6 @@
+#![allow(deprecated)]
+#![allow(unused_imports)]
+
 use chrono::{DateTime, Duration, Utc};
 use oxidiviner_core::TimeSeriesData;
 use rand::Rng;

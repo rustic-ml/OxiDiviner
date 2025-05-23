@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 #[cfg(feature = "ndarray_support")]
-use ndarray::{Array1, Array2};
+use ndarray::{Array1, ArrayView1};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -229,7 +229,7 @@ impl TimeSeriesData {
 
         let mut train = self.slice(0, split_idx)?;
         let mut test = self.slice(split_idx, self.len())?;
-        
+
         // Update names to follow the convention
         train.name = format!("{}_train", self.name);
         test.name = format!("{}_test", self.name);
@@ -270,7 +270,7 @@ impl TimeSeriesData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{TimeZone, Utc};
+    use chrono::Utc;
 
     #[test]
     fn test_time_series_data_creation() {
