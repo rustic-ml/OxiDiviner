@@ -16,32 +16,25 @@ publish = true
 # Configuration for docs.rs
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--cfg", "docsrs", "--extern-html-root-url=oxidiviner-core=https://docs.rs/oxidiviner-core/latest/", "--extern-html-root-url=oxidiviner-math=https://docs.rs/oxidiviner-math/latest/", "--extern-html-root-url=oxidiviner-moving-average=https://docs.rs/oxidiviner-moving-average/latest/", "--extern-html-root-url=oxidiviner-exponential-smoothing=https://docs.rs/oxidiviner-exponential-smoothing/latest/", "--extern-html-root-url=oxidiviner-autoregressive=https://docs.rs/oxidiviner-autoregressive/latest/", "--extern-html-root-url=oxidiviner-garch=https://docs.rs/oxidiviner-garch/latest/"]
+rustdoc-args = ["--cfg", "docsrs"]
 default-target = "x86_64-unknown-linux-gnu"
 
-# Include readme and examples plus all internal crate source code
+# Include source files for the main crate only
 readme = "../README.md"
 include = [
     "src/**/*",
-    "../README.md",
-    "../examples/**/*",
-    "../oxidiviner-core/src/**/*",
-    "../oxidiviner-math/src/**/*",
-    "../oxidiviner-moving-average/src/**/*",
-    "../oxidiviner-exponential-smoothing/src/**/*",
-    "../oxidiviner-autoregressive/src/**/*",
-    "../oxidiviner-garch/src/**/*"
+    "tests/**/*",
+    "../README.md"
 ]
 
 [dependencies]
-# Use path dependencies for local development, but specify version for publishing
-# Use the latest version for internal crates
-oxidiviner-core = { version = "0.4.1", path = "../oxidiviner-core" }
-oxidiviner-math = { version = "0.4.1", path = "../oxidiviner-math" }
-oxidiviner-moving-average = { version = "0.4.1", path = "../oxidiviner-moving-average" }
-oxidiviner-exponential-smoothing = { version = "0.4.1", path = "../oxidiviner-exponential-smoothing" }
-oxidiviner-autoregressive = { version = "0.4.1", path = "../oxidiviner-autoregressive" }
-oxidiviner-garch = { version = "0.4.1", path = "../oxidiviner-garch" } 
+# Use path dependencies for local development with current workspace version
+oxidiviner-core = { version = "0.4.2", path = "../oxidiviner-core" }
+oxidiviner-math = { version = "0.4.2", path = "../oxidiviner-math" }
+oxidiviner-moving-average = { version = "0.4.2", path = "../oxidiviner-moving-average" }
+oxidiviner-exponential-smoothing = { version = "0.4.2", path = "../oxidiviner-exponential-smoothing" }
+oxidiviner-autoregressive = { version = "0.4.2", path = "../oxidiviner-autoregressive" }
+oxidiviner-garch = { version = "0.4.2", path = "../oxidiviner-garch" }
 rand = "0.9.1"
 rand_distr = "0.5.0"
 chrono = { version = "0.4.41", features = ["serde"] }
