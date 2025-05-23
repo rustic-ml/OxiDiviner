@@ -21,6 +21,11 @@ rand_distr = "0.5.0"
 name = "standard_interface_demo"
 path = "standard_interface_demo.rs"
 
+# Quick Start Improved API Demo
+[[bin]]
+name = "quick_start_improved"
+path = "quick_start_improved.rs"
+
 # OHLCV Data Examples
 [[bin]]
 name = "ohlcv_forecasting_example"
