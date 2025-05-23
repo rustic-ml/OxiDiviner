@@ -302,7 +302,7 @@ impl Forecaster for ARModel {
 
     fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
         if horizon == 0 {
-            return Err(OxiError::from(ARError::InvalidHorizon(horizon)));
+            return Err(OxiError::from(ARError::InvalidHorizon(horizon));
         }
 
         if self.coefficients.is_none() || self.last_values.is_none() {

@@ -353,7 +353,7 @@ mod tests {
         
         let params = vec![0.0, 0.1, 0.01, 0.05, 0.85];
         
-        let model_var = GARCHMModel::new(1, 1, variance_type, Some(params.clone()));
+        let model_var = GARCHMModel::new(1, 1, variance_type, Some(params.clone());
         assert!(model_var.is_ok());
         
         let model_vol = GARCHMModel::new(1, 1, std_dev_type, Some(params));
@@ -968,7 +968,7 @@ mod error_tests {
     #[test]
     fn test_error_propagation() {
         // Test that errors propagate correctly through the Result type
-        let result: Result<()> = Err(OxiError::from(GARCHError::InvalidParameters("test".to_string()));
+        let result: Result<()> = Err(OxiError::from(GARCHError::InvalidParameters("test".to_string());
         assert!(result.is_err());
         
         match result {

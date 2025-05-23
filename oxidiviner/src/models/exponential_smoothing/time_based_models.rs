@@ -1,7 +1,7 @@
-use crate::models::ESError;
+use crate::models::exponential_smoothing::error::ESError;
 use crate::models::exponential_smoothing::ets::{ETSModel, ErrorType, SeasonalType, TrendType};
 use chrono::{DateTime, Utc};
-use crate::core::{OHLCVData, OxiError, Result, TimeSeriesData};
+use crate::core::{OHLCVData, OxiError, Result, TimeSeriesData, ModelEvaluation};
 use std::collections::HashMap;
 
 #[cfg(test)]
@@ -310,7 +310,7 @@ impl DailyETSModel {
     }
 
     /// Evaluate the model
-    pub fn evaluate(&self, test_data: &OHLCVData) -> Result<oxidiviner_core::ModelEvaluation> {
+    pub fn evaluate(&self, test_data: &OHLCVData) -> Result<ModelEvaluation> {
         let values = match self.target_column.to_lowercase().as_str() {
             "open" => &test_data.open,
             "high" => &test_data.high,
@@ -436,10 +436,10 @@ impl MinuteETSModel {
         // Validate aggregation_minutes if provided
         if let Some(agg) = aggregation_minutes {
             if agg < 1 {
-                return Err(OxiError::from(ESError::InvalidParameter(format!(
+                return Err(OxiError::InvalidParameter(format!(
                     "Aggregation minutes must be at least 1, got {}",
                     agg
-                )));
+                ));
             }
         }
 
@@ -568,7 +568,7 @@ impl MinuteETSModel {
     }
 
     /// Evaluate the model
-    pub fn evaluate(&self, test_data: &OHLCVData) -> Result<oxidiviner_core::ModelEvaluation> {
+    pub fn evaluate(&self, test_data: &OHLCVData) -> Result<ModelEvaluation> {
         let values = match self.target_column.to_lowercase().as_str() {
             "open" => &test_data.open,
             "high" => &test_data.high,

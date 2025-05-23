@@ -83,7 +83,7 @@ impl EGARCHModel {
                     "Expected {} parameters, got {}",
                     1 + 1 + p + p + q,
                     params.len()
-                )));
+                ));
             }
 
             let mean = params[0];

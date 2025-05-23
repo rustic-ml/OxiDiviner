@@ -80,7 +80,7 @@ impl GJRGARCHModel {
                     "Expected {} parameters, got {}",
                     1 + 1 + p + p + q,
                     params.len()
-                )));
+                ));
             }
 
             let mean = params[0];
@@ -166,7 +166,7 @@ impl GJRGARCHModel {
                     "Alpha[{}] + Gamma[{}]/2 must be non-negative for positive variance",
                     i + 1,
                     i + 1
-                )));
+                ));
             }
         }
 

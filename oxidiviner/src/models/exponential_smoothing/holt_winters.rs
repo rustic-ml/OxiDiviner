@@ -216,7 +216,7 @@ impl Forecaster for HoltWintersModel {
         if let (Some(level), Some(trend)) = (self.level, self.trend) {
             if let Some(seasonal) = &self.seasonal {
                 if horizon == 0 {
-                    return Err(OxiError::from(ESError::InvalidHorizon(horizon)));
+                    return Err(OxiError::from(ESError::InvalidHorizon(horizon));
                 }
 
                 // For Holt-Winters model, forecasts include trend and seasonal components

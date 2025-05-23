@@ -84,7 +84,7 @@ impl SARIMAModel {
             return Err(OxiError::from(ARError::InvalidParameter(format!(
                 "Seasonal period must be at least 2, got {}",
                 s
-            )));
+            ));
         }
 
         let name = if include_intercept {
@@ -307,7 +307,7 @@ impl Forecaster for SARIMAModel {
 
     fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
         if horizon == 0 {
-            return Err(OxiError::from(ARError::InvalidHorizon(horizon)));
+            return Err(OxiError::from(ARError::InvalidHorizon(horizon));
         }
 
         if self.arima_model.is_none() || self.last_values.is_none() {

@@ -54,7 +54,7 @@ impl ARIMAModel {
         if p == 0 && q == 0 {
             return Err(OxiError::from(ARError::InvalidParameters(
                 "At least one of p or q must be greater than 0".to_string(),
-            )));
+            ));
         }
 
         let name = if include_intercept {
@@ -227,7 +227,7 @@ impl Forecaster for ARIMAModel {
 
     fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
         if horizon == 0 {
-            return Err(OxiError::from(ARError::InvalidHorizon(horizon)));
+            return Err(OxiError::from(ARError::InvalidHorizon(horizon));
         }
 
         if self.arma_model.is_none() || self.last_values.is_none() {

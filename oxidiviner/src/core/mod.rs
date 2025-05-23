@@ -54,7 +54,7 @@ impl Forecaster for SimpleAverageForecast {
 
     fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
         if self.values.is_empty() {
-            return Err(oxidiviner_core::OxiError::ModelError("Model not fitted".to_string()));
+            return Err(crate::core::OxiError::ModelError("Model not fitted".to_string()));
         }
 
         // Calculate the average of all values
@@ -64,7 +64,7 @@ impl Forecaster for SimpleAverageForecast {
         Ok(vec![avg; horizon])
     }
 
-    fn evaluate(&self, test_data: &TimeSeriesData) -> Result<oxidiviner_core::ModelEvaluation> {
+    fn evaluate(&self, test_data: &TimeSeriesData) -> Result<crate::core::ModelEvaluation> {
         // Implementation would calculate various error metrics
         // between forecasts and actual test data
         unimplemented!()

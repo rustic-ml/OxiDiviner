@@ -108,7 +108,7 @@ impl VARModel {
                 return Err(OxiError::DataError(format!(
                     "Missing data for variable '{}'",
                     var_name
-                )));
+                ));
             }
         }
 
@@ -125,7 +125,7 @@ impl VARModel {
                     n,
                     var_data.timestamps.len(),
                     var_name
-                )));
+                ));
             }
 
             for i in 0..n {
@@ -133,7 +133,7 @@ impl VARModel {
                     return Err(OxiError::DataError(format!(
                         "Inconsistent timestamps at position {} for variable '{}'",
                         i, var_name
-                    )));
+                    ));
                 }
             }
         }
@@ -173,7 +173,7 @@ impl VARModel {
             return Err(OxiError::ModelError(format!(
                 "Cannot use fit() for VAR model with {} variables. Use fit_multiple() instead.",
                 self.k
-            )));
+            ));
         }
 
         let mut data_map = HashMap::new();
@@ -191,7 +191,7 @@ impl VARModel {
     /// * `Result<HashMap<String, Vec<f64>>>` - Forecasts for each variable
     pub fn forecast_multiple(&self, horizon: usize) -> Result<HashMap<String, Vec<f64>>> {
         if horizon == 0 {
-            return Err(OxiError::from(ARError::InvalidHorizon(horizon)));
+            return Err(OxiError::from(ARError::InvalidHorizon(horizon));
         }
 
         if self.coefficient_matrices.is_none() || self.last_values.is_none() {
@@ -295,7 +295,7 @@ impl VARModel {
                 return Err(OxiError::DataError(format!(
                     "Missing test data for variable '{}'",
                     var_name
-                )));
+                ));
             }
         }
 
@@ -311,7 +311,7 @@ impl VARModel {
                     horizon,
                     var_data.values.len(),
                     var_name
-                )));
+                ));
             }
         }
 
@@ -386,7 +386,7 @@ impl VARModel {
         test_data_map: Option<&HashMap<String, TimeSeriesData>>,
     ) -> Result<HashMap<String, ModelOutput>> {
         if horizon == 0 {
-            return Err(OxiError::from(ARError::InvalidHorizon(horizon)));
+            return Err(OxiError::from(ARError::InvalidHorizon(horizon));
         }
 
         if self.coefficient_matrices.is_none() {

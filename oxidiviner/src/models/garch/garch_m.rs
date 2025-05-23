@@ -103,7 +103,7 @@ impl GARCHMModel {
                     "Expected {} parameters, got {}",
                     2 + 1 + p + q,
                     params.len()
-                )));
+                ));
             }
 
             let mean = params[0];
@@ -557,7 +557,7 @@ mod tests {
 
         // Test with provided parameters
         let params = vec![0.01, 0.05, 0.05, 0.1, 0.8];
-        let model = GARCHMModel::new(1, 1, RiskPremiumType::LogVariance, Some(params.clone()));
+        let model = GARCHMModel::new(1, 1, RiskPremiumType::LogVariance, Some(params.clone());
         assert!(model.is_ok());
 
         let model = model.unwrap();

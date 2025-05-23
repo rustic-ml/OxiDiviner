@@ -39,7 +39,7 @@ impl ValidationUtils {
     /// ```rust
     /// # use crate::core::{TimeSeriesData, validation::ValidationUtils};
     /// # use chrono::Utc;
-    /// # fn example() -> oxidiviner_core::Result<()> {
+    /// # fn example() -> crate::core::Result<()> {
     /// # let data = TimeSeriesData::new(vec![Utc::now()], vec![1.0], "test")?;
     /// let (train, test) = ValidationUtils::time_split(&data, 0.8)?;
     /// assert!(train.values.len() > test.values.len());

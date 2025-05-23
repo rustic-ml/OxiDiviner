@@ -423,7 +423,7 @@ impl Forecaster for ETSModel {
                 return Err(OxiError::from(ESError::UnsupportedModelType(format!(
                     "ETS({},{},{})",
                     self.error_type, self.trend_type, self.seasonal_type
-                ))));
+                )));
             }
         }
 
@@ -462,7 +462,7 @@ impl Forecaster for ETSModel {
                 return Err(OxiError::from(ESError::UnsupportedModelType(format!(
                     "ETS({},{},{})",
                     self.error_type, self.trend_type, self.seasonal_type
-                ))));
+                )));
             }
         }
 
@@ -504,7 +504,7 @@ impl Forecaster for ETSModel {
                     return Err(OxiError::from(ESError::UnsupportedModelType(format!(
                         "ETS({},{},{})",
                         self.error_type, self.trend_type, self.seasonal_type
-                    ))));
+                    )));
                 }
             };
 
@@ -569,7 +569,7 @@ impl Forecaster for ETSModel {
                     return Err(OxiError::from(ESError::UnsupportedModelType(format!(
                         "ETS({},{},{})",
                         self.error_type, self.trend_type, self.seasonal_type
-                    ))));
+                    )));
                 }
             }
         }
@@ -597,7 +597,7 @@ impl Forecaster for ETSModel {
         }
 
         if horizon == 0 {
-            return Err(OxiError::from(ESError::InvalidHorizon(horizon)));
+            return Err(OxiError::from(ESError::InvalidHorizon(horizon));
         }
 
         let level = self.level.unwrap();
@@ -670,7 +670,7 @@ impl Forecaster for ETSModel {
                 return Err(OxiError::from(ESError::UnsupportedModelType(format!(
                     "ETS({},{},{})",
                     self.error_type, self.trend_type, self.seasonal_type
-                ))));
+                )));
             }
         }
 

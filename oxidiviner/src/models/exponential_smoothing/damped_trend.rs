@@ -51,15 +51,15 @@ impl DampedTrendModel {
     pub fn new(alpha: f64, beta: f64, phi: f64) -> std::result::Result<Self, ESError> {
         // Validate parameters
         if alpha <= 0.0 || alpha >= 1.0 {
-            return Err(OxiError::from(ESError::InvalidAlpha(alpha));
+            return Err(OxiError::from(ESError::InvalidAlpha(alpha)));
         }
 
         if beta <= 0.0 || beta >= 1.0 {
-            return Err(OxiError::from(ESError::InvalidBeta(beta));
+            return Err(OxiError::from(ESError::InvalidBeta(beta)));
         }
 
         if phi <= 0.0 || phi >= 1.0 {
-            return Err(OxiError::from(ESError::InvalidDampingFactor(phi));
+            return Err(OxiError::from(ESError::InvalidDampingFactor(phi)));
         }
 
         let name = format!("DampedTrend(α={:.3}, β={:.3}, φ={:.3})", alpha, beta, phi);

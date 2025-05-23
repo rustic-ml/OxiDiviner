@@ -71,7 +71,7 @@ impl GARCHModel {
                     "Expected {} parameters, got {}",
                     1 + 1 + p + q,
                     params.len()
-                )));
+                ));
             }
 
             let mean = params[0];

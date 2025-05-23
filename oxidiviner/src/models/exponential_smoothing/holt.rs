@@ -153,7 +153,7 @@ impl Forecaster for HoltLinearModel {
     fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
         if let (Some(level), Some(trend)) = (self.level, self.trend) {
             if horizon == 0 {
-                return Err(OxiError::from(ESError::InvalidHorizon(horizon)));
+                return Err(OxiError::from(ESError::InvalidHorizon(horizon));
             }
 
             // For Holt model, forecasts increase by the trend value each step

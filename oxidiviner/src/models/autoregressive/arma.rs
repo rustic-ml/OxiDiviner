@@ -64,7 +64,7 @@ impl ARMAModel {
     pub fn new(p: usize, q: usize, include_intercept: bool) -> Result<Self> {
         // Validate parameters
         if p == 0 && q == 0 {
-            return Err(OxiError::from(ARError::InvalidLagOrder(0)));
+            return Err(OxiError::from(ARError::InvalidLagOrder(0));
         }
 
         let name = if include_intercept {
@@ -340,7 +340,7 @@ impl ARMAModel {
 
             // Check for invalid coefficients
             if ma_coeffs[q].is_nan() || ma_coeffs[q].is_infinite() {
-                return Err(OxiError::from(ARError::InvalidCoefficient)));
+                return Err(OxiError::from(ARError::InvalidCoefficient));
             }
 
             // MA coefficients should typically be between -1 and 1
@@ -415,7 +415,7 @@ impl ARMAModel {
 
             // Check for invalid coefficients
             if x[i].is_nan() || x[i].is_infinite() {
-                return Err(OxiError::from(ARError::InvalidCoefficient)));
+                return Err(OxiError::from(ARError::InvalidCoefficient));
             }
         }
 
@@ -484,7 +484,7 @@ impl Forecaster for ARMAModel {
 
     fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
         if horizon == 0 {
-            return Err(OxiError::from(ARError::InvalidHorizon(horizon)));
+            return Err(OxiError::from(ARError::InvalidHorizon(horizon));
         }
 
         if self.ar_coefficients.is_none()
