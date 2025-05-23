@@ -5,12 +5,6 @@ edition.workspace = true
 publish = false
 
 [dependencies]
-oxidiviner-core = { path = "../oxidiviner-core" }
-oxidiviner-math = { path = "../oxidiviner-math" }
-oxidiviner-moving-average = { path = "../oxidiviner-moving-average" }
-oxidiviner-exponential-smoothing = { path = "../oxidiviner-exponential-smoothing" }
-oxidiviner-autoregressive = { path = "../oxidiviner-autoregressive" }
-oxidiviner-garch = { path = "../oxidiviner-garch" }
 oxidiviner = { path = "../oxidiviner" }
 chrono = { version = "0.4.41", features = ["serde"] }
 rand = "0.9.1"

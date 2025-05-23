@@ -1,11 +1,5 @@
 [workspace]
 members = [
-    "oxidiviner-core",
-    "oxidiviner-math",
-    "oxidiviner-moving-average",
-    "oxidiviner-exponential-smoothing",
-    "oxidiviner-autoregressive",
-    "oxidiviner-garch",
     "oxidiviner",
     "examples",
 ]

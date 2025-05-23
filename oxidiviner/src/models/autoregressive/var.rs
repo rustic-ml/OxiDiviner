@@ -1,8 +1,8 @@
 #![allow(clippy::needless_range_loop)]
 
-use crate::models::{ARError, Result as ARResult};
 use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
 use crate::math::metrics::{mae, mape, mse, rmse, smape};
+
 use std::collections::HashMap;
 
 /// Vector Autoregression (VAR) model for multivariate time series forecasting.
@@ -61,14 +61,14 @@ impl VARModel {
     ///
     /// # Returns
     /// * `Result<Self>` - A new VAR model if parameters are valid
-    pub fn new(p: usize, variable_names: Vec<String>, include_intercept: bool) -> ARResult<Self> {
+    pub fn new(p: usize, variable_names: Vec<String>, include_intercept: bool) -> Result<Self> {
         // Validate parameters
         if p == 0 {
-            return Err(ARError::InvalidLagOrder(p));
+            return Err(OxiError::ARInvalidLagOrder(p));
         }
 
         if variable_names.is_empty() {
-            return Err(ARError::InvalidParameter(
+            return Err(OxiError::InvalidParameter(
                 "At least one variable required for VAR model".to_string(),
             ));
         }
@@ -105,10 +105,7 @@ impl VARModel {
         // Check if we have data for all variables
         for var_name in &self.variable_names {
             if !data_map.contains_key(var_name) {
-                return Err(OxiError::DataError(format!(
-                    "Missing data for variable '{}'",
-                    var_name
-                ));
+                return Err(OxiError::ARMissingVariable(var_name.clone()));
             }
         }
 
@@ -120,30 +117,16 @@ impl VARModel {
         for var_name in &self.variable_names {
             let var_data = &data_map[var_name];
             if var_data.timestamps.len() != n {
-                return Err(OxiError::DataError(format!(
-                    "Inconsistent time series lengths. Expected {} timestamps, but got {} for '{}'",
-                    n,
-                    var_data.timestamps.len(),
-                    var_name
-                ));
-            }
-
-            for i in 0..n {
-                if var_data.timestamps[i] != timestamps[i] {
-                    return Err(OxiError::DataError(format!(
-                        "Inconsistent timestamps at position {} for variable '{}'",
-                        i, var_name
-                    ));
-                }
+                return Err(OxiError::ARInconsistentTimestamps);
             }
         }
 
         // Need more observations than the VAR order
         if n <= self.p {
-            return Err(OxiError::from(ARError::InsufficientData {
+            return Err(OxiError::ARInsufficientData {
                 actual: n,
                 expected: self.p + 1,
-            }));
+            });
         }
 
         // Extract all time series values into a k×n matrix
@@ -170,9 +153,8 @@ impl VARModel {
     /// * `Result<()>` - Success or error
     pub fn fit(&mut self, data: &TimeSeriesData) -> Result<()> {
         if self.k != 1 {
-            return Err(OxiError::ModelError(format!(
-                "Cannot use fit() for VAR model with {} variables. Use fit_multiple() instead.",
-                self.k
+            return Err(OxiError::ModelError(
+                format!("Cannot use fit() for VAR model with {} variables. Use fit_multiple() instead.", self.k)
             ));
         }
 
@@ -191,11 +173,11 @@ impl VARModel {
     /// * `Result<HashMap<String, Vec<f64>>>` - Forecasts for each variable
     pub fn forecast_multiple(&self, horizon: usize) -> Result<HashMap<String, Vec<f64>>> {
         if horizon == 0 {
-            return Err(OxiError::from(ARError::InvalidHorizon(horizon));
+            return Err(OxiError::ARInvalidHorizon(horizon));
         }
 
         if self.coefficient_matrices.is_none() || self.last_values.is_none() {
-            return Err(OxiError::from(ARError::NotFitted));
+            return Err(OxiError::ARNotFitted);
         }
 
         // Get coefficient matrices and last values
@@ -268,10 +250,15 @@ impl VARModel {
     /// # Returns
     /// * `Result<Vec<f64>>` - Forecasts for the first variable
     pub fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
-        let forecasts_map = self.forecast_multiple(horizon)?;
-        let var_name = &self.variable_names[0];
+        if self.k != 1 {
+            return Err(OxiError::ModelError(
+                format!("Cannot use forecast() for VAR model with {} variables. Use forecast_multiple() instead.", self.k)
+            ));
+        }
 
-        Ok(forecasts_map[var_name].clone())
+        let forecasts_map = self.forecast_multiple(horizon)?;
+
+        Ok(forecasts_map[&self.variable_names[0]].clone())
     }
 
     /// Evaluate the model on test data for multiple variables.
@@ -286,16 +273,13 @@ impl VARModel {
         test_data_map: &HashMap<String, TimeSeriesData>,
     ) -> Result<HashMap<String, ModelEvaluation>> {
         if self.coefficient_matrices.is_none() {
-            return Err(OxiError::from(ARError::NotFitted));
+            return Err(OxiError::ARNotFitted);
         }
 
         // Check if we have test data for all variables
         for var_name in &self.variable_names {
             if !test_data_map.contains_key(var_name) {
-                return Err(OxiError::DataError(format!(
-                    "Missing test data for variable '{}'",
-                    var_name
-                ));
+                return Err(OxiError::ARMissingVariable(var_name.clone()));
             }
         }
 
@@ -306,12 +290,7 @@ impl VARModel {
         for var_name in &self.variable_names {
             let var_data = &test_data_map[var_name];
             if var_data.values.len() != horizon {
-                return Err(OxiError::DataError(format!(
-                    "Inconsistent test series lengths. Expected {} values, but got {} for '{}'",
-                    horizon,
-                    var_data.values.len(),
-                    var_name
-                ));
+                return Err(OxiError::ARInconsistentTimestamps);
             }
         }
 
@@ -386,11 +365,11 @@ impl VARModel {
         test_data_map: Option<&HashMap<String, TimeSeriesData>>,
     ) -> Result<HashMap<String, ModelOutput>> {
         if horizon == 0 {
-            return Err(OxiError::from(ARError::InvalidHorizon(horizon));
+            return Err(OxiError::ARInvalidHorizon(horizon));
         }
 
         if self.coefficient_matrices.is_none() {
-            return Err(OxiError::from(ARError::NotFitted));
+            return Err(OxiError::ARNotFitted);
         }
 
         // Generate forecasts for all variables
@@ -493,16 +472,16 @@ impl VARModel {
     ///
     /// # Returns
     /// * `Result<()>` - Success or error
-    fn fit_var_model(&mut self, data: &[Vec<f64>]) -> ARResult<()> {
+    fn fit_var_model(&mut self, data: &[Vec<f64>]) -> Result<()> {
         let k = data.len();
         let n = data[0].len();
 
         // Sanity check: all time series should have the same length
         for i in 1..k {
             if data[i].len() != n {
-                return Err(ARError::InvalidParameter(
+                                return Err(OxiError::DataError(
                     format!("Inconsistent time series lengths. Expected {} values, but got {} for series {}",
-                           n, data[i].len(), i)
+                        n, data[i].len(), i)
                 ));
             }
         }
@@ -511,7 +490,7 @@ impl VARModel {
         let t = n - self.p;
 
         if t <= k * self.p + self.include_intercept as usize {
-            return Err(ARError::InsufficientData {
+            return Err(OxiError::ARInsufficientData {
                 actual: n,
                 expected: k * self.p + self.include_intercept as usize + self.p + 1,
             });
@@ -674,10 +653,10 @@ impl VARModel {
     ///
     /// # Returns
     /// * `Result<Vec<Vec<f64>>>` - Inverted matrix
-    fn invert_matrix(&self, a: &[Vec<f64>]) -> ARResult<Vec<Vec<f64>>> {
+    fn invert_matrix(&self, a: &[Vec<f64>]) -> Result<Vec<Vec<f64>>> {
         let n = a.len();
         if n == 0 || a[0].len() != n {
-            return Err(ARError::LinearSolveError(
+            return Err(OxiError::ARLinearSolveError(
                 "Invalid matrix dimensions for inversion".to_string(),
             ));
         }
@@ -706,7 +685,7 @@ impl VARModel {
 
             // Check if matrix is singular
             if max_val < 1e-10 {
-                return Err(ARError::LinearSolveError(
+                return Err(OxiError::ARLinearSolveError(
                     "Singular matrix detected".to_string(),
                 ));
             }
@@ -741,7 +720,9 @@ impl VARModel {
 
                 // Check for invalid values
                 if inverse[i][j].is_nan() || inverse[i][j].is_infinite() {
-                    return Err(ARError::InvalidCoefficient);
+                    return Err(OxiError::ARLinearSolveError(
+                        "Invalid coefficient detected".to_string(),
+                    ));
                 }
             }
         }

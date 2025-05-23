@@ -16,8 +16,8 @@ cargo run --package oxidiviner-examples --bin autoregressive_demo
 
 use chrono::{DateTime, Duration, Utc};
 use oxidiviner::{quick, AutoSelector, ModelBuilder};
-use oxidiviner_autoregressive::{ARIMAModel, ARModel, SARIMAModel, VARModel};
-use oxidiviner_core::{validation::ValidationUtils, ModelValidator, TimeSeriesData};
+use oxidiviner::{ARIMAModel, ARModel, SARIMAModel, VARModel};
+use oxidiviner::{validation::ValidationUtils, ModelValidator, TimeSeriesData};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
 use std::f64::consts::PI;

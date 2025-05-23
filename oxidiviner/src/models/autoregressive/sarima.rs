@@ -1,9 +1,9 @@
 #![allow(clippy::needless_range_loop)]
 
-use crate::models::autoregressive::arima::ARIMAModel;
-use crate::models::autoregressive::error::ARError;
 use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
 use crate::math::metrics::{mae, mape, mse, rmse, smape};
+use crate::models::autoregressive::arima::ARIMAModel;
+use crate::models::autoregressive::error::ARError;
 
 /// Seasonal Autoregressive Integrated Moving Average (SARIMA) model for time series forecasting.
 ///
@@ -77,14 +77,14 @@ impl SARIMAModel {
     ) -> Result<Self> {
         // Validate parameters
         if p == 0 && q == 0 && seasonal_p == 0 && seasonal_q == 0 {
-            return Err(OxiError::from(ARError::InvalidLagOrder(0));
+            return Err(OxiError::from(ARError::InvalidLagOrder(0)));
         }
 
         if s < 2 {
             return Err(OxiError::from(ARError::InvalidParameter(format!(
                 "Seasonal period must be at least 2, got {}",
                 s
-            ));
+            ))));
         }
 
         let name = if include_intercept {
@@ -307,7 +307,7 @@ impl Forecaster for SARIMAModel {
 
     fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
         if horizon == 0 {
-            return Err(OxiError::from(ARError::InvalidHorizon(horizon));
+            return Err(OxiError::from(ARError::InvalidHorizon(horizon)));
         }
 
         if self.arima_model.is_none() || self.last_values.is_none() {

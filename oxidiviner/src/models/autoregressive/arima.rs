@@ -1,7 +1,6 @@
-use crate::models::autoregressive::arma::ARMAModel;
-use crate::models::autoregressive::error::ARError;
 use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
 use crate::math::metrics::{mae, mape, mse, rmse, smape};
+use crate::models::autoregressive::arma::ARMAModel;
 
 /// Autoregressive Integrated Moving Average (ARIMA) model for time series forecasting.
 ///
@@ -52,7 +51,7 @@ impl ARIMAModel {
     pub fn new(p: usize, d: usize, q: usize, include_intercept: bool) -> Result<Self> {
         // Validate parameters
         if p == 0 && q == 0 {
-            return Err(OxiError::from(ARError::InvalidParameters(
+            return Err(OxiError::InvalidParameter(
                 "At least one of p or q must be greater than 0".to_string(),
             ));
         }
@@ -182,17 +181,17 @@ impl Forecaster for ARIMAModel {
 
     fn fit(&mut self, data: &TimeSeriesData) -> Result<()> {
         if data.is_empty() {
-            return Err(OxiError::from(ARError::EmptyData));
+            return Err(OxiError::AREmptyData);
         }
 
         let n = data.values.len();
 
         // Check if we have enough data after differencing
         if n <= self.p + self.d {
-            return Err(OxiError::from(ARError::InsufficientData {
+            return Err(OxiError::ARInsufficientData {
                 actual: n,
                 expected: self.p + self.d + 1,
-            }));
+            });
         }
 
         // Apply differencing to the data
@@ -227,11 +226,11 @@ impl Forecaster for ARIMAModel {
 
     fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
         if horizon == 0 {
-            return Err(OxiError::from(ARError::InvalidHorizon(horizon));
+            return Err(OxiError::ARInvalidHorizon(horizon));
         }
 
         if self.arma_model.is_none() || self.last_values.is_none() {
-            return Err(OxiError::from(ARError::NotFitted));
+            return Err(OxiError::ARNotFitted);
         }
 
         // Forecast the differenced series using the ARMA model
@@ -245,7 +244,7 @@ impl Forecaster for ARIMAModel {
 
     fn evaluate(&self, test_data: &TimeSeriesData) -> Result<ModelEvaluation> {
         if self.arma_model.is_none() {
-            return Err(OxiError::from(ARError::NotFitted));
+            return Err(OxiError::ARNotFitted);
         }
 
         let forecast = self.forecast(test_data.values.len())?;

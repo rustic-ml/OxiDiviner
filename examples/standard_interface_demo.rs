@@ -1,10 +1,10 @@
 #![allow(deprecated)]
 #![allow(unused_imports)]
 
+use chrono::{DateTime, Duration, Utc};
 use oxidiviner::prelude::*;
 use rand::Rng;
 use std::error::Error;
-use chrono::{DateTime, Duration, Utc};
 
 // Main function to demonstrate OxiDiviner's standard interface
 fn main() -> std::result::Result<(), Box<dyn Error>> {

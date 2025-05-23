@@ -378,7 +378,7 @@ fn calculate_rmse(actual: &[f64], forecast: &[f64]) -> f64 {
 #[test]
 fn test_quick_api_arima() {
     use oxidiviner::quick;
-    use oxidiviner_core::validation::ValidationUtils;
+    use oxidiviner::core::validation::ValidationUtils;
 
     let data = generate_test_data(60, true, false, 46);
     let (train, test) = ValidationUtils::time_split(&data, 0.8).unwrap();
@@ -396,7 +396,7 @@ fn test_quick_api_arima() {
 #[test]
 fn test_quick_api_moving_average() {
     use oxidiviner::quick;
-    use oxidiviner_core::validation::ValidationUtils;
+    use oxidiviner::core::validation::ValidationUtils;
 
     let data = generate_test_data(60, true, false, 47);
     let (train, test) = ValidationUtils::time_split(&data, 0.8).unwrap();
@@ -458,7 +458,7 @@ fn test_model_validator() {
 
 #[test]
 fn test_validation_utilities() {
-    use oxidiviner_core::validation::ValidationUtils;
+    use oxidiviner::core::validation::ValidationUtils;
 
     let data = generate_test_data(100, true, false, 48);
 
@@ -483,7 +483,7 @@ fn test_validation_utilities() {
 
 #[test]
 fn test_accuracy_metrics() {
-    use oxidiviner_core::validation::ValidationUtils;
+    use oxidiviner::core::validation::ValidationUtils;
 
     let actual = vec![1.0, 2.0, 3.0, 4.0, 5.0];
     let predicted = vec![1.1, 2.1, 2.9, 4.1, 4.9];
@@ -546,7 +546,7 @@ fn test_auto_select_integration() {
 #[test]
 fn test_builder_with_quick_api() {
     use oxidiviner::{quick, ModelBuilder};
-    use oxidiviner_core::validation::ValidationUtils;
+    use oxidiviner::core::validation::ValidationUtils;
 
     let data = generate_test_data(60, true, false, 50);
     let (train, test) = ValidationUtils::time_split(&data, 0.8).unwrap();
@@ -582,7 +582,7 @@ fn test_parameter_validation_edge_cases() {
 #[test]
 fn test_comprehensive_enhanced_workflow() {
     use oxidiviner::{quick, ModelBuilder};
-    use oxidiviner_core::validation::ValidationUtils;
+    use oxidiviner::core::validation::ValidationUtils;
 
     // Create realistic test scenario
     let data = generate_test_data(100, true, false, 52);

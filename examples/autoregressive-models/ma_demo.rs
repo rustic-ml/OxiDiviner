@@ -15,8 +15,8 @@ cargo run --package oxidiviner-examples --bin ma_demo
 
 use chrono::{Duration, Utc};
 use oxidiviner::{quick, ModelBuilder};
-use oxidiviner_core::{validation::ValidationUtils, ModelValidator, TimeSeriesData};
-use oxidiviner_moving_average::MAModel;
+use oxidiviner::{validation::ValidationUtils, ModelValidator, TimeSeriesData};
+use oxidiviner::MAModel;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 fn main() {

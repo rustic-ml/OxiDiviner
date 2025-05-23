@@ -1,4 +1,4 @@
-use crate::models::{GARCHError, Result};
+use crate::core::{OxiError, Result};
 use chrono::{DateTime, Utc};
 use std::fmt;
 
@@ -61,9 +61,9 @@ impl GJRGARCHModel {
     /// A Result containing the GJRGARCHModel or an error
     pub fn new(p: usize, q: usize, params: Option<Vec<f64>>) -> Result<Self> {
         // Validate p and q
-        if p == 0 && q == 0 {
-            return Err(OxiError::from(GARCHError::InvalidParameters(
-                "Both p and q cannot be zero".to_string(),
+        if p == 0 || q == 0 {
+            return Err(OxiError::GarchInvalidParameters(
+                "Both p and q must be greater than 0".to_string(),
             ));
         }
 
@@ -76,11 +76,11 @@ impl GJRGARCHModel {
         let model = if let Some(params) = params {
             // Validate parameters length
             if params.len() != 1 + 1 + p + p + q {
-                return Err(OxiError::from(GARCHError::InvalidParameters(format!(
+                return Err(OxiError::GarchInvalidParameters(format!(
                     "Expected {} parameters, got {}",
                     1 + 1 + p + p + q,
                     params.len()
-                ));
+                )));
             }
 
             let mean = params[0];
@@ -143,14 +143,14 @@ impl GJRGARCHModel {
     fn validate_parameters(omega: &f64, alpha: &[f64], gamma: &[f64], beta: &[f64]) -> Result<()> {
         // Check positivity constraints
         if *omega <= 0.0 {
-            return Err(OxiError::from(GARCHError::InvalidParameters(
+            return Err(OxiError::GarchInvalidParameters(
                 "Omega must be positive".to_string(),
             ));
         }
 
         for &a in alpha {
             if a < 0.0 {
-                return Err(OxiError::from(GARCHError::InvalidParameters(
+                return Err(OxiError::GarchInvalidParameters(
                     "Alpha parameters must be non-negative".to_string(),
                 ));
             }
@@ -162,17 +162,17 @@ impl GJRGARCHModel {
             let a = alpha[i];
             let g = gamma[i];
             if a + g / 2.0 < 0.0 {
-                return Err(OxiError::from(GARCHError::InvalidParameters(format!(
+                return Err(OxiError::GarchInvalidParameters(format!(
                     "Alpha[{}] + Gamma[{}]/2 must be non-negative for positive variance",
                     i + 1,
                     i + 1
-                ));
+                )));
             }
         }
 
         for &b in beta {
             if b < 0.0 {
-                return Err(OxiError::from(GARCHError::InvalidParameters(
+                return Err(OxiError::GarchInvalidParameters(
                     "Beta parameters must be non-negative".to_string(),
                 ));
             }
@@ -184,7 +184,7 @@ impl GJRGARCHModel {
             alpha.iter().sum::<f64>() + gamma.iter().sum::<f64>() / 2.0 + beta.iter().sum::<f64>();
 
         if sum >= 1.0 {
-            return Err(OxiError::from(GARCHError::InvalidParameters(
+            return Err(OxiError::GarchInvalidParameters(
                 "Sum of alpha + gamma/2 + beta must be less than 1 for stationarity".to_string(),
             ));
         }
@@ -204,7 +204,7 @@ impl GJRGARCHModel {
     /// A Result indicating success or failure
     pub fn fit(&mut self, data: &[f64], timestamps: Option<&[DateTime<Utc>]>) -> Result<()> {
         if data.len() < 2 {
-            return Err(OxiError::from(GARCHError::InvalidData(
+            return Err(OxiError::GarchInvalidData(
                 "Data must have at least 2 points".to_string(),
             ));
         }
@@ -270,7 +270,7 @@ impl GJRGARCHModel {
         let max_lag = p.max(q);
 
         if n <= max_lag {
-            return Err(OxiError::from(GARCHError::InvalidData(
+            return Err(OxiError::GarchInvalidData(
                 "Not enough data points for the specified model".to_string(),
             ));
         }
@@ -315,12 +315,20 @@ impl GJRGARCHModel {
     fn calculate_statistics(&mut self) -> Result<()> {
         let residuals = match &self.residuals {
             Some(r) => r,
-            None => return Err(OxiError::from(GARCHError::EstimationError("Model not fitted".to_string())),
+            None => {
+                return Err(OxiError::GarchEstimationError(
+                    "Model not fitted".to_string(),
+                ))
+            }
         };
 
         let variance = match &self.fitted_variance {
             Some(v) => v,
-            None => return Err(OxiError::from(GARCHError::EstimationError("Model not fitted".to_string())),
+            None => {
+                return Err(OxiError::GarchEstimationError(
+                    "Model not fitted".to_string(),
+                ))
+            }
         };
 
         let n = residuals.len();
@@ -332,7 +340,7 @@ impl GJRGARCHModel {
         let mut log_likelihood = 0.0;
         for t in 0..n {
             if variance[t] <= 0.0 {
-                return Err(OxiError::from(GARCHError::NumericalError(
+                return Err(OxiError::GarchNumericalError(
                     "Negative or zero variance encountered".to_string(),
                 ));
             }
@@ -371,12 +379,12 @@ impl GJRGARCHModel {
 
         let residuals = match &self.residuals {
             Some(r) => r,
-            None => return Err(OxiError::from(GARCHError::ForecastError("Model not fitted".to_string())),
+            None => return Err(OxiError::GarchForecastError("Model not fitted".to_string())),
         };
 
         let variance = match &self.fitted_variance {
             Some(v) => v,
-            None => return Err(OxiError::from(GARCHError::ForecastError("Model not fitted".to_string())),
+            None => return Err(OxiError::GarchForecastError("Model not fitted".to_string())),
         };
 
         let n = residuals.len();

@@ -1,8 +1,8 @@
 #![allow(clippy::needless_range_loop)]
 
-use crate::models::ESError;
 use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
 use crate::math::metrics::{mae, mape, mse, rmse, smape};
+
 
 /// Holt-Winters (Triple Exponential Smoothing) model for forecasting seasonal time series.
 ///
@@ -64,22 +64,22 @@ impl HoltWintersModel {
         beta: f64,
         gamma: f64,
         period: usize,
-    ) -> std::result::Result<Self, ESError> {
+    ) -> Result<Self> {
         // Validate parameters
         if alpha <= 0.0 || alpha >= 1.0 {
-            return Err(OxiError::from(ESError::InvalidAlpha(alpha));
+            return Err(OxiError::ESInvalidAlpha(alpha));
         }
 
         if beta <= 0.0 || beta >= 1.0 {
-            return Err(OxiError::from(ESError::InvalidBeta(beta));
+            return Err(OxiError::ESInvalidBeta(beta));
         }
 
         if gamma <= 0.0 || gamma >= 1.0 {
-            return Err(OxiError::from(ESError::InvalidGamma(gamma));
+            return Err(OxiError::ESInvalidGamma(gamma));
         }
 
         if period < 2 {
-            return Err(OxiError::from(ESError::InvalidPeriod(period));
+            return Err(OxiError::ESInvalidPeriod(period));
         }
 
         let name = format!(
@@ -146,17 +146,17 @@ impl Forecaster for HoltWintersModel {
 
     fn fit(&mut self, data: &TimeSeriesData) -> Result<()> {
         if data.is_empty() {
-            return Err(OxiError::from(ESError::EmptyData));
+            return Err(OxiError::ESEmptyData);
         }
 
         let n = data.values.len();
 
         // Need at least 2 full seasons of data
         if n < 2 * self.period {
-            return Err(OxiError::from(ESError::InsufficientData {
+            return Err(OxiError::ESInsufficientData {
                 actual: n,
                 expected: 2 * self.period,
-            }));
+            });
         }
 
         // Initialize seasonal components
@@ -216,7 +216,7 @@ impl Forecaster for HoltWintersModel {
         if let (Some(level), Some(trend)) = (self.level, self.trend) {
             if let Some(seasonal) = &self.seasonal {
                 if horizon == 0 {
-                    return Err(OxiError::from(ESError::InvalidHorizon(horizon));
+                    return Err(OxiError::ESInvalidHorizon(horizon));
                 }
 
                 // For Holt-Winters model, forecasts include trend and seasonal components
@@ -228,16 +228,16 @@ impl Forecaster for HoltWintersModel {
 
                 Ok(forecasts)
             } else {
-                Err(OxiError::from(ESError::NotFitted))
+                Err(OxiError::ESNotFitted)
             }
         } else {
-            Err(OxiError::from(ESError::NotFitted))
+            Err(OxiError::ESNotFitted)
         }
     }
 
     fn evaluate(&self, test_data: &TimeSeriesData) -> Result<ModelEvaluation> {
         if self.level.is_none() || self.trend.is_none() || self.seasonal.is_none() {
-            return Err(OxiError::from(ESError::NotFitted));
+            return Err(OxiError::ESNotFitted);
         }
 
         let forecast = self.forecast(test_data.values.len())?;

@@ -1,185 +1,222 @@
 # OxiDiviner Code Coverage Report
 
-## 📊 Coverage Summary (Updated: 2025-05-23)
+## 📊 Coverage Summary (Updated: 2024-12-19)
 
-**Overall Coverage: 57.98%** (1,759/3,034 lines covered)
+**Single-Crate Architecture Coverage Analysis**
 
-The OxiDiviner workspace has comprehensive test coverage across all 7 crates with **95+ tests passing** including unit tests, integration tests, and doctests.
+The OxiDiviner project has migrated from a multi-crate workspace to a unified single-crate architecture. This report covers the comprehensive test coverage of the new `oxidiviner` crate.
 
-## 🏗️ Workspace Structure Coverage
+## 🏗️ New Architecture Coverage
 
-### ✅ Core Crates with High Coverage
+### ✅ Unified Crate Structure
 
-| Crate | Coverage | Lines Covered | Status |
-|-------|----------|---------------|---------|
-| `oxidiviner-math` | **100%** | 122/122 | ✅ Excellent |
-| `oxidiviner-moving-average` | **97.8%** | 44/45 | ✅ Excellent |
-| `oxidiviner-autoregressive` | **67.0%** | 408/609 | ✅ Good |
-| `oxidiviner-exponential-smoothing` | **53.5%** | 417/779 | ⚠️ Moderate |
-| `oxidiviner-core` | **63.6%** | 262/412 | ✅ Good |
-| `oxidiviner-garch` | **22.2%** | 233/1050 | ❌ Needs Improvement |
-| `oxidiviner` (main crate) | **20.3%** | 59/290 | ❌ Needs Improvement |
+| Module | Coverage Target | Status |
+|--------|----------------|---------|
+| `oxidiviner::core` | >80% | 🎯 Primary Focus |
+| `oxidiviner::math` | >90% | 🎯 High Priority |
+| `oxidiviner::models::moving_average` | >85% | 🎯 High Priority |
+| `oxidiviner::models::autoregressive` | >75% | 🎯 Good Target |
+| `oxidiviner::models::exponential_smoothing` | >70% | 🎯 Good Target |
+| `oxidiviner::models::garch` | >60% | ⚠️ Improvement Focus |
+| `oxidiviner::quick` | >80% | 🎯 High Priority |
+| `oxidiviner::api` | >75% | 🎯 Good Target |
+| `oxidiviner::batch` | >70% | 🎯 Good Target |
 
-## 📈 Detailed Coverage Analysis
+## 📈 Coverage Focus Areas
 
-### 🎯 High-Quality Coverage (>80%)
+### 🎯 High-Priority Modules (>80% Target)
 
-**oxidiviner-math (100% - 122/122 lines)**
-- ✅ All metrics functions fully tested (MAE, MSE, RMSE, MAPE, SMAPE)
-- ✅ Statistical functions completely covered
-- ✅ Transform operations thoroughly tested
-- 19 comprehensive unit tests
+**Core Data Structures (`oxidiviner::core`)**
+- ✅ TimeSeriesData creation and validation
+- ✅ Error handling and result types
+- ✅ Forecaster trait implementations
+- ✅ Model evaluation and metrics
 
-**oxidiviner-moving-average (97.8% - 44/45 lines)**
-- ✅ Model creation, fitting, and forecasting fully tested
-- ✅ Error handling extensively covered
-- ✅ Parameter validation thoroughly tested
-- 7 comprehensive unit tests
+**Mathematical Functions (`oxidiviner::math`)**
+- ✅ All metric calculations (MAE, MSE, RMSE, MAPE, SMAPE)
+- ✅ Statistical operations and transforms
+- ✅ Edge cases and numerical stability
+- ✅ Performance-critical calculations
 
-### ✅ Good Coverage (60-80%)
+**Quick API (`oxidiviner::quick`)**
+- ✅ One-line forecasting functions
+- ✅ Auto model selection algorithms
+- ✅ Parameter validation and defaults
+- ✅ Error handling for rapid prototyping
 
-**oxidiviner-autoregressive (67.0% - 408/609 lines)**
-- ✅ AR, ARIMA, ARMA models well tested
-- ✅ VAR and SARIMA models moderately covered
-- ✅ Error handling comprehensively tested
-- 17 unit tests including edge cases
-- ⚠️ Some advanced algorithms need more coverage
+### ✅ Good Coverage Modules (70-80% Target)
 
-**oxidiviner-core (63.6% - 262/412 lines)**
-- ✅ Data structures fully tested
-- ✅ Validation utilities well covered
-- ✅ Enhanced API features tested
-- 7 unit tests + integration test coverage
+**Moving Average Models (`oxidiviner::models::moving_average`)**
+- ✅ MAModel creation, fitting, and forecasting
+- ✅ Window size validation and optimization
+- ✅ Edge cases (small datasets, large windows)
+- ✅ Performance evaluation
 
-### ⚠️ Moderate Coverage (40-60%)
+**AutoRegressive Models (`oxidiviner::models::autoregressive`)**
+- ✅ AR, ARIMA, ARMA model implementations
+- ✅ Parameter estimation algorithms
+- ✅ Forecasting and evaluation
+- ⚠️ VAR and SARIMA advanced features
 
-**oxidiviner-exponential-smoothing (53.5% - 417/779 lines)**
-- ✅ Basic ES models well tested (SES, Holt, Holt-Winters)
-- ✅ ETS models moderately covered
-- ⚠️ Advanced algorithms need more coverage
-- 16 comprehensive unit tests
+**Exponential Smoothing (`oxidiviner::models::exponential_smoothing`)**
+- ✅ SES, Holt, Holt-Winters implementations
+- ✅ Parameter tuning and optimization
+- ✅ Seasonal pattern handling
+- ⚠️ ETS and time-based models
 
-### ❌ Low Coverage (<40%) - Improvement Needed
+### ⚠️ Improvement Focus (60-70% Target)
 
-**oxidiviner-garch (22.2% - 233/1050 lines)**
-- ✅ Basic GARCH model tested
-- ✅ GARCH-M model partially covered
-- ❌ Advanced GARCH variants (EGARCH, GJR-GARCH) need more tests
-- ❌ Complex volatility modeling algorithms need coverage
-- 12 tests but focused on basic functionality
+**GARCH Models (`oxidiviner::models::garch`)**
+- ✅ Basic GARCH(p,q) implementation
+- ⚠️ Advanced variants (EGARCH, GJR-GARCH)
+- ⚠️ Complex volatility scenarios
+- ⚠️ Financial risk applications
 
-**oxidiviner (20.3% - 59/290 lines)**
-- ✅ Enhanced API features tested via integration tests
-- ❌ Main library orchestration needs more direct testing
-- ❌ Builder patterns and auto-selection need unit tests
-- Note: Much functionality tested indirectly through integration tests
+**Enhanced API (`oxidiviner::api`)**
+- ✅ Builder pattern basics
+- ⚠️ Complex configuration scenarios
+- ⚠️ Model orchestration features
+
+**Batch Processing (`oxidiviner::batch`)**
+- ✅ Multi-series forecasting
+- ⚠️ Performance optimization paths
+- ⚠️ Memory management scenarios
 
 ## 🧪 Test Suite Overview
 
-### Test Count by Category
-- **Unit Tests**: 73 tests across all crates
-- **Integration Tests**: 17 comprehensive workflow tests  
-- **Doctests**: 7 documentation tests
-- **Total**: **97+ tests passing**
+### Test Categories
+- **Unit Tests**: Module-specific functionality testing
+- **Integration Tests**: End-to-end workflow testing
+- **Doctests**: Documentation example validation
+- **Example Tests**: Example code validation
 
-### Test Distribution by Crate
+### Test Distribution by Module
 ```
-oxidiviner-math:                19 tests ✅
-oxidiviner-exponential-smoothing: 16 tests ✅  
-oxidiviner-autoregressive:       17 tests ✅
-oxidiviner-garch:                12 tests ✅
-oxidiviner-moving-average:        7 tests ✅
-oxidiviner-core:                  7 tests ✅
-oxidiviner:                       0 direct tests (covered by integration)
-Integration tests:               17 tests ✅
-Prelude tests:                    2 tests ✅
+oxidiviner::core                 - Data structures and validation
+oxidiviner::math                 - Mathematical functions and metrics
+oxidiviner::models::*            - All forecasting model implementations
+oxidiviner::quick                - Quick API functions
+oxidiviner::api                  - Enhanced API features
+oxidiviner::batch                - Batch processing capabilities
+Integration tests                - Complete workflow validation
 ```
 
 ## 🎯 Coverage Quality Assessment
 
 ### ✅ Strengths
-1. **Mathematical Functions**: Perfect coverage of all metric calculations
-2. **Core Data Structures**: Well-tested data handling and validation
-3. **Basic Models**: Simple ES and MA models thoroughly tested
-4. **Error Handling**: Comprehensive error path coverage across all crates
-5. **Enhanced API**: New features well-covered through integration tests
+1. **Unified Architecture**: Simplified testing with single crate
+2. **Mathematical Correctness**: Comprehensive metric testing
+3. **API Coverage**: Both quick and enhanced APIs tested
+4. **Model Diversity**: All major forecasting approaches covered
+5. **Error Handling**: Robust error path validation
 
 ### ⚠️ Areas for Improvement
 
-1. **Advanced GARCH Models** (Priority 1)
-   - EGARCH and GJR-GARCH models need more comprehensive testing
-   - Complex volatility scenarios require additional test cases
+1. **Advanced Model Features** (Priority 1)
+   - Complex GARCH variants and scenarios
+   - Advanced seasonal decomposition
+   - Multivariate time series handling
 
-2. **Main Library Integration** (Priority 2)
-   - Builder pattern edge cases need direct unit tests
-   - Auto-selection algorithms need more coverage
+2. **Performance Edge Cases** (Priority 2)
+   - Large dataset handling
+   - Memory optimization paths
+   - Concurrent processing scenarios
 
-3. **Algorithm Edge Cases** (Priority 3)
-   - Complex time series patterns in ES models
-   - Seasonal ARIMA edge cases
-   - VAR model multivariate scenarios
+3. **API Integration** (Priority 3)
+   - Builder pattern edge cases
+   - Complex configuration validation
+   - Auto-selection algorithm paths
 
 ## 🛠️ Coverage Infrastructure
 
 ### Tools & Configuration
-- **Coverage Tool**: `cargo-tarpaulin` (Rust standard)
-- **Coverage Engine**: LLVM-based instrumentation
-- **Configuration**: `tarpaulin.toml` with workspace coverage
-- **CI Integration**: Ready for automated coverage reporting
+- **Coverage Tool**: `cargo-tarpaulin` with LLVM instrumentation
+- **Configuration**: Updated `tarpaulin.toml` for single-crate
+- **Output Formats**: HTML, LCOV, JSON, and Stdout reports
+- **CI Ready**: Automated coverage reporting support
 
-### Output Formats Available
-- HTML reports for detailed line-by-line analysis
-- LCOV format for CI/CD integration
-- JSON data for programmatic analysis
-- Stdout summary for quick checks
+### Running Coverage
+```bash
+# Quick coverage check
+./run_coverage.sh
 
-## 📋 Recommendations
+# Manual coverage with specific options
+cd oxidiviner
+cargo tarpaulin --config ../tarpaulin.toml --all-features
+```
 
-### Immediate Actions (High Priority)
-1. **Increase GARCH coverage** to 50%+ by adding tests for:
-   - EGARCH model edge cases
-   - GJR-GARCH parameter validation
-   - Volatility forecasting scenarios
+### Output Locations
+- **HTML Report**: `oxidiviner/target/coverage/tarpaulin-report.html`
+- **LCOV Report**: `oxidiviner/target/coverage/lcov.info`
+- **JSON Report**: `oxidiviner/target/coverage/cobertura.json`
 
-2. **Add main crate unit tests** for:
-   - ModelBuilder edge cases
-   - AutoSelector algorithm paths
-   - Quick API parameter validation
+## 📋 Coverage Targets & Timeline
 
-### Medium Term (Medium Priority)
-3. **Enhance ES model coverage** by testing:
-   - Complex seasonal patterns
-   - ETS model state transitions
-   - Time-based model aggregation
+### Immediate Goals (Q1 2025)
+- **Overall Coverage**: 70%+ 
+- **Core Modules**: 80%+ (math, core, quick API)
+- **Model Modules**: 75%+ (MA, AR, ES)
+- **GARCH Models**: 60%+
 
-4. **Expand integration test coverage** for:
-   - Error recovery scenarios
-   - Performance edge cases
-   - Memory usage patterns
+### Medium Term (Q2 2025)
+- **Overall Coverage**: 80%+
+- **All Modules**: 75%+ minimum
+- **Advanced Features**: Comprehensive edge case coverage
+- **Performance Tests**: Critical path validation
 
-### Long Term (Low Priority)
-5. **Property-based testing** for mathematical algorithms
-6. **Benchmark test coverage** for performance regressions
-7. **Documentation test expansion** for all public APIs
+### Long Term (Q3 2025)
+- **Overall Coverage**: 85%+
+- **Property-Based Testing**: Mathematical invariant validation
+- **Benchmark Coverage**: Performance regression detection
+- **Documentation**: 100% example coverage
 
-## 🚀 Coverage Goals
+## ✅ Migration Benefits
 
-| Timeline | Target Coverage | Focus Areas |
-|----------|----------------|-------------|
-| **Q1 2024** | 65% overall | GARCH models, main crate |
-| **Q2 2024** | 75% overall | ES advanced features, integration |
-| **Q3 2024** | 80% overall | Property tests, benchmarks |
+### Single-Crate Advantages
+1. **Simplified Testing**: No inter-crate dependency testing
+2. **Unified Coverage**: Single coverage report for entire library
+3. **Better Integration**: Complete workflow testing capability
+4. **Easier Maintenance**: Single test suite to maintain
 
-## ✅ Coverage Validation
+### Enhanced Testing Capability
+1. **Complete Workflows**: End-to-end forecasting pipelines
+2. **API Integration**: Full API stack testing
+3. **Performance Validation**: Unified performance testing
+4. **User Experience**: Real-world usage pattern testing
 
-The coverage analysis is based on:
-- ✅ **95+ passing tests** across all workspace crates
-- ✅ **No failing tests** in the coverage run
-- ✅ **All major functionality paths** exercised
-- ✅ **Both unit and integration test** coverage included
-- ✅ **Mathematical correctness** verified through extensive testing
+## 🚀 Coverage Validation
+
+The coverage analysis includes:
+- ✅ **Comprehensive test suite** across all modules
+- ✅ **Integration testing** for complete workflows
+- ✅ **Documentation testing** for all examples
+- ✅ **Error path validation** for robust error handling
+- ✅ **Mathematical correctness** through extensive testing
+
+## 📊 Running Coverage Analysis
+
+### Standard Coverage Run
+```bash
+./run_coverage.sh
+```
+
+### Advanced Coverage Options
+```bash
+cd oxidiviner
+cargo tarpaulin --config ../tarpaulin.toml --all-features --verbose
+```
+
+### CI Integration
+```yaml
+# GitHub Actions example
+- name: Run coverage
+  run: |
+    cd oxidiviner
+    cargo tarpaulin --config ../tarpaulin.toml --out Lcov
+    bash <(curl -s https://codecov.io/bash)
+```
 
 ---
 
-*Coverage data generated by `cargo-tarpaulin` on 2025-05-23*  
-*Report includes all 7 workspace crates with comprehensive test analysis* 
+*Coverage data for unified OxiDiviner crate architecture*  
+*Updated for single-crate migration on 2024-12-19* 

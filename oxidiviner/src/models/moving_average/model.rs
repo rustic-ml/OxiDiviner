@@ -29,7 +29,7 @@ impl MAModel {
     pub fn new(window_size: usize) -> std::result::Result<Self, MAError> {
         // Validate parameters
         if window_size == 0 {
-            return Err(OxiError::from(MAError::InvalidWindowSize(window_size)));
+            return Err(MAError::InvalidWindowSize(window_size));
         }
 
         let name = format!("MA({})", window_size);
@@ -83,16 +83,16 @@ impl Forecaster for MAModel {
 
     fn fit(&mut self, data: &TimeSeriesData) -> Result<()> {
         if data.is_empty() {
-            return Err(OxiError::from(MAError::EmptyData));
+            return Err(OxiError::MAEmptyData);
         }
 
         let n = data.values.len();
 
         if n < self.window_size {
-            return Err(OxiError::from(MAError::TimeSeriesTooShort {
+            return Err(OxiError::MATimeSeriesTooShort {
                 actual: n,
                 expected: self.window_size,
-            }));
+            });
         }
 
         // Calculate fitted values
@@ -110,7 +110,7 @@ impl Forecaster for MAModel {
     fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
         if let Some(last_values) = &self.last_values {
             if horizon == 0 {
-                return Err(OxiError::from(MAError::InvalidHorizon(horizon)));
+                return Err(OxiError::MAInvalidHorizon(horizon));
             }
 
             // For MA model, all forecasts are the same value: the average of the last window_size values
@@ -119,13 +119,13 @@ impl Forecaster for MAModel {
             // Return the same value for all horizons
             Ok(vec![forecast_value; horizon])
         } else {
-            Err(OxiError::from(MAError::NotFitted))
+            Err(OxiError::MANotFitted)
         }
     }
 
     fn evaluate(&self, test_data: &TimeSeriesData) -> Result<ModelEvaluation> {
         if self.last_values.is_none() {
-            return Err(OxiError::from(MAError::NotFitted));
+            return Err(OxiError::MANotFitted);
         }
 
         let forecast = self.forecast(test_data.values.len())?;
@@ -302,8 +302,7 @@ mod tests {
         assert!(result.is_err());
 
         if let Err(err) = result {
-            // We don't check the specific error type since it's wrapped in OxiError
-            // Just make sure it failed due to the horizon being 0
+            // Check that the error contains relevant information
             assert!(format!("{:?}", err).contains("0"));
         }
     }

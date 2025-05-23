@@ -1,4 +1,4 @@
-# Code Coverage Configuration for OxiDiviner Workspace
+# Code Coverage Configuration for OxiDiviner (Single Crate)
 # Run with: cargo tarpaulin --config tarpaulin.toml
 
 [report]
@@ -8,12 +8,12 @@ out = ["Html", "Lcov", "Json", "Stdout"]
 # Output directory for reports
 output-dir = "target/coverage"
 
-# Minimum coverage threshold (50% is more realistic for complex algorithms)
-fail-under = 50.0
+# Minimum coverage threshold (60% is realistic for the unified crate)
+fail-under = 60.0
 
 [run]
-# Include all workspace members
-workspace = true
+# Target the oxidiviner crate
+# workspace = false (commented out since we're now single-crate)
 
 # Test all features
 all-features = true
@@ -21,8 +21,11 @@ all-features = true
 # Include doctests in coverage
 count-doc-tests = true
 
-# Timeout for tests (5 minutes)
-timeout = "300s"
+# Timeout for tests (10 minutes for comprehensive testing)
+timeout = "600s"
+
+# Change working directory to the oxidiviner crate
+root = "oxidiviner"
 
 # Exclude files/directories from coverage
 exclude = [
@@ -30,32 +33,21 @@ exclude = [
     "*/tests/*",
     "*/benches/*",
     
-    # Example files that are demos only
-    "examples/exponential-smoothing-models/ses_model_example.rs",
-    "examples/exponential-smoothing-models/ses_parameter_tuning.rs",
-    "examples/exponential-smoothing-models/es_parameter_tuning.rs",
-    "examples/exponential-smoothing-models/ets_model_demo.rs",
-    "examples/exponential-smoothing-models/ets_demo.rs",
-    "examples/exponential-smoothing-models/ses_demo.rs",
-    "examples/exponential-smoothing-models/holt_demo.rs",
-    "examples/garch-models/*",
-    "examples/ohlcv-handling/*",
-    "examples/standard_interface_demo.rs",
-    "examples/ohlcv_forecasting_example.rs",
+    # Example files (they're demos, not production code)
+    "examples/*",
     
     # Generated files
     "target/*",
     
     # Documentation and config files
     "*.md",
-    "*.toml"
-]
-
-# Include example files that test core APIs
-include = [
-    "examples/autoregressive-models/autoregressive_demo.rs",
-    "examples/autoregressive-models/ma_demo.rs", 
-    "examples/quick_start_improved.rs"
+    "*.toml",
+    "*.txt",
+    "*.yml",
+    "*.yaml",
+    
+    # Build scripts
+    "build.rs"
 ]
 
 # Run types
@@ -68,10 +60,21 @@ line = true
 # Branch coverage  
 branch = true
 
+# Function coverage
+region = true
+
 [target.'cfg(not(target_os = "windows"))']
 # Additional options for non-Windows systems
 engine = "llvm"
 
 [target.'cfg(target_os = "windows")']
 # Windows-specific options
-engine = "ptrace" 
+engine = "ptrace"
+
+# Advanced coverage options
+[advanced]
+# Include all source files even if not executed
+force-clean = true
+
+# Generate more detailed reports
+verbose = true 

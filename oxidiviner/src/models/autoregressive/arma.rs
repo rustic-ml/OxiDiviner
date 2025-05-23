@@ -1,8 +1,8 @@
 #![allow(clippy::needless_range_loop)]
 
-use crate::models::autoregressive::error::ARError;
 use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
 use crate::math::metrics::{mae, mape, mse, rmse, smape};
+use crate::models::autoregressive::error::ARError;
 
 /// Autoregressive Moving Average (ARMA) model for time series forecasting.
 ///
@@ -64,7 +64,7 @@ impl ARMAModel {
     pub fn new(p: usize, q: usize, include_intercept: bool) -> Result<Self> {
         // Validate parameters
         if p == 0 && q == 0 {
-            return Err(OxiError::from(ARError::InvalidLagOrder(0));
+            return Err(OxiError::from(ARError::InvalidLagOrder(0)));
         }
 
         let name = if include_intercept {
@@ -356,7 +356,7 @@ impl ARMAModel {
         if n == 0 || a[0].len() != n || b.len() != n {
             return Err(OxiError::from(ARError::LinearSolveError(
                 "Invalid matrix dimensions".to_string(),
-            ));
+            )));
         }
 
         // Create augmented matrix [A|b]
@@ -385,7 +385,7 @@ impl ARMAModel {
             if max_val.abs() < 1e-10 {
                 return Err(OxiError::from(ARError::LinearSolveError(
                     "Singular matrix detected".to_string(),
-                ));
+                )));
             }
 
             // Swap rows if needed
@@ -427,7 +427,7 @@ impl ARMAModel {
         if ar_coeffs.len() < self.p {
             return Err(OxiError::from(ARError::InvalidParameter(
                 "AR coefficients array too small".to_string(),
-            ));
+            )));
         }
 
         // Copy AR coefficients
@@ -442,7 +442,7 @@ impl ARMAModel {
         if ma_coeffs.len() < self.q {
             return Err(OxiError::from(ARError::InvalidParameter(
                 "MA coefficients array too small".to_string(),
-            ));
+            )));
         }
 
         // Copy MA coefficients
@@ -484,7 +484,7 @@ impl Forecaster for ARMAModel {
 
     fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
         if horizon == 0 {
-            return Err(OxiError::from(ARError::InvalidHorizon(horizon));
+            return Err(OxiError::from(ARError::InvalidHorizon(horizon)));
         }
 
         if self.ar_coefficients.is_none()

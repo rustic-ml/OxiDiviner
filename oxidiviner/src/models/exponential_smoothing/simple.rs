@@ -1,6 +1,7 @@
-use crate::models::ESError;
+use crate::models::exponential_smoothing::ESError;
 use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
 use crate::math::metrics::{mae, mape, mse, rmse, smape};
+
 
 /// Simple Exponential Smoothing (SES) model for forecasting.
 ///
@@ -38,7 +39,7 @@ impl SimpleESModel {
     pub fn new(alpha: f64) -> std::result::Result<Self, ESError> {
         // Validate parameters
         if alpha <= 0.0 || alpha >= 1.0 {
-            return Err(OxiError::from(ESError::InvalidAlpha(alpha));
+            return Err(ESError::InvalidAlpha(alpha));
         }
 
         let name = format!("SES(α={:.3})", alpha);
@@ -92,7 +93,7 @@ impl Forecaster for SimpleESModel {
 
     fn fit(&mut self, data: &TimeSeriesData) -> Result<()> {
         if data.is_empty() {
-            return Err(OxiError::from(ESError::EmptyData));
+            return Err(OxiError::ESEmptyData);
         }
 
         let n = data.values.len();
@@ -128,13 +129,13 @@ impl Forecaster for SimpleESModel {
             // For SES, all future forecasts are just the last level
             Ok(vec![level; horizon])
         } else {
-            Err(OxiError::from(ESError::NotFitted))
+            Err(OxiError::ESNotFitted)
         }
     }
 
     fn evaluate(&self, test_data: &TimeSeriesData) -> Result<ModelEvaluation> {
         if self.level.is_none() {
-            return Err(OxiError::from(ESError::NotFitted));
+            return Err(OxiError::ESNotFitted);
         }
 
         let forecast = self.forecast(test_data.values.len())?;

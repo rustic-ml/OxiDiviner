@@ -1,22 +1,30 @@
-//! # Models Module
-//!
-//! This module contains all the forecasting models organized by type.
-//! Each submodule provides specific implementations for different forecasting approaches.
+/*!
+# OxiDiviner Models
 
-/// Moving average models for capturing short-term patterns
-pub mod moving_average;
+This module contains all the time series forecasting models available in OxiDiviner.
 
-/// Exponential smoothing models for trend and seasonal data
-pub mod exponential_smoothing;
+## Available Model Categories
 
-/// Autoregressive models for data with dependency on past values
+* **GARCH Models** - For volatility modeling and forecasting
+* **Exponential Smoothing** - For trend and seasonal decomposition
+* **Autoregressive Models** - For linear time series modeling
+* **Moving Average Models** - For smoothing and trend analysis
+
+## Usage
+
+```rust
+use oxidiviner::models::garch::GARCHModel;
+use oxidiviner::models::exponential_smoothing::SimpleExponentialSmoothing;
+
+// Create and use models...
+```
+*/
+
+// Re-export the unified error system
+pub use crate::core::{OxiError, Result};
+
+// Model modules
 pub mod autoregressive;
-
-/// GARCH models for volatility forecasting in financial time series
+pub mod exponential_smoothing;
 pub mod garch;
-
-// Re-export all models for convenience
-pub use moving_average::*;
-pub use exponential_smoothing::*;
-pub use autoregressive::*;
-pub use garch::*; 
+pub mod moving_average;

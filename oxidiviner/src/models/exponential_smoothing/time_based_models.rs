@@ -1,7 +1,7 @@
+use crate::core::{ModelEvaluation, OHLCVData, OxiError, Result, TimeSeriesData};
 use crate::models::exponential_smoothing::error::ESError;
 use crate::models::exponential_smoothing::ets::{ETSModel, ErrorType, SeasonalType, TrendType};
 use chrono::{DateTime, Utc};
-use crate::core::{OHLCVData, OxiError, Result, TimeSeriesData, ModelEvaluation};
 use std::collections::HashMap;
 
 #[cfg(test)]
@@ -291,7 +291,7 @@ impl DailyETSModel {
                 return Err(OxiError::InvalidParameter(format!(
                     "Unknown column: {}",
                     self.target_column
-                )))
+                )));
             }
         };
 
@@ -321,7 +321,7 @@ impl DailyETSModel {
                 return Err(OxiError::InvalidParameter(format!(
                     "Unknown column: {}",
                     self.target_column
-                )))
+                )));
             }
         };
 
@@ -436,10 +436,10 @@ impl MinuteETSModel {
         // Validate aggregation_minutes if provided
         if let Some(agg) = aggregation_minutes {
             if agg < 1 {
-                return Err(OxiError::InvalidParameter(format!(
+                return Err(ESError::InvalidParameter(format!(
                     "Aggregation minutes must be at least 1, got {}",
                     agg
-                ));
+                )));
             }
         }
 
@@ -542,7 +542,7 @@ impl MinuteETSModel {
                 return Err(OxiError::InvalidParameter(format!(
                     "Unknown column: {}",
                     self.target_column
-                )))
+                )));
             }
         };
 
@@ -579,7 +579,7 @@ impl MinuteETSModel {
                 return Err(OxiError::InvalidParameter(format!(
                     "Unknown column: {}",
                     self.target_column
-                )))
+                )));
             }
         };
 

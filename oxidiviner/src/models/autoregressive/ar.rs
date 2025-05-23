@@ -1,6 +1,5 @@
 #![allow(clippy::needless_range_loop)]
 
-use crate::models::ARError;
 use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
 use crate::math::metrics::{mae, mape, mse, rmse, smape};
 
@@ -50,10 +49,10 @@ impl ARModel {
     ///
     /// # Returns
     /// * `Result<Self>` - A new AR model if parameters are valid
-    pub fn new(p: usize, include_intercept: bool) -> std::result::Result<Self, ARError> {
+    pub fn new(p: usize, include_intercept: bool) -> Result<Self> {
         // Validate parameters
         if p == 0 {
-            return Err(ARError::InvalidLagOrder(p));
+            return Err(OxiError::ARInvalidLagOrder(p));
         }
 
         let name = if include_intercept {
@@ -125,7 +124,7 @@ impl ARModel {
     /// Solve the Yule-Walker equations to find AR coefficients.
     ///
     /// This implements the method of moments estimator for AR models.
-    fn fit_yule_walker(&mut self, data: &[f64]) -> std::result::Result<(), ARError> {
+    fn fit_yule_walker(&mut self, data: &[f64]) -> Result<()> {
         let n = data.len();
         let mean = data.iter().sum::<f64>() / n as f64;
 
@@ -184,10 +183,10 @@ impl ARModel {
         &self,
         a: &[Vec<f64>],
         b: &[f64],
-    ) -> std::result::Result<Vec<f64>, ARError> {
+    ) -> Result<Vec<f64>> {
         let n = a.len();
         if n == 0 || a[0].len() != n || b.len() != n {
-            return Err(ARError::LinearSolveError(
+            return Err(OxiError::ARLinearSolveError(
                 "Invalid matrix dimensions".to_string(),
             ));
         }
@@ -216,7 +215,7 @@ impl ARModel {
 
             // Check if matrix is singular
             if max_val.abs() < 1e-10 {
-                return Err(ARError::LinearSolveError(
+                return Err(OxiError::ARLinearSolveError(
                     "Singular matrix detected".to_string(),
                 ));
             }
@@ -248,7 +247,7 @@ impl ARModel {
 
             // Check for invalid coefficients
             if x[i].is_nan() || x[i].is_infinite() {
-                return Err(ARError::InvalidCoefficient);
+                return Err(OxiError::ARInvalidCoefficient);
             }
         }
 
@@ -263,21 +262,21 @@ impl Forecaster for ARModel {
 
     fn fit(&mut self, data: &TimeSeriesData) -> Result<()> {
         if data.is_empty() {
-            return Err(OxiError::from(ARError::EmptyData));
+            return Err(OxiError::AREmptyData);
         }
 
         let n = data.values.len();
 
         // Need more observations than the AR order
         if n <= self.p {
-            return Err(OxiError::from(ARError::InsufficientData {
+            return Err(OxiError::ARInsufficientData {
                 actual: n,
                 expected: self.p + 1,
-            }));
+            });
         }
 
         // Fit the model using Yule-Walker equations
-        self.fit_yule_walker(&data.values).map_err(OxiError::from)?;
+        self.fit_yule_walker(&data.values)?;
 
         // Calculate fitted values
         let mut fitted_values = vec![f64::NAN; self.p]; // First p values cannot be predicted
@@ -302,11 +301,11 @@ impl Forecaster for ARModel {
 
     fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
         if horizon == 0 {
-            return Err(OxiError::from(ARError::InvalidHorizon(horizon));
+            return Err(OxiError::ARInvalidHorizon(horizon));
         }
 
         if self.coefficients.is_none() || self.last_values.is_none() {
-            return Err(OxiError::from(ARError::NotFitted));
+            return Err(OxiError::ARNotFitted);
         }
 
         let coefficients = self.coefficients.as_ref().unwrap();
@@ -336,7 +335,7 @@ impl Forecaster for ARModel {
 
     fn evaluate(&self, test_data: &TimeSeriesData) -> Result<ModelEvaluation> {
         if self.coefficients.is_none() {
-            return Err(OxiError::from(ARError::NotFitted));
+            return Err(OxiError::ARNotFitted);
         }
 
         let forecast = self.forecast(test_data.values.len())?;
@@ -471,7 +470,7 @@ mod tests {
         let result = ARModel::new(0, true);
         assert!(result.is_err());
 
-        if let Err(ARError::InvalidLagOrder(p)) = result {
+        if let Err(OxiError::ARInvalidLagOrder(p)) = result {
             assert_eq!(p, 0);
         } else {
             panic!("Expected InvalidLagOrder error");

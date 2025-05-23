@@ -1,8 +1,9 @@
 #![allow(clippy::needless_range_loop)]
 
-use crate::models::ESError;
 use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
 use crate::math::metrics::{mae, mape, mse, rmse, smape};
+use crate::models::exponential_smoothing::ESError;
+
 use std::fmt;
 
 /// Error component type for ETS models
@@ -149,17 +150,19 @@ impl ETSModel {
     ) -> std::result::Result<Self, ESError> {
         // Validate parameters
         if alpha <= 0.0 || alpha >= 1.0 {
-            return Err(OxiError::from(ESError::InvalidAlpha(alpha));
+            return Err(ESError::InvalidAlpha(alpha));
         }
 
         // Validate beta if trend is present
         if trend_type != TrendType::None {
             if let Some(beta_val) = beta {
                 if beta_val <= 0.0 || beta_val >= 1.0 {
-                    return Err(OxiError::from(ESError::InvalidBeta(beta_val));
+                    return Err(ESError::InvalidBeta(beta_val));
                 }
             } else {
-                return Err(OxiError::from(ESError::MissingParameter("beta".to_string()));
+                return Err(ESError::MissingParameter(
+                    "beta".to_string(),
+                ));
             }
         }
 
@@ -168,10 +171,10 @@ impl ETSModel {
         {
             if let Some(phi_val) = phi {
                 if phi_val <= 0.0 || phi_val >= 1.0 {
-                    return Err(OxiError::from(ESError::InvalidDampingFactor(phi_val));
+                    return Err(ESError::InvalidDampingFactor(phi_val));
                 }
             } else {
-                return Err(OxiError::from(ESError::MissingParameter("phi".to_string()));
+                return Err(ESError::MissingParameter("phi".to_string()));
             }
         }
 
@@ -179,18 +182,22 @@ impl ETSModel {
         if seasonal_type != SeasonalType::None {
             if let Some(gamma_val) = gamma {
                 if gamma_val <= 0.0 || gamma_val >= 1.0 {
-                    return Err(OxiError::from(ESError::InvalidGamma(gamma_val));
+                    return Err(ESError::InvalidGamma(gamma_val));
                 }
             } else {
-                return Err(OxiError::from(ESError::MissingParameter("gamma".to_string()));
+                return Err(ESError::MissingParameter(
+                    "gamma".to_string(),
+                ));
             }
 
             if let Some(period_val) = period {
                 if period_val < 2 {
-                    return Err(OxiError::from(ESError::InvalidPeriod(period_val));
+                    return Err(ESError::InvalidPeriod(period_val));
                 }
             } else {
-                return Err(OxiError::from(ESError::MissingParameter("period".to_string()));
+                return Err(ESError::MissingParameter(
+                    "period".to_string(),
+                ));
             }
         }
 
@@ -233,7 +240,7 @@ impl ETSModel {
         })
     }
 
-    /// Convenience method to create a Simple Exponential Smoothing model (ETS(A,N,N)).
+    /// Convenience method to create a Simple Exponential Smoothing model (ETS(A,N,N).
     pub fn simple(alpha: f64) -> std::result::Result<Self, ESError> {
         Self::new(
             ErrorType::Additive,
@@ -247,7 +254,7 @@ impl ETSModel {
         )
     }
 
-    /// Convenience method to create a Holt Linear model (ETS(A,A,N)).
+    /// Convenience method to create a Holt Linear model (ETS(A,A,N).
     pub fn holt(alpha: f64, beta: f64) -> std::result::Result<Self, ESError> {
         Self::new(
             ErrorType::Additive,
@@ -261,7 +268,7 @@ impl ETSModel {
         )
     }
 
-    /// Convenience method to create a Damped Trend model (ETS(A,Ad,N)).
+    /// Convenience method to create a Damped Trend model (ETS(A,Ad,N).
     pub fn damped_trend(alpha: f64, beta: f64, phi: f64) -> std::result::Result<Self, ESError> {
         Self::new(
             ErrorType::Additive,
@@ -275,7 +282,7 @@ impl ETSModel {
         )
     }
 
-    /// Convenience method to create an additive Holt-Winters model (ETS(A,A,A)).
+    /// Convenience method to create an additive Holt-Winters model (ETS(A,A,A).
     pub fn holt_winters_additive(
         alpha: f64,
         beta: f64,
@@ -294,7 +301,7 @@ impl ETSModel {
         )
     }
 
-    /// Convenience method to create a multiplicative Holt-Winters model (ETS(A,A,M)).
+    /// Convenience method to create a multiplicative Holt-Winters model (ETS(A,A,M).
     pub fn holt_winters_multiplicative(
         alpha: f64,
         beta: f64,
@@ -354,7 +361,7 @@ impl Forecaster for ETSModel {
 
     fn fit(&mut self, data: &TimeSeriesData) -> Result<()> {
         if data.is_empty() {
-            return Err(OxiError::from(ESError::EmptyData));
+            return Err(OxiError::ESEmptyData);
         }
 
         let n = data.values.len();
@@ -364,10 +371,10 @@ impl Forecaster for ETSModel {
         };
 
         if n < min_size {
-            return Err(OxiError::from(ESError::InsufficientData {
+            return Err(OxiError::ESInsufficientData {
                 actual: n,
                 expected: min_size,
-            }));
+            });
         }
 
         // Setup initial values
@@ -420,7 +427,7 @@ impl Forecaster for ETSModel {
 
             // Unsupported model types
             _ => {
-                return Err(OxiError::from(ESError::UnsupportedModelType(format!(
+                return Err(OxiError::ESUnsupportedModelType(format!(
                     "ETS({},{},{})",
                     self.error_type, self.trend_type, self.seasonal_type
                 )));
@@ -459,7 +466,7 @@ impl Forecaster for ETSModel {
                 }
             }
             _ => {
-                return Err(OxiError::from(ESError::UnsupportedModelType(format!(
+                return Err(OxiError::ESUnsupportedModelType(format!(
                     "ETS({},{},{})",
                     self.error_type, self.trend_type, self.seasonal_type
                 )));
@@ -501,7 +508,7 @@ impl Forecaster for ETSModel {
                     (level + self.phi.unwrap() * trend) * seasonal[s_idx]
                 }
                 _ => {
-                    return Err(OxiError::from(ESError::UnsupportedModelType(format!(
+                    return Err(OxiError::ESUnsupportedModelType(format!(
                         "ETS({},{},{})",
                         self.error_type, self.trend_type, self.seasonal_type
                     )));
@@ -566,7 +573,7 @@ impl Forecaster for ETSModel {
 
                 // Other combinations are not yet implemented
                 _ => {
-                    return Err(OxiError::from(ESError::UnsupportedModelType(format!(
+                    return Err(OxiError::ESUnsupportedModelType(format!(
                         "ETS({},{},{})",
                         self.error_type, self.trend_type, self.seasonal_type
                     )));
@@ -593,11 +600,11 @@ impl Forecaster for ETSModel {
 
     fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
         if self.level.is_none() {
-            return Err(OxiError::from(ESError::NotFitted));
+            return Err(OxiError::ESNotFitted);
         }
 
         if horizon == 0 {
-            return Err(OxiError::from(ESError::InvalidHorizon(horizon));
+            return Err(OxiError::ESInvalidHorizon(horizon));
         }
 
         let level = self.level.unwrap();
@@ -647,7 +654,7 @@ impl Forecaster for ETSModel {
                         forecasts.push(level + h as f64 * _trend + seasonal[s_idx]);
                     }
                 } else {
-                    return Err(OxiError::from(ESError::NotFitted));
+                    return Err(OxiError::ESNotFitted);
                 }
             }
 
@@ -661,13 +668,13 @@ impl Forecaster for ETSModel {
                         forecasts.push((level + h as f64 * _trend) * seasonal[s_idx]);
                     }
                 } else {
-                    return Err(OxiError::from(ESError::NotFitted));
+                    return Err(OxiError::ESNotFitted);
                 }
             }
 
             // Other combinations are not yet implemented
             _ => {
-                return Err(OxiError::from(ESError::UnsupportedModelType(format!(
+                return Err(OxiError::ESUnsupportedModelType(format!(
                     "ETS({},{},{})",
                     self.error_type, self.trend_type, self.seasonal_type
                 )));
@@ -679,7 +686,7 @@ impl Forecaster for ETSModel {
 
     fn evaluate(&self, test_data: &TimeSeriesData) -> Result<ModelEvaluation> {
         if self.level.is_none() {
-            return Err(OxiError::from(ESError::NotFitted));
+            return Err(OxiError::ESNotFitted);
         }
 
         let forecast = self.forecast(test_data.values.len())?;

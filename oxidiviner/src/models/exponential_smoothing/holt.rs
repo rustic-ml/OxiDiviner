@@ -46,11 +46,11 @@ impl HoltLinearModel {
     pub fn new(alpha: f64, beta: f64) -> std::result::Result<Self, ESError> {
         // Validate parameters
         if alpha <= 0.0 || alpha >= 1.0 {
-            return Err(OxiError::from(ESError::InvalidAlpha(alpha));
+            return Err(ESError::InvalidAlpha(alpha));
         }
 
         if beta <= 0.0 || beta >= 1.0 {
-            return Err(OxiError::from(ESError::InvalidBeta(beta));
+            return Err(ESError::InvalidBeta(beta));
         }
 
         let name = format!("Holt(α={:.3}, β={:.3})", alpha, beta);
@@ -106,16 +106,16 @@ impl Forecaster for HoltLinearModel {
 
     fn fit(&mut self, data: &TimeSeriesData) -> Result<()> {
         if data.is_empty() {
-            return Err(OxiError::from(ESError::EmptyData));
+            return Err(OxiError::ESEmptyData);
         }
 
         let n = data.values.len();
 
         if n < 2 {
-            return Err(OxiError::from(ESError::InsufficientData {
+            return Err(OxiError::ESInsufficientData {
                 actual: n,
                 expected: 2,
-            }));
+            });
         }
 
         // Initialize level with the first observation
@@ -153,7 +153,7 @@ impl Forecaster for HoltLinearModel {
     fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
         if let (Some(level), Some(trend)) = (self.level, self.trend) {
             if horizon == 0 {
-                return Err(OxiError::from(ESError::InvalidHorizon(horizon));
+                return Err(OxiError::ESInvalidHorizon(horizon));
             }
 
             // For Holt model, forecasts increase by the trend value each step
@@ -164,13 +164,13 @@ impl Forecaster for HoltLinearModel {
 
             Ok(forecasts)
         } else {
-            Err(OxiError::from(ESError::NotFitted))
+            Err(OxiError::ESNotFitted)
         }
     }
 
     fn evaluate(&self, test_data: &TimeSeriesData) -> Result<ModelEvaluation> {
         if self.level.is_none() || self.trend.is_none() {
-            return Err(OxiError::from(ESError::NotFitted));
+            return Err(OxiError::ESNotFitted);
         }
 
         let forecast = self.forecast(test_data.values.len())?;

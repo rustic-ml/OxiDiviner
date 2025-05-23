@@ -1,4 +1,6 @@
-use crate::core::OxiError;
+// Re-export the unified error system
+pub use crate::core::{OxiError, Result};
+
 use thiserror::Error;
 
 /// Error type for exponential smoothing models
@@ -79,9 +81,6 @@ impl From<ESError> for OxiError {
         }
     }
 }
-
-// Define a Result type for internal module use
-pub type Result<T> = std::result::Result<T, ESError>;
 
 #[cfg(test)]
 mod tests {
