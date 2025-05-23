@@ -259,50 +259,28 @@
 //! ```
 
 // Re-export from core
-pub use oxidiviner_core::*;
+pub use crate::core::*;
 
 // Re-export from math
 #[doc(inline)]
-pub use oxidiviner_math as math;
+pub use crate::math;
 
-// Direct access to subcrates for power users
+// Direct access to internal modules for power users
 #[doc(inline)]
-pub use oxidiviner_autoregressive as autoregressive;
+pub use crate::models::autoregressive;
 #[doc(inline)]
-pub use oxidiviner_core as core;
+pub use crate::core;
 #[doc(inline)]
-pub use oxidiviner_exponential_smoothing as exponential_smoothing;
+pub use crate::models::exponential_smoothing;
 #[doc(inline)]
-pub use oxidiviner_garch as garch;
+pub use crate::models::garch;
 #[doc(inline)]
-pub use oxidiviner_moving_average as moving_average;
+pub use crate::models::moving_average;
 
-// Re-export models from module-specific crates
-pub mod models {
-    /// Moving average models for capturing short-term patterns
-    pub mod moving_average {
-        #[doc(inline)]
-        pub use oxidiviner_moving_average::*;
-    }
-
-    /// Exponential smoothing models for trend and seasonal data
-    pub mod exponential_smoothing {
-        #[doc(inline)]
-        pub use oxidiviner_exponential_smoothing::*;
-    }
-
-    /// Autoregressive models for data with dependency on past values
-    pub mod autoregressive {
-        #[doc(inline)]
-        pub use oxidiviner_autoregressive::*;
-    }
-
-    /// GARCH models for volatility forecasting in financial time series
-    pub mod garch {
-        #[doc(inline)]
-        pub use oxidiviner_garch::*;
-    }
-}
+// Internal modules - organized for development but packaged as single crate
+pub mod core;
+pub mod math;
+pub mod models;
 
 // Direct re-exports of all model types for maximum convenience
 pub use models::autoregressive::{ARIMAModel, ARMAModel, ARModel, SARIMAModel, VARModel};

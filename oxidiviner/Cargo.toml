@@ -28,13 +28,18 @@ include = [
 ]
 
 [dependencies]
-# Use path dependencies for local development with current workspace version
-oxidiviner-core = { version = "0.4.2", path = "../oxidiviner-core" }
-oxidiviner-math = { version = "0.4.2", path = "../oxidiviner-math" }
-oxidiviner-moving-average = { version = "0.4.2", path = "../oxidiviner-moving-average" }
-oxidiviner-exponential-smoothing = { version = "0.4.2", path = "../oxidiviner-exponential-smoothing" }
-oxidiviner-autoregressive = { version = "0.4.2", path = "../oxidiviner-autoregressive" }
-oxidiviner-garch = { version = "0.4.2", path = "../oxidiviner-garch" }
-rand = "0.9.1"
-rand_distr = "0.5.0"
-chrono = { version = "0.4.41", features = ["serde"] }
+# External dependencies needed by internal modules
+chrono.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+rand.workspace = true
+statrs.workspace = true
+ndarray = { workspace = true, optional = true }
+
+[dev-dependencies]
+rand = { workspace = true }
+chrono = { workspace = true }
+
+[features]
+default = []
+ndarray_support = ["ndarray"]
