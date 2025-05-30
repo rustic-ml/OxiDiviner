@@ -2,7 +2,7 @@
 #![allow(unused_imports)]
 
 use chrono::{DateTime, Duration, Utc};
-use oxidiviner_core::TimeSeriesData;
+use oxidiviner::TimeSeriesData;
 use rand::Rng;
 use std::error::Error;
 

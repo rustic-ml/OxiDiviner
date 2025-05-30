@@ -4,19 +4,17 @@
 //! for time series forecasting. ARIMA models are suitable for non-stationary time series data
 //! with trends and autocorrelation patterns.
 
-use oxidiviner::prelude::*;
+use chrono::{DateTime, Duration, Utc};
 use oxidiviner::models::autoregressive::ARIMAModel;
-use chrono::{Duration, Utc};
+use oxidiviner::prelude::*;
 
 fn main() -> oxidiviner::Result<()> {
     println!("=== ARIMA Model Example ===\n");
 
     // Generate sample data with trend and noise
     let start_date = Utc::now() - Duration::days(100);
-    let timestamps: Vec<DateTime<Utc>> = (0..100)
-        .map(|i| start_date + Duration::days(i))
-        .collect();
-    
+    let timestamps: Vec<DateTime<Utc>> = (0..100).map(|i| start_date + Duration::days(i)).collect();
+
     // Create a time series with trend and some randomness
     let values: Vec<f64> = (0..100)
         .map(|i| {
@@ -27,10 +25,15 @@ fn main() -> oxidiviner::Result<()> {
         })
         .collect();
 
-    println!("Generated {} data points with trend and weekly seasonality", values.len());
-    println!("Data range: {:.2} to {:.2}", 
-             values.iter().fold(f64::INFINITY, |a, &b| a.min(b)),
-             values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b)));
+    println!(
+        "Generated {} data points with trend and weekly seasonality",
+        values.len()
+    );
+    println!(
+        "Data range: {:.2} to {:.2}",
+        values.iter().fold(f64::INFINITY, |a, &b| a.min(b)),
+        values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b))
+    );
 
     // Create time series data
     let ts_data = TimeSeriesData::new(timestamps.clone(), values.clone(), "sample_series")?;
@@ -43,8 +46,11 @@ fn main() -> oxidiviner::Result<()> {
 
     let train_data = TimeSeriesData::new(train_timestamps, train_values, "train_data")?;
 
-    println!("\nData split: {} training, {} testing observations", 
-             train_data.len(), test_values.len());
+    println!(
+        "\nData split: {} training, {} testing observations",
+        train_data.len(),
+        test_values.len()
+    );
 
     // Example 1: Basic ARIMA(1,1,1) model
     println!("\n1. Basic ARIMA(1,1,1) Model");
@@ -65,10 +71,10 @@ fn main() -> oxidiviner::Result<()> {
     let test_data = TimeSeriesData::new(
         timestamps[split_idx..].to_vec(),
         test_values.clone(),
-        "test_data"
+        "test_data",
     )?;
     let evaluation_111 = arima_111.evaluate(&test_data)?;
-    
+
     println!("Model Performance:");
     println!("  MAE:  {:.3}", evaluation_111.mae);
     println!("  RMSE: {:.3}", evaluation_111.rmse);
@@ -88,25 +94,21 @@ fn main() -> oxidiviner::Result<()> {
 
     for (p, d, q, description) in arima_configs {
         match ARIMAModel::new(p, d, q, true) {
-            Ok(mut model) => {
-                match model.fit(&train_data) {
-                    Ok(_) => {
-                        match model.forecast(test_values.len()) {
-                            Ok(forecast) => {
-                                match model.evaluate(&test_data) {
-                                    Ok(eval) => {
-                                        println!("  {}: RMSE = {:.3}, MAE = {:.3}", 
-                                                description, eval.rmse, eval.mae);
-                                    }
-                                    Err(_) => println!("  {}: Evaluation failed", description),
-                                }
-                            }
-                            Err(_) => println!("  {}: Forecast failed", description),
+            Ok(mut model) => match model.fit(&train_data) {
+                Ok(_) => match model.forecast(test_values.len()) {
+                    Ok(_forecast) => match model.evaluate(&test_data) {
+                        Ok(eval) => {
+                            println!(
+                                "  {}: RMSE = {:.3}, MAE = {:.3}",
+                                description, eval.rmse, eval.mae
+                            );
                         }
-                    }
-                    Err(_) => println!("  {}: Fit failed", description),
-                }
-            }
+                        Err(_) => println!("  {}: Evaluation failed", description),
+                    },
+                    Err(_) => println!("  {}: Forecast failed", description),
+                },
+                Err(_) => println!("  {}: Fit failed", description),
+            },
             Err(_) => println!("  {}: Model creation failed", description),
         }
     }
@@ -145,13 +147,12 @@ fn main() -> oxidiviner::Result<()> {
     use oxidiviner::quick;
 
     let quick_forecast = quick::arima(ts_data.clone(), 14)?;
-    println!("Quick API forecast (first 5 values): {:?}", &quick_forecast[..5]);
+    println!(
+        "Quick API forecast (first 5 values): {:?}",
+        &quick_forecast[..5]
+    );
 
-    let (auto_forecast, auto_model) = quick::auto_forecast(
-        timestamps.clone(), 
-        values.clone(), 
-        14
-    )?;
+    let (auto_forecast, auto_model) = quick::auto_forecast(timestamps.clone(), values.clone(), 14)?;
     println!("Auto-selected model: {}", auto_model);
     println!("Auto forecast (first 5 values): {:?}", &auto_forecast[..5]);
 
@@ -166,6 +167,10 @@ mod tests {
     #[test]
     fn test_arima_example() {
         let result = main();
-        assert!(result.is_ok(), "ARIMA example should run successfully: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "ARIMA example should run successfully: {:?}",
+            result
+        );
     }
-} 
+}

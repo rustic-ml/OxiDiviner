@@ -1,6 +1,6 @@
 use chrono::{Duration, Utc};
-use oxidiviner_core::ModelsOHLCVData;
-use oxidiviner_core::models::exponential_smoothing::ets::{ETSComponent, DailyETSModel, MinuteETSModel, ModelEvaluation};
+use oxidiviner::ModelsOHLCVData;
+use oxidiviner::models::exponential_smoothing::ets::{ETSComponent, DailyETSModel, MinuteETSModel, ModelEvaluation};
 
 fn create_test_data() -> OHLCVData::new(
     let now = Utc::now();

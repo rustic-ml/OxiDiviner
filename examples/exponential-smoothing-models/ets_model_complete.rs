@@ -1,8 +1,6 @@
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
-use oxidiviner_core::TimeSeriesData;
-use oxidiviner_exponential_smoothing::{
-    DampedTrendModel, ETSModel, HoltLinearModel, HoltWintersModel, SimpleESModel,
-};
+use oxidiviner::TimeSeriesData;
+use oxidiviner::{DampedTrendModel, ETSModel, HoltLinearModel, HoltWintersModel, SimpleESModel};
 use std::error::Error;
 
 /// This example demonstrates the complete ETS (Error-Trend-Seasonal) model framework

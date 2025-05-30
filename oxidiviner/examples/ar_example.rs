@@ -4,32 +4,32 @@
 //! AR models are useful for data with autocorrelation patterns where current values
 //! depend on previous values.
 
-use oxidiviner::prelude::*;
-use oxidiviner::models::autoregressive::ARModel;
+use chrono::{DateTime, Duration, Utc};
 use oxidiviner::core::Forecaster;
-use chrono::{Duration, Utc};
+use oxidiviner::models::autoregressive::ARModel;
+use oxidiviner::prelude::*;
 
 fn main() -> oxidiviner::Result<()> {
     println!("=== AR Model Example ===\n");
 
     // Generate sample AR(2) data
     let start_date = Utc::now() - Duration::days(100);
-    let timestamps: Vec<DateTime<Utc>> = (0..100)
-        .map(|i| start_date + Duration::days(i))
-        .collect();
-    
+    let timestamps: Vec<DateTime<Utc>> = (0..100).map(|i| start_date + Duration::days(i)).collect();
+
     // Create AR(2) process: y_t = 0.6*y_{t-1} + 0.3*y_{t-2} + noise
     let mut values = vec![0.0, 1.0]; // Initial values
     for i in 2..100 {
-        let ar_component = 0.6 * values[i-1] + 0.3 * values[i-2];
+        let ar_component = 0.6 * values[i - 1] + 0.3 * values[i - 2];
         let noise = (rand::random::<f64>() - 0.5) * 2.0;
         values.push(ar_component + noise);
     }
 
     println!("Generated {} AR(2) data points", values.len());
-    println!("Data range: {:.2} to {:.2}", 
-             values.iter().fold(f64::INFINITY, |a, &b| a.min(b)),
-             values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b)));
+    println!(
+        "Data range: {:.2} to {:.2}",
+        values.iter().fold(f64::INFINITY, |a, &b| a.min(b)),
+        values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b))
+    );
 
     // Create time series data
     let ts_data = TimeSeriesData::new(timestamps.clone(), values.clone(), "ar_series")?;
@@ -39,16 +39,19 @@ fn main() -> oxidiviner::Result<()> {
     let train_data = TimeSeriesData::new(
         timestamps[..split_idx].to_vec(),
         values[..split_idx].to_vec(),
-        "train_data"
+        "train_data",
     )?;
     let test_data = TimeSeriesData::new(
         timestamps[split_idx..].to_vec(),
         values[split_idx..].to_vec(),
-        "test_data"
+        "test_data",
     )?;
 
-    println!("\nData split: {} training, {} testing observations", 
-             train_data.len(), test_data.len());
+    println!(
+        "\nData split: {} training, {} testing observations",
+        train_data.len(),
+        test_data.len()
+    );
 
     // Example 1: AR(1) model
     println!("\n1. AR(1) Model");
@@ -56,7 +59,7 @@ fn main() -> oxidiviner::Result<()> {
 
     let mut ar1_model = ARModel::new(1, true)?;
     ar1_model.fit(&train_data)?;
-    let ar1_forecast = ar1_model.forecast(test_data.len())?;
+    let _ar1_forecast = ar1_model.forecast(test_data.len())?;
     let ar1_eval = ar1_model.evaluate(&test_data)?;
 
     println!("AR(1) Performance:");
@@ -70,7 +73,7 @@ fn main() -> oxidiviner::Result<()> {
 
     let mut ar2_model = ARModel::new(2, true)?;
     ar2_model.fit(&train_data)?;
-    let ar2_forecast = ar2_model.forecast(test_data.len())?;
+    let _ar2_forecast = ar2_model.forecast(test_data.len())?;
     let ar2_eval = ar2_model.evaluate(&test_data)?;
 
     println!("AR(2) Performance:");
@@ -84,20 +87,18 @@ fn main() -> oxidiviner::Result<()> {
 
     for order in 1..=5 {
         match ARModel::new(order, true) {
-            Ok(mut model) => {
-                match model.fit(&train_data) {
-                    Ok(_) => {
-                        match model.evaluate(&test_data) {
-                            Ok(eval) => {
-                                println!("  AR({}): RMSE = {:.3}, MAE = {:.3}", 
-                                        order, eval.rmse, eval.mae);
-                            }
-                            Err(_) => println!("  AR({}): Evaluation failed", order),
-                        }
+            Ok(mut model) => match model.fit(&train_data) {
+                Ok(_) => match model.evaluate(&test_data) {
+                    Ok(eval) => {
+                        println!(
+                            "  AR({}): RMSE = {:.3}, MAE = {:.3}",
+                            order, eval.rmse, eval.mae
+                        );
                     }
-                    Err(_) => println!("  AR({}): Fit failed", order),
-                }
-            }
+                    Err(_) => println!("  AR({}): Evaluation failed", order),
+                },
+                Err(_) => println!("  AR({}): Fit failed", order),
+            },
             Err(_) => println!("  AR({}): Model creation failed", order),
         }
     }
@@ -137,6 +138,10 @@ mod tests {
     #[test]
     fn test_ar_example() {
         let result = main();
-        assert!(result.is_ok(), "AR example should run successfully: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "AR example should run successfully: {:?}",
+            result
+        );
     }
-} 
+}

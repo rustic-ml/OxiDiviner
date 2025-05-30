@@ -572,9 +572,17 @@ mod tests {
                 assert_eq!(model.beta.len(), q);
                 assert_eq!(model.order(), (p, q));
 
-                // Test with explicit parameters
+                // Test with explicit valid parameters
                 let param_count = 2 + p + q; // mean, omega, alphas, betas
-                let params = vec![0.0; param_count];
+                let mut params = vec![0.0; param_count];
+                params[1] = 0.001; // omega must be positive
+                                   // Set small valid alpha and beta values that satisfy stationarity
+                for i in 0..p {
+                    params[2 + i] = 0.05 / p as f64; // alpha values
+                }
+                for i in 0..q {
+                    params[2 + p + i] = 0.8 / q as f64; // beta values
+                }
                 let param_model = GARCHModel::new(p, q, Some(params));
                 assert!(param_model.is_ok());
             }
@@ -886,7 +894,7 @@ mod tests {
         let garch_model = GARCHModel::new(1, 1, None).unwrap();
         let garch_display = format!("{}", garch_model);
         assert!(garch_display.contains("GARCH"));
-        assert!(garch_display.contains("(1,1)"));
+        assert!(garch_display.contains("GARCH(1, 1)"));
 
         let egarch_model = EGARCHModel::new(1, 1, None).unwrap();
         let egarch_display = format!("{}", egarch_model);

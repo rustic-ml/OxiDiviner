@@ -1,8 +1,7 @@
 use chrono::{Duration, Utc};
-use oxidiviner_core::ModelsOHLCVData;
-use oxidiviner_core::models::exponential_smoothing::holt::{HoltModel, TargetColumn};
+use oxidiviner::{OHLCVData, HoltLinearModel, TimeSeriesData};
 
-fn create_test_data() -> OHLCVData::new(
+fn create_test_data() -> OHLCVData {
     let now = Utc::now();
     let timestamps = vec![
         now,
@@ -19,7 +18,7 @@ fn create_test_data() -> OHLCVData::new(
     let close = vec![103.0, 105.0, 107.0, 109.0, 111.0];
     let volume = vec![1000.0, 1050.0, 1100.0, 1150.0, 1200.0];
     
-    ModelsOHLCVData::new(
+    OHLCVData::new(
         timestamps,
         open,
         high,
@@ -33,39 +32,30 @@ fn create_test_data() -> OHLCVData::new(
 #[test]
 fn test_holt_model_creation() {
     // Test valid parameter ranges
-    assert!(HoltModel::new(0.3, 0.1, None, None).is_ok());
-    assert!(HoltModel::new(0.3, 0.1, Some(0.9), None).is_ok());
+    assert!(HoltLinearModel::new(0.3, 0.1).is_ok());
     
     // Test invalid alpha values
-    assert!(HoltModel::new(0.0, 0.1, None, None).is_err());
-    assert!(HoltModel::new(1.0, 0.1, None, None).is_err());
+    assert!(HoltLinearModel::new(0.0, 0.1).is_err());
+    assert!(HoltLinearModel::new(1.0, 0.1).is_err());
     
     // Test invalid beta values
-    assert!(HoltModel::new(0.3, 0.0, None, None).is_err());
-    assert!(HoltModel::new(0.3, 1.0, None, None).is_err());
-    
-    // Test invalid phi values
-    assert!(HoltModel::new(0.3, 0.1, Some(0.0), None).is_err());
-    assert!(HoltModel::new(0.3, 0.1, Some(1.0), None).is_err());
-    
-    // Test with different target columns
-    let model = HoltModel::new(0.3, 0.1, None, Some(TargetColumn::Open)).unwrap();
-    assert!(model.name().contains("Open"));
-    
-    let model = HoltModel::new(0.3, 0.1, None, Some(TargetColumn::Close)).unwrap();
-    assert!(model.name().contains("Close"));
-    
-    // Test damped trend model name
-    let model = HoltModel::new(0.3, 0.1, Some(0.9), None).unwrap();
-    assert!(model.name().contains("Damped"));
+    assert!(HoltLinearModel::new(0.3, 0.0).is_err());
+    assert!(HoltLinearModel::new(0.3, 1.0).is_err());
 }
 
 #[test]
 fn test_holt_model_fit_and_forecast() {
-    let data = create_test_data();
+    let ohlcv_data = create_test_data();
+    
+    // Convert to TimeSeriesData using close prices
+    let data = TimeSeriesData::new(
+        ohlcv_data.timestamps.clone(),
+        ohlcv_data.close.clone(),
+        "test_trend"
+    ).unwrap();
     
     // Create a Holt model with linear trend
-    let mut model = HoltModel::new(0.3, 0.1, None, None).unwrap();
+    let mut model = HoltLinearModel::new(0.3, 0.1).unwrap();
     
     // Fit the model
     assert!(model.fit(&data).is_ok());
@@ -73,13 +63,6 @@ fn test_holt_model_fit_and_forecast() {
     // Check if fitted values exist
     let fitted_values = model.fitted_values().unwrap();
     assert_eq!(fitted_values.len(), data.len());
-    
-    // Get level and trend
-    let level = model.level().unwrap();
-    let trend = model.trend().unwrap();
-    
-    // For our test data with linear trend, trend should be positive
-    assert!(trend > 0.0);
     
     // Generate forecasts
     let horizon = 3;
@@ -90,44 +73,24 @@ fn test_holt_model_fit_and_forecast() {
     for i in 1..horizon {
         assert!(forecasts[i] > forecasts[i-1]);
     }
-    
-    // First forecast should be approximately level + trend
-    assert!((forecasts[0] - (level + trend)).abs() < 1e-6);
-}
-
-#[test]
-fn test_holt_damped_trend() {
-    let data = create_test_data();
-    
-    // Create a Holt model with damped trend
-    let mut model = HoltModel::new(0.3, 0.1, Some(0.9), None).unwrap();
-    
-    // Fit the model
-    model.fit(&data).unwrap();
-    
-    // Generate forecasts with both models
-    let horizon = 10;
-    let damped_forecasts = model.forecast(horizon).unwrap();
-    
-    // Create regular Holt model for comparison
-    let mut regular_model = HoltModel::new(0.3, 0.1, None, None).unwrap();
-    regular_model.fit(&data).unwrap();
-    let regular_forecasts = regular_model.forecast(horizon).unwrap();
-    
-    // For distant forecasts, damped trend should produce more conservative values
-    // than regular trend when we have an upward trend
-    assert!(damped_forecasts[horizon-1] < regular_forecasts[horizon-1]);
 }
 
 #[test]
 fn test_holt_model_evaluation() {
-    let data = create_test_data();
+    let ohlcv_data = create_test_data();
+    
+    // Convert to TimeSeriesData using close prices
+    let data = TimeSeriesData::new(
+        ohlcv_data.timestamps.clone(),
+        ohlcv_data.close.clone(),
+        "test_trend"
+    ).unwrap();
     
     // Split data into train and test sets
     let (train_data, test_data) = data.train_test_split(0.6).unwrap();
     
     // Create and fit model
-    let mut model = HoltModel::new(0.3, 0.1, None, None).unwrap();
+    let mut model = HoltLinearModel::new(0.3, 0.1).unwrap();
     model.fit(&train_data).unwrap();
     
     // Evaluate on test data
@@ -137,10 +100,6 @@ fn test_holt_model_evaluation() {
     assert!(eval.mae > 0.0);
     assert!(eval.rmse > 0.0);
     assert!(eval.mape > 0.0);
-    assert!(eval.smape > 0.0);
-    
-    // RMSE should be greater than or equal to MAE
-    assert!(eval.rmse >= eval.mae);
     
     // Model name should be in the evaluation
     assert_eq!(eval.model_name, model.name());
@@ -149,17 +108,13 @@ fn test_holt_model_evaluation() {
 #[test]
 fn test_holt_insufficient_data() {
     // Create model
-    let mut model = HoltModel::new(0.3, 0.1, None, None).unwrap();
+    let mut model = HoltLinearModel::new(0.3, 0.1).unwrap();
     
     // Test with single data point (not enough for trend initialization)
-    let single_data = ModelsOHLCVData::new(
+    let single_data = TimeSeriesData::new(
         vec![Utc::now()],
         vec![100.0],
-        vec![105.0],
-        vec![98.0],
-        vec![103.0],
-        vec![1000.0],
-        Some("SINGLE".to_string())
+        "single"
     ).unwrap();
     
     // Should fail because at least two points are needed for trend

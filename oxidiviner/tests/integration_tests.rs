@@ -111,7 +111,7 @@ fn test_simple_exponential_smoothing_model() {
     };
 
     // Create and fit the model
-    let mut ses_model = SESModel::new(0.3).expect("Failed to create SES model");
+    let mut ses_model = SimpleESModel::new(0.3).expect("Failed to create SES model");
     ses_model.fit(&train_data).expect("Failed to fit SES model");
 
     // Make predictions
@@ -296,7 +296,7 @@ fn test_ensemble_forecasting() {
     let mut ma_model = MAModel::new(7).expect("Failed to create MA model");
     ma_model.fit(&train_data).expect("Failed to fit MA model");
 
-    let mut ses_model = SESModel::new(0.3).expect("Failed to create SES model");
+    let mut ses_model = SimpleESModel::new(0.3).expect("Failed to create SES model");
     ses_model.fit(&train_data).expect("Failed to fit SES model");
 
     let mut hw_model =
@@ -377,8 +377,8 @@ fn calculate_rmse(actual: &[f64], forecast: &[f64]) -> f64 {
 
 #[test]
 fn test_quick_api_arima() {
-    use oxidiviner::quick;
     use oxidiviner::core::validation::ValidationUtils;
+    use oxidiviner::quick;
 
     let data = generate_test_data(60, true, false, 46);
     let (train, test) = ValidationUtils::time_split(&data, 0.8).unwrap();
@@ -395,8 +395,8 @@ fn test_quick_api_arima() {
 
 #[test]
 fn test_quick_api_moving_average() {
-    use oxidiviner::quick;
     use oxidiviner::core::validation::ValidationUtils;
+    use oxidiviner::quick;
 
     let data = generate_test_data(60, true, false, 47);
     let (train, test) = ValidationUtils::time_split(&data, 0.8).unwrap();
@@ -545,8 +545,8 @@ fn test_auto_select_integration() {
 
 #[test]
 fn test_builder_with_quick_api() {
-    use oxidiviner::{quick, ModelBuilder};
     use oxidiviner::core::validation::ValidationUtils;
+    use oxidiviner::{quick, ModelBuilder};
 
     let data = generate_test_data(60, true, false, 50);
     let (train, test) = ValidationUtils::time_split(&data, 0.8).unwrap();
@@ -581,8 +581,8 @@ fn test_parameter_validation_edge_cases() {
 
 #[test]
 fn test_comprehensive_enhanced_workflow() {
-    use oxidiviner::{quick, ModelBuilder};
     use oxidiviner::core::validation::ValidationUtils;
+    use oxidiviner::{quick, ModelBuilder};
 
     // Create realistic test scenario
     let data = generate_test_data(100, true, false, 52);

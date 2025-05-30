@@ -14,7 +14,7 @@ cargo run --example quick_start_improved
 use chrono::{Duration, Utc};
 use oxidiviner::prelude::*;
 use oxidiviner::{quick, AutoSelector, ModelBuilder};
-use oxidiviner_core::{validation::ValidationUtils, ModelValidator};
+use oxidiviner::{validation::ValidationUtils, ModelValidator};
 use rand::Rng;
 
 fn main() -> Result<()> {

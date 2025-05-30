@@ -175,11 +175,15 @@ pub struct ModelComparison {
 impl ModelComparison {
     /// Get the best model (lowest error)
     pub fn best(&self) -> Option<&ModelResult> {
-        self.results.iter().min_by(|a, b| a.error.partial_cmp(&b.error).unwrap_or(std::cmp::Ordering::Equal))
+        self.results.iter().min_by(|a, b| {
+            a.error
+                .partial_cmp(&b.error)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
     }
 
     /// Get all model names
     pub fn model_names(&self) -> Vec<&str> {
         self.results.iter().map(|r| r.name.as_str()).collect()
     }
-} 
+}

@@ -1,10 +1,10 @@
 use chrono::{Duration, Utc};
-use oxidiviner_core::ModelsOHLCVData;
-use oxidiviner_core::models::exponential_smoothing::ets::{ETSComponent, ModelEvaluation};
+use oxidiviner::ModelsOHLCVData;
+use oxidiviner::models::exponential_smoothing::ets::{ETSComponent, ModelEvaluation};
 
-// Import the new DailyETSModel and MinuteETSModel from the reorganized structure
-// The imports might need to be adjusted based on the actual reorganized structure
-use oxidiviner_core::models::exponential_smoothing::ets::{DailyETSModel, MinuteETSModel};
+// Import specific components for testing
+use std::collections::HashMap;
+use oxidiviner::models::exponential_smoothing::ets::{DailyETSModel, MinuteETSModel};
 
 fn create_test_data_daily() -> OHLCVData::new(
     let now = Utc::now();

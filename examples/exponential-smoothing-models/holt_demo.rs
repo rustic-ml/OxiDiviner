@@ -2,8 +2,8 @@
 #![allow(unused_imports)]
 
 use chrono::{DateTime, Duration, Utc};
-use oxidiviner_core::TimeSeriesData;
-use oxidiviner_exponential_smoothing::HoltLinearModel;
+use oxidiviner::HoltLinearModel;
+use oxidiviner::TimeSeriesData;
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {

@@ -407,7 +407,7 @@ impl GJRGARCHModel {
                 } else {
                     // Expected value of future squared residuals is the variance
                     // Expected value of indicator is 0.5 under zero mean normality
-                    if h - i - 2 < forecast.len() {
+                    if h > i + 1 && h - i - 2 < forecast.len() {
                         var_h += (self.alpha[i] + self.gamma[i] * 0.5) * forecast[h - i - 2];
                     }
                 }
@@ -418,7 +418,7 @@ impl GJRGARCHModel {
                 if h <= j + 1 {
                     // We have actual variances available
                     var_h += self.beta[j] * variance[n - h + j + 1];
-                } else if h - j - 2 < forecast.len() {
+                } else if h > j + 1 && h - j - 2 < forecast.len() {
                     // Use previously forecasted variances
                     var_h += self.beta[j] * forecast[h - j - 2];
                 }

@@ -2,7 +2,7 @@
 #![allow(unused_imports)]
 
 use chrono::{DateTime, Duration, Utc};
-use oxidiviner_garch::{EGARCHModel, GARCHMModel, GARCHModel, GJRGARCHModel, RiskPremiumType};
+use oxidiviner::{EGARCHModel, GARCHMModel, GARCHModel, GJRGARCHModel, RiskPremiumType};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("OxiDiviner GARCH Models Example");

@@ -179,11 +179,7 @@ impl ARModel {
     }
 
     /// Solve a linear system Ax = b using Gaussian elimination with partial pivoting.
-    fn solve_linear_system(
-        &self,
-        a: &[Vec<f64>],
-        b: &[f64],
-    ) -> Result<Vec<f64>> {
+    fn solve_linear_system(&self, a: &[Vec<f64>], b: &[f64]) -> Result<Vec<f64>> {
         let n = a.len();
         if n == 0 || a[0].len() != n || b.len() != n {
             return Err(OxiError::ARLinearSolveError(
@@ -354,6 +350,22 @@ impl Forecaster for ARModel {
             rmse,
             mape,
             smape,
+            r_squared: {
+                let actual_mean =
+                    test_data.values.iter().sum::<f64>() / test_data.values.len() as f64;
+                let tss = test_data
+                    .values
+                    .iter()
+                    .map(|x| (x - actual_mean).powi(2))
+                    .sum::<f64>();
+                if tss > 0.0 {
+                    1.0 - (mse * test_data.values.len() as f64) / tss
+                } else {
+                    0.0
+                }
+            },
+            aic: None, // Can be computed but not implemented yet
+            bic: None, // Can be computed but not implemented yet
         })
     }
 

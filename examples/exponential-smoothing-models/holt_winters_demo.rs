@@ -1,6 +1,6 @@
 use chrono::{Duration, Utc};
-use oxidiviner_core::TimeSeriesData;
-use oxidiviner_exponential_smoothing::HoltWintersModel;
+use oxidiviner::HoltWintersModel;
+use oxidiviner::TimeSeriesData;
 use std::error::Error;
 use std::f64::consts::PI;
 

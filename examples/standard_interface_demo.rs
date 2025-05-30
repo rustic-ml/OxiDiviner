@@ -1,7 +1,10 @@
-#![allow(deprecated)]
-#![allow(unused_imports)]
+//! Standard Interface Demo for OxiDiviner
+//!
+//! This example demonstrates the unified interface across different models
+//! using the new API improvements.
 
-use chrono::{DateTime, Duration, Utc};
+use chrono::{Duration, Utc};
+use oxidiviner::api::*;
 use oxidiviner::prelude::*;
 use rand::Rng;
 use std::error::Error;
@@ -14,61 +17,124 @@ fn main() -> std::result::Result<(), Box<dyn Error>> {
     // Create some demo data
     let data = create_sample_data(100, "test_series")?;
 
-    // Create and configure models
-    println!("Creating and configuring models...");
+    // Demo 1: High-level Forecaster interface
+    println!("=== Demo 1: High-level Forecaster Interface ===");
+    demo_high_level_interface(&data)?;
 
-    // Simple Exponential Smoothing model
-    let mut ses_model = SESModel::new(0.3)?;
+    // Demo 2: Builder pattern interface
+    println!("\n=== Demo 2: Builder Pattern Interface ===");
+    demo_builder_interface(&data)?;
 
-    // Moving Average model
-    let mut ma_model = MAModel::new(5)?;
-
-    // Autoregressive model (order 3)
-    let mut ar_model = ARModel::new(3, true)?;
-
-    // Fit models to data
-    println!("\nFitting models to data...");
-
-    ses_model.fit(&data)?;
-    ma_model.fit(&data)?;
-    ar_model.fit(&data)?;
-
-    // Make predictions
-    println!("\nMaking predictions...");
-
-    let forecast_horizon = 10;
-    let ses_output = ses_model.predict(forecast_horizon, None)?;
-    let ma_output = ma_model.predict(forecast_horizon, None)?;
-    let ar_output = ar_model.predict(forecast_horizon, None)?;
-
-    // Print results
-    println!("\nModel outputs:");
-
-    print_model_output(&ses_output);
-    print_model_output(&ma_output);
-    print_model_output(&ar_output);
+    // Demo 3: Model comparison
+    println!("\n=== Demo 3: Model Comparison ===");
+    demo_model_comparison(&data)?;
 
     Ok(())
 }
 
-// Helper function to print model output information
-fn print_model_output(output: &ModelOutput) {
-    println!("\nModel: {}", output.model_name);
-    println!("Forecasts:");
+fn demo_high_level_interface(data: &TimeSeriesData) -> Result<()> {
+    println!("Using the high-level Forecaster interface...\n");
 
-    for (i, value) in output.forecasts.iter().enumerate() {
-        println!("  t+{}: {:.2}", i + 1, value);
+    // Simple exponential smoothing
+    let forecaster = Forecaster::new().model(ModelType::SimpleES).alpha(0.3);
+    let output = forecaster.forecast(data, 10)?;
+    println!("📈 Simple ES forecast: {:?}", &output.forecast[..5]);
+
+    // Moving Average
+    let forecaster = Forecaster::new()
+        .model(ModelType::MovingAverage)
+        .ma_window(5);
+    let output = forecaster.forecast(data, 10)?;
+    println!("📈 MA(5) forecast: {:?}", &output.forecast[..5]);
+
+    // ARIMA
+    let forecaster = Forecaster::new()
+        .model(ModelType::ARIMA)
+        .arima_params(2, 1, 1);
+    let output = forecaster.forecast(data, 10)?;
+    println!("📈 ARIMA(2,1,1) forecast: {:?}", &output.forecast[..5]);
+
+    Ok(())
+}
+
+fn demo_builder_interface(data: &TimeSeriesData) -> Result<()> {
+    println!("Using the builder pattern interface...\n");
+
+    // Simple Exponential Smoothing with builder
+    let mut ses_model = ModelBuilder::exponential_smoothing()
+        .with_alpha(0.3)
+        .build()?;
+    ses_model.quick_fit(data)?;
+    let forecast = ses_model.quick_forecast(10)?;
+    println!("🏗️  ES builder forecast: {:?}", &forecast[..5]);
+
+    // Moving Average with builder
+    let mut ma_model = ModelBuilder::moving_average().with_window(5).build()?;
+    ma_model.quick_fit(data)?;
+    let forecast = ma_model.quick_forecast(10)?;
+    println!("🏗️  MA builder forecast: {:?}", &forecast[..5]);
+
+    // ARIMA with builder
+    let mut arima_model = ModelBuilder::arima()
+        .with_ar(2)
+        .with_differencing(1)
+        .with_ma(1)
+        .build()?;
+    arima_model.quick_fit(data)?;
+    let forecast = arima_model.quick_forecast(10)?;
+    println!("🏗️  ARIMA builder forecast: {:?}", &forecast[..5]);
+
+    Ok(())
+}
+
+fn demo_model_comparison(data: &TimeSeriesData) -> Result<()> {
+    println!("Comparing different models...\n");
+
+    let models = vec![
+        (
+            "Simple ES (α=0.3)",
+            ModelBuilder::exponential_smoothing().with_alpha(0.3),
+        ),
+        (
+            "Simple ES (α=0.7)",
+            ModelBuilder::exponential_smoothing().with_alpha(0.7),
+        ),
+        ("MA(3)", ModelBuilder::moving_average().with_window(3)),
+        ("MA(7)", ModelBuilder::moving_average().with_window(7)),
+        (
+            "ARIMA(1,1,1)",
+            ModelBuilder::arima()
+                .with_ar(1)
+                .with_differencing(1)
+                .with_ma(1),
+        ),
+    ];
+
+    println!(
+        "{:<15} {:<8} {:<8} {:<8} {:<8}",
+        "Model", "MAE", "MSE", "RMSE", "MAPE"
+    );
+    println!("{}", "-".repeat(55));
+
+    for (name, builder) in models {
+        match builder.build() {
+            Ok(mut model) => {
+                if model.quick_fit(data).is_ok() {
+                    if let Ok(evaluation) = model.evaluate(data) {
+                        println!(
+                            "{:<15} {:<8.3} {:<8.3} {:<8.3} {:<8.2}",
+                            name, evaluation.mae, evaluation.mse, evaluation.rmse, evaluation.mape
+                        );
+                    }
+                }
+            }
+            Err(_) => {
+                println!("{:<15} Failed to build", name);
+            }
+        }
     }
 
-    // Print evaluation metrics if available
-    if let Some(eval) = &output.evaluation {
-        println!("\nEvaluation metrics:");
-        println!("  MAE:  {:.4}", eval.mae);
-        println!("  RMSE: {:.4}", eval.rmse);
-        println!("  MAPE: {:.2}%", eval.mape);
-    }
-
-    println!();
+    Ok(())
 }
 
 // Helper function to create sample time series data
@@ -79,7 +145,7 @@ fn create_sample_data(n: usize, name: &str) -> std::result::Result<TimeSeriesDat
     let mut values = Vec::with_capacity(n);
 
     // Create a base timestamp
-    let base_time = chrono::Utc::now();
+    let base_time = Utc::now();
 
     // Initialize random number generator
     let mut rng = rand::thread_rng();
@@ -87,7 +153,7 @@ fn create_sample_data(n: usize, name: &str) -> std::result::Result<TimeSeriesDat
     // Generate a sinusoidal pattern with some noise
     for i in 0..n {
         // Add i days to the base time
-        let timestamp = base_time + chrono::Duration::days(i as i64);
+        let timestamp = base_time + Duration::days(i as i64);
 
         // Generate a value with sinusoidal pattern and noise
         let time = i as f64 / 10.0;
@@ -102,9 +168,5 @@ fn create_sample_data(n: usize, name: &str) -> std::result::Result<TimeSeriesDat
     }
 
     // Create the TimeSeriesData struct
-    Ok(TimeSeriesData {
-        timestamps,
-        values,
-        name: name.to_string(),
-    })
+    Ok(TimeSeriesData::new(timestamps, values, name)?)
 }

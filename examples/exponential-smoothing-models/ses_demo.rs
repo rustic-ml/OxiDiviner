@@ -3,8 +3,8 @@
 #![allow(unused_imports)]
 
 use chrono::{Duration, Utc};
-use oxidiviner_core::TimeSeriesData;
-use oxidiviner_exponential_smoothing::SimpleESModel;
+use oxidiviner::SimpleESModel;
+use oxidiviner::TimeSeriesData;
 use rand::Rng;
 use std::error::Error;
 

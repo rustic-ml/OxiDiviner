@@ -201,10 +201,14 @@ impl BatchTimeSeries {
     }
 
     /// Automatic model selection for a single series
-    fn auto_forecast_single(&self, data: &TimeSeriesData, periods: usize) -> Result<(Vec<f64>, String)> {
+    fn auto_forecast_single(
+        &self,
+        data: &TimeSeriesData,
+        periods: usize,
+    ) -> Result<(Vec<f64>, String)> {
         // Try different models in order of preference
         // Use individual function calls instead of closures to avoid type issues
-        
+
         // Try ARIMA first
         if let Ok(forecast) = self.try_arima_single(data, periods) {
             return Ok((forecast, "ARIMA(1,1,1)".to_string()));
@@ -220,7 +224,9 @@ impl BatchTimeSeries {
             return Ok((forecast, "MA(5)".to_string()));
         }
 
-        Err(OxiError::ModelError("All models failed for series".to_string())) // Use existing error type
+        Err(OxiError::ModelError(
+            "All models failed for series".to_string(),
+        )) // Use existing error type
     }
 
     // Helper methods for individual model attempts
@@ -252,9 +258,7 @@ impl BatchTimeSeries {
     }
 
     /// Create a batch from multiple data arrays
-    pub fn from_data_arrays(
-        data: Vec<(String, Vec<DateTime<Utc>>, Vec<f64>)>,
-    ) -> Result<Self> {
+    pub fn from_data_arrays(data: Vec<(String, Vec<DateTime<Utc>>, Vec<f64>)>) -> Result<Self> {
         let mut batch = Self::new();
         for (name, timestamps, values) in data {
             batch.add_from_data(name, timestamps, values)?;
@@ -263,23 +267,29 @@ impl BatchTimeSeries {
     }
 
     /// Export batch results to a simple format
-    pub fn export_results(&self, results: &BatchForecastResult) -> HashMap<String, BatchSeriesResult> {
+    pub fn export_results(
+        &self,
+        results: &BatchForecastResult,
+    ) -> HashMap<String, BatchSeriesResult> {
         let mut exported = HashMap::new();
-        
+
         for name in self.series_names() {
             let forecast = results.forecasts.get(name).cloned();
             let model_used = results.models_used.get(name).cloned();
             let error = results.errors.get(name).cloned();
             let success = forecast.is_some();
-            
-            exported.insert(name.clone(), BatchSeriesResult {
-                forecast,
-                model_used,
-                error,
-                success,
-            });
+
+            exported.insert(
+                name.clone(),
+                BatchSeriesResult {
+                    forecast,
+                    model_used,
+                    error,
+                    success,
+                },
+            );
         }
-        
+
         exported
     }
 
@@ -361,10 +371,14 @@ mod tests {
         assert!(batch.is_empty());
 
         let (name1, timestamps1, values1) = create_test_data("series1", 20);
-        batch.add_from_data(name1.clone(), timestamps1, values1).unwrap();
-        
+        batch
+            .add_from_data(name1.clone(), timestamps1, values1)
+            .unwrap();
+
         let (name2, timestamps2, values2) = create_test_data("series2", 15);
-        batch.add_from_data(name2.clone(), timestamps2, values2).unwrap();
+        batch
+            .add_from_data(name2.clone(), timestamps2, values2)
+            .unwrap();
 
         assert_eq!(batch.len(), 2);
         assert!(!batch.is_empty());
@@ -385,7 +399,7 @@ mod tests {
 
         assert_eq!(results.forecasts.len(), 3);
         assert_eq!(results.models_used.len(), 3);
-        
+
         for forecast in results.forecasts.values() {
             assert_eq!(forecast.len(), 5);
         }
@@ -408,4 +422,4 @@ mod tests {
         assert_eq!(summary.avg_length, 20.0);
         assert_eq!(summary.series_names.len(), 3);
     }
-} 
+}

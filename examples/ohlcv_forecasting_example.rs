@@ -2,8 +2,9 @@
 #![allow(clippy::needless_range_loop)]
 #![allow(unused_imports)]
 
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use oxidiviner::prelude::*;
+use oxidiviner::ModelOutput;
 use std::error::Error;
 use std::path::Path;
 
@@ -14,7 +15,7 @@ fn main() -> std::result::Result<(), Box<dyn Error>> {
 
     // Load OHLCV data from CSV
     println!("Loading AAPL daily OHLCV data...");
-    let data = load_ohlcv_data("examples/csv/AAPL_daily_ohlcv.csv")?;
+    let data = load_ohlcv_data("csv/AAPL_daily_ohlcv.csv")?;
 
     println!(
         "Data loaded: {} rows from {} to {}",
@@ -51,7 +52,7 @@ fn main() -> std::result::Result<(), Box<dyn Error>> {
 
     // 2. Simple Exponential Smoothing model
     println!("\n2. Simple Exponential Smoothing Model (SES):");
-    let mut ses_model = SESModel::new(0.3)?; // Only the alpha parameter
+    let mut ses_model = SimpleESModel::new(0.3)?; // Only the alpha parameter
     ses_model.fit(&train_data)?;
     let ses_output = ses_model.predict(forecast_horizon, Some(&test_data))?;
     print_model_evaluation(&ses_output);

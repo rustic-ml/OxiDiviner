@@ -20,6 +20,10 @@ pub enum OxiError {
     #[error("Invalid Parameter: {0}")]
     InvalidParameter(String),
 
+    /// Error related to validation failures
+    #[error("Validation Error: {0}")]
+    ValidationError(String),
+
     /// Error when a feature is not enabled
     #[error("Feature not enabled: {0}")]
     FeatureNotEnabled(String),

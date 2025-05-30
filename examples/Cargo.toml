@@ -10,6 +10,21 @@ chrono = { version = "0.4.41", features = ["serde"] }
 rand = "0.9.1"
 rand_distr = "0.5.0"
 
+# Basic Working Demo
+[[bin]]
+name = "basic_working_demo"
+path = "basic_working_demo.rs"
+
+# API Improvements Demo
+[[bin]]
+name = "api_improvements_demo"
+path = "api_improvements_demo.rs"
+
+# Simple API Demo
+[[bin]]
+name = "simple_api_demo"
+path = "simple_api_demo.rs"
+
 # Standard Interface Demo
 [[bin]]
 name = "standard_interface_demo"

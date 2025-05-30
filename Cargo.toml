@@ -16,21 +16,33 @@ timeout = "300s"
 out = ["Html", "Lcov", "Stdout"]
 output-dir = "target/coverage"
 exclude = [
-    "examples/exponential-smoothing-models/ses_model_example.rs",
-    "examples/exponential-smoothing-models/ses_parameter_tuning.rs",
-    "examples/exponential-smoothing-models/es_parameter_tuning.rs",
-    "examples/exponential-smoothing-models/ets_model_demo.rs",
-    "examples/exponential-smoothing-models/ets_demo.rs",
-    "examples/exponential-smoothing-models/ses_demo.rs",
-    "examples/exponential-smoothing-models/holt_demo.rs",
-    "examples/garch-models/*",
-    "examples/ohlcv-handling/*",
-    "examples/standard_interface_demo.rs",
-    "examples/ohlcv_forecasting_example.rs",
+    # Development and documentation files
+    "*.md",
+    "*.jpg", 
+    "*.jpeg",
+    "*.png",
+    "*.gif",
+    ".gitignore",
+    ".codecov.yml",
+    
+    # Build artifacts and temporary files
+    "target/**/*",
+    "Cargo.lock",
+    "*.profraw",
+    "*.bak",
+    
+    # CI/CD and development tools
+    ".github/**/*",
+    ".git/**/*",
+    "run_coverage.sh",
+    
+    # Examples and test data
+    "examples/**/*",
+    "csv/**/*",
 ]
 
 [workspace.package]
-version = "0.4.2"
+version = "0.4.3"
 edition = "2021"
 license = "MIT"
 authors = ["OxiDiviner Team"]

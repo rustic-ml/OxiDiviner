@@ -6,18 +6,16 @@
 //! - quick: One-line utility functions
 //! - batch: Batch processing for multiple time series
 
+use chrono::{DateTime, Duration, Utc};
 use oxidiviner::prelude::*;
-use oxidiviner::{api, batch, quick};
-use chrono::{Duration, Utc};
+use oxidiviner::{api, batch, quick, FinancialTimeSeries};
 
 fn main() -> oxidiviner::Result<()> {
     println!("=== OxiDiviner Enhanced API Demo ===\n");
 
     // Generate sample data
     let start_date = Utc::now() - Duration::days(30);
-    let timestamps: Vec<DateTime<Utc>> = (0..30)
-        .map(|i| start_date + Duration::days(i))
-        .collect();
+    let timestamps: Vec<DateTime<Utc>> = (0..30).map(|i| start_date + Duration::days(i)).collect();
     let prices: Vec<f64> = (0..30)
         .map(|i| 100.0 + (i as f64) * 2.0 + (i as f64 * 0.1).sin() * 5.0)
         .collect();
@@ -55,11 +53,8 @@ fn main() -> oxidiviner::Result<()> {
     println!("2. FINANCIAL MODULE - Financial-specific analysis");
     println!("================================================");
 
-    let financial_ts = FinancialTimeSeries::from_prices(
-        timestamps.clone(),
-        prices.clone(),
-        "DEMO_STOCK"
-    )?;
+    let financial_ts =
+        FinancialTimeSeries::from_prices(timestamps.clone(), prices.clone(), "DEMO_STOCK")?;
 
     println!("Symbol: {}", financial_ts.symbol());
 
@@ -72,7 +67,10 @@ fn main() -> oxidiviner::Result<()> {
 
     // Automatic financial forecasting
     let (fin_forecast, fin_model) = financial_ts.auto_forecast(5)?;
-    println!("Financial auto forecast using {}: {:?}", fin_model, fin_forecast);
+    println!(
+        "Financial auto forecast using {}: {:?}",
+        fin_model, fin_forecast
+    );
 
     // Compare models for financial data
     let fin_comparison = financial_ts.compare_models(5)?;
@@ -94,20 +92,22 @@ fn main() -> oxidiviner::Result<()> {
     let ts_data = TimeSeriesData::new(timestamps.clone(), prices.clone(), "demo_series")?;
 
     // Use the high-level API with builder pattern
-    let forecaster = api::ForecastBuilder::new()
-        .arima(2, 1, 2)
-        .build();
+    let forecaster = api::ForecastBuilder::new().arima(2, 1, 2).build();
 
     let api_result = forecaster.forecast(&ts_data, 5)?;
-    println!("API forecast using {}: {:?}", api_result.model_used, api_result.forecast);
+    println!(
+        "API forecast using {}: {:?}",
+        api_result.model_used, api_result.forecast
+    );
 
     // Auto-selection API
-    let auto_forecaster = api::ForecastBuilder::new()
-        .auto()
-        .build();
+    let auto_forecaster = api::ForecastBuilder::new().auto().build();
 
     let auto_result = auto_forecaster.forecast(&ts_data, 5)?;
-    println!("API auto forecast using {}: {:?}", auto_result.model_used, auto_result.forecast);
+    println!(
+        "API auto forecast using {}: {:?}",
+        auto_result.model_used, auto_result.forecast
+    );
 
     // Direct forecaster creation
     let direct_forecaster = api::Forecaster::new()
@@ -115,7 +115,10 @@ fn main() -> oxidiviner::Result<()> {
         .alpha(0.4);
 
     let direct_result = direct_forecaster.forecast(&ts_data, 5)?;
-    println!("Direct API forecast using {}: {:?}", direct_result.model_used, direct_result.forecast);
+    println!(
+        "Direct API forecast using {}: {:?}",
+        direct_result.model_used, direct_result.forecast
+    );
 
     println!();
 
@@ -125,16 +128,20 @@ fn main() -> oxidiviner::Result<()> {
 
     // Create multiple time series for batch processing
     let mut batch_data = Vec::new();
-    
+
     for i in 0..3 {
         let series_name = format!("series_{}", i + 1);
         let series_values: Vec<f64> = (0..25)
-            .map(|j| 100.0 + (i as f64 * 10.0) + (j as f64) + (j as f64 * 0.1 * (i + 1) as f64).sin() * 3.0)
+            .map(|j| {
+                100.0
+                    + (i as f64 * 10.0)
+                    + (j as f64)
+                    + (j as f64 * 0.1 * (i + 1) as f64).sin() * 3.0
+            })
             .collect();
-        let series_timestamps: Vec<DateTime<Utc>> = (0..25)
-            .map(|j| start_date + Duration::days(j))
-            .collect();
-        
+        let series_timestamps: Vec<DateTime<Utc>> =
+            (0..25).map(|j| start_date + Duration::days(j)).collect();
+
         batch_data.push((series_name, series_timestamps, series_values));
     }
 
@@ -146,7 +153,10 @@ fn main() -> oxidiviner::Result<()> {
     println!("Batch summary:");
     println!("  Total series: {}", summary.total_series);
     println!("  Average length: {:.1}", summary.avg_length);
-    println!("  Length range: {} - {}", summary.min_length, summary.max_length);
+    println!(
+        "  Length range: {} - {}",
+        summary.min_length, summary.max_length
+    );
     println!("  Series names: {:?}", summary.series_names);
 
     // Perform batch forecasting with default config
@@ -154,7 +164,10 @@ fn main() -> oxidiviner::Result<()> {
     println!("\nBatch forecasting results:");
     for (name, forecast) in &batch_results.forecasts {
         let unknown_model = "Unknown".to_string();
-        let model = batch_results.models_used.get(name).unwrap_or(&unknown_model);
+        let model = batch_results
+            .models_used
+            .get(name)
+            .unwrap_or(&unknown_model);
         println!("  {}: {} -> {:?}", name, model, &forecast[..3]);
     }
 
@@ -184,10 +197,12 @@ fn main() -> oxidiviner::Result<()> {
     let exported = batch_ts.export_results(&batch_results);
     println!("\nExported results:");
     for (name, result) in &exported {
-        println!("  {}: success={}, model={:?}", 
-                 name, 
-                 result.success, 
-                 result.model_used.as_deref().unwrap_or("None"));
+        println!(
+            "  {}: success={}, model={:?}",
+            name,
+            result.success,
+            result.model_used.as_deref().unwrap_or("None")
+        );
     }
 
     println!();
@@ -198,31 +213,39 @@ fn main() -> oxidiviner::Result<()> {
 
     // Start with quick module for initial exploration
     let (initial_forecast, initial_model) = quick::values_only_forecast(prices.clone(), 3)?;
-    println!("Initial exploration with quick module: {} -> {:?}", initial_model, initial_forecast);
+    println!(
+        "Initial exploration with quick module: {} -> {:?}",
+        initial_model, initial_forecast
+    );
 
     // Move to financial module for specialized analysis
-    let financial_series = FinancialTimeSeries::from_prices(timestamps.clone(), prices.clone(), "INTEGRATED")?;
+    let financial_series =
+        FinancialTimeSeries::from_prices(timestamps.clone(), prices.clone(), "INTEGRATED")?;
     let returns = financial_series.simple_returns()?;
     println!("Financial analysis: {} returns calculated", returns.len());
 
     // Use API module for detailed configuration
-    let precise_forecaster = api::ForecastBuilder::new()
-        .arima(1, 1, 2)
-        .build();
+    let precise_forecaster = api::ForecastBuilder::new().arima(1, 1, 2).build();
     let ts_data = TimeSeriesData::new(timestamps.clone(), prices.clone(), "integrated")?;
     let precise_result = precise_forecaster.forecast(&ts_data, 3)?;
-    println!("Precise API forecast: {} -> {:?}", precise_result.model_used, precise_result.forecast);
+    println!(
+        "Precise API forecast: {} -> {:?}",
+        precise_result.model_used, precise_result.forecast
+    );
 
     // Scale up with batch module
     let mut integrated_batch = batch::BatchTimeSeries::new();
     integrated_batch.add_from_data("original".to_string(), timestamps.clone(), prices.clone())?;
-    
+
     // Add a modified series
     let modified_prices: Vec<f64> = prices.iter().map(|p| p * 1.1).collect();
     integrated_batch.add_from_data("modified".to_string(), timestamps.clone(), modified_prices)?;
 
     let final_results = integrated_batch.forecast(3)?;
-    println!("Final batch results: {} series processed", final_results.forecasts.len());
+    println!(
+        "Final batch results: {} series processed",
+        final_results.forecasts.len()
+    );
 
     println!("\n=== Demo Complete ===");
     println!("All enhanced API modules working successfully!");
@@ -240,4 +263,4 @@ mod tests {
         let result = main();
         assert!(result.is_ok(), "Demo should run successfully: {:?}", result);
     }
-} 
+}

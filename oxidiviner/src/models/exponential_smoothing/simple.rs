@@ -1,7 +1,6 @@
-use crate::models::exponential_smoothing::ESError;
 use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
 use crate::math::metrics::{mae, mape, mse, rmse, smape};
-
+use crate::models::exponential_smoothing::ESError;
 
 /// Simple Exponential Smoothing (SES) model for forecasting.
 ///
@@ -147,6 +146,19 @@ impl Forecaster for SimpleESModel {
         let mape = mape(&test_data.values, &forecast);
         let smape = smape(&test_data.values, &forecast);
 
+        // Calculate R-squared
+        let actual_mean = test_data.values.iter().sum::<f64>() / test_data.values.len() as f64;
+        let tss = test_data
+            .values
+            .iter()
+            .map(|x| (x - actual_mean).powi(2))
+            .sum::<f64>();
+        let r_squared = if tss > 0.0 {
+            1.0 - (mse * test_data.values.len() as f64) / tss
+        } else {
+            0.0
+        };
+
         Ok(ModelEvaluation {
             model_name: self.name.clone(),
             mae,
@@ -154,6 +166,9 @@ impl Forecaster for SimpleESModel {
             rmse,
             mape,
             smape,
+            r_squared,
+            aic: None,
+            bic: None,
         })
     }
 

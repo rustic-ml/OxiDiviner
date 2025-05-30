@@ -3,8 +3,8 @@
 
 use chrono::Timelike;
 use chrono::{DateTime, Utc};
-use oxidiviner_core::{OHLCVData, Result};
-use oxidiviner_exponential_smoothing::{DailyETSModel, MinuteETSModel};
+use oxidiviner::{DailyETSModel, MinuteETSModel};
+use oxidiviner::{OHLCVData, Result};
 
 fn main() -> Result<()> {
     println!("OHLCV Data Processing Example");

@@ -311,6 +311,88 @@ impl ModelValidator {
 
         Ok(())
     }
+
+    /// Validate a single smoothing parameter
+    pub fn validate_smoothing_param(value: f64, param_name: &str) -> Result<()> {
+        if !(0.0..=1.0).contains(&value) {
+            return Err(OxiError::ValidationError(format!(
+                "{} must be between 0.0 and 1.0, got {}",
+                param_name, value
+            )));
+        }
+        Ok(())
+    }
+
+    /// Validate damping parameter
+    pub fn validate_damping_param(phi: f64) -> Result<()> {
+        if !(0.0..=1.0).contains(&phi) {
+            return Err(OxiError::ValidationError(format!(
+                "Damping parameter phi must be between 0.0 and 1.0, got {}",
+                phi
+            )));
+        }
+        Ok(())
+    }
+
+    /// Validate seasonal period
+    pub fn validate_seasonal_period(period: usize) -> Result<()> {
+        if period < 2 {
+            return Err(OxiError::ValidationError(format!(
+                "Seasonal period must be at least 2, got {}",
+                period
+            )));
+        }
+        if period > 365 {
+            return Err(OxiError::ValidationError(format!(
+                "Seasonal period {} seems too large (>365), please verify",
+                period
+            )));
+        }
+        Ok(())
+    }
+
+    /// Validate data for fitting
+    pub fn validate_for_fitting(
+        data: &TimeSeriesData,
+        min_points: usize,
+        model_name: &str,
+    ) -> Result<()> {
+        // Check minimum data points
+        Self::validate_minimum_data(data.values.len(), min_points, model_name)?;
+
+        // Check for NaN or infinite values
+        for (i, &value) in data.values.iter().enumerate() {
+            if value.is_nan() {
+                return Err(OxiError::ValidationError(format!(
+                    "NaN value found at index {} in time series data",
+                    i
+                )));
+            }
+            if value.is_infinite() {
+                return Err(OxiError::ValidationError(format!(
+                    "Infinite value found at index {} in time series data",
+                    i
+                )));
+            }
+        }
+
+        // Check for extreme values (optional warning)
+        let mean = data.values.iter().sum::<f64>() / data.values.len() as f64;
+        let variance =
+            data.values.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / data.values.len() as f64;
+        let std_dev = variance.sqrt();
+
+        for (i, &value) in data.values.iter().enumerate() {
+            if (value - mean).abs() > 5.0 * std_dev {
+                eprintln!(
+                    "Warning: Potential outlier at index {} (value: {}, mean: {}, std: {})",
+                    i, value, mean, std_dev
+                );
+            }
+        }
+
+        Ok(())
+    }
 }
 
 /// Central trait that all forecasting models must implement
@@ -399,6 +481,12 @@ pub struct ModelEvaluation {
     pub mape: f64,
     /// Symmetric Mean Absolute Percentage Error
     pub smape: f64,
+    /// R-squared (coefficient of determination)
+    pub r_squared: f64,
+    /// Akaike Information Criterion
+    pub aic: Option<f64>,
+    /// Bayesian Information Criterion
+    pub bic: Option<f64>,
 }
 
 /// Standardized output from a forecasting model
@@ -412,99 +500,100 @@ pub struct ModelOutput {
     pub evaluation: Option<ModelEvaluation>,
 }
 
-/// Simplified, unified forecasting trait for easy external consumption
-///
-/// This trait provides a standardized interface across all models with:
-/// - Simplified configuration via associated Config types
-/// - Unified fit/forecast signatures
-/// - Clear model identification
-/// - Default configurations to minimize setup
-pub trait QuickForecaster {
-    /// Configuration type for this model (must implement Default)
-    type Config: Default;
-
-    /// Create a new model instance with optional configuration
-    ///
-    /// # Arguments
-    /// * `config` - Optional configuration, uses Default if None
-    ///
-    /// # Returns
-    /// * `Result<Self>` - Model instance or error
-    fn quick_new(config: Option<Self::Config>) -> Result<Self>
-    where
-        Self: Sized;
-
-    /// Fit the model to training data
-    ///
-    /// # Arguments
-    /// * `data` - Time series data to fit the model to
-    ///
-    /// # Returns
-    /// * `Result<()>` - Success or error during fitting
+/// Unified trait for quick forecasting with consistent interface across all models
+pub trait QuickForecaster: std::fmt::Debug {
+    /// Fit the model to time series data
     fn quick_fit(&mut self, data: &TimeSeriesData) -> Result<()>;
 
     /// Generate forecasts for the specified number of periods
-    ///
-    /// # Arguments
-    /// * `periods` - Number of future periods to forecast
-    ///
-    /// # Returns
-    /// * `Result<Vec<f64>>` - Forecasted values or error
     fn quick_forecast(&self, periods: usize) -> Result<Vec<f64>>;
 
-    /// Get the human-readable name of this model
-    ///
-    /// # Returns
-    /// * `&'static str` - Model name for identification
+    /// Get the name of the model type
     fn model_name(&self) -> &'static str;
 
-    /// Convenience method to fit and forecast in one step
-    ///
-    /// # Arguments
-    /// * `data` - Time series data to fit the model to
-    /// * `periods` - Number of future periods to forecast
-    ///
-    /// # Returns
-    /// * `Result<Vec<f64>>` - Forecasted values or error
-    fn quick_fit_and_forecast(
-        &mut self,
-        data: &TimeSeriesData,
-        periods: usize,
-    ) -> Result<Vec<f64>> {
-        self.quick_fit(data)?;
-        self.quick_forecast(periods)
+    /// Get fitted values if available
+    fn fitted_values(&self) -> Option<Vec<f64>> {
+        None
+    }
+
+    /// Evaluate the model on test data
+    fn evaluate(&self, test_data: &TimeSeriesData) -> Result<ModelEvaluation>;
+}
+
+/// Enhanced forecasting trait with confidence intervals
+pub trait ConfidenceForecaster: QuickForecaster {
+    /// Generate forecasts with confidence intervals
+    fn forecast_with_confidence(&self, periods: usize, confidence: f64) -> Result<ForecastResult>;
+}
+
+/// Trait for cloning QuickForecaster trait objects
+pub trait CloneableQuickForecaster: QuickForecaster {
+    fn clone_box(&self) -> Box<dyn CloneableQuickForecaster>;
+}
+
+impl<T> CloneableQuickForecaster for T
+where
+    T: 'static + QuickForecaster + Clone,
+{
+    fn clone_box(&self) -> Box<dyn CloneableQuickForecaster> {
+        Box::new(self.clone())
     }
 }
 
-/// Forecast result with confidence intervals
-#[derive(Debug, Clone, Serialize, Deserialize)]
+impl Clone for Box<dyn CloneableQuickForecaster> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}
+
+/// Result of a forecast with optional confidence intervals
+#[derive(Debug, Clone)]
 pub struct ForecastResult {
     /// Point forecasts
     pub point_forecast: Vec<f64>,
-    /// Lower confidence bounds (if supported)
+    /// Lower confidence bound
     pub lower_bound: Option<Vec<f64>>,
-    /// Upper confidence bounds (if supported)
+    /// Upper confidence bound
     pub upper_bound: Option<Vec<f64>>,
-    /// Confidence level used (e.g., 0.95 for 95%)
+    /// Confidence level (e.g., 0.95 for 95%)
     pub confidence_level: Option<f64>,
-    /// Model used for forecasting
+    /// Model name used for forecasting
     pub model_name: String,
 }
 
-/// Extended forecasting trait with confidence intervals
-///
-/// Models that implement this trait can provide uncertainty estimates
-/// alongside their point forecasts.
-pub trait ConfidenceForecaster: QuickForecaster {
-    /// Generate forecasts with confidence intervals
-    ///
-    /// # Arguments
-    /// * `periods` - Number of future periods to forecast
-    /// * `confidence` - Confidence level (e.g., 0.95 for 95% confidence)
-    ///
-    /// # Returns
-    /// * `Result<ForecastResult>` - Forecast with confidence bounds or error
-    fn forecast_with_confidence(&self, periods: usize, confidence: f64) -> Result<ForecastResult>;
+impl ForecastResult {
+    /// Create a new forecast result with just point forecasts
+    pub fn new(point_forecast: Vec<f64>, model_name: String) -> Self {
+        Self {
+            point_forecast,
+            lower_bound: None,
+            upper_bound: None,
+            confidence_level: None,
+            model_name,
+        }
+    }
+
+    /// Create a new forecast result with confidence intervals
+    pub fn with_confidence(
+        point_forecast: Vec<f64>,
+        lower_bound: Vec<f64>,
+        upper_bound: Vec<f64>,
+        confidence_level: f64,
+        model_name: String,
+    ) -> Self {
+        Self {
+            point_forecast,
+            lower_bound: Some(lower_bound),
+            upper_bound: Some(upper_bound),
+            confidence_level: Some(confidence_level),
+            model_name,
+        }
+    }
+
+    /// Check if confidence intervals are available
+    pub fn has_confidence_intervals(&self) -> bool {
+        self.lower_bound.is_some() && self.upper_bound.is_some()
+    }
 }
 
 /// Builder pattern for creating forecasting models with fluent interface
@@ -792,4 +881,154 @@ pub struct SelectionResult {
     pub all_results: Vec<(ModelConfig, f64)>,
     /// Criteria used for selection
     pub criteria: SelectionCriteria,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{DateTime, TimeZone, Utc};
+
+    #[test]
+    fn test_forecast_result_creation() {
+        let forecasts = vec![1.0, 2.0, 3.0];
+        let result = ForecastResult::new(forecasts.clone(), "TestModel".to_string());
+
+        assert_eq!(result.point_forecast, forecasts);
+        assert!(result.lower_bound.is_none());
+        assert!(result.upper_bound.is_none());
+        assert!(!result.has_confidence_intervals());
+        assert_eq!(result.model_name, "TestModel");
+    }
+
+    #[test]
+    fn test_forecast_result_with_confidence() {
+        let forecasts = vec![1.0, 2.0, 3.0];
+        let lower = vec![0.5, 1.5, 2.5];
+        let upper = vec![1.5, 2.5, 3.5];
+
+        let result = ForecastResult::with_confidence(
+            forecasts.clone(),
+            lower.clone(),
+            upper.clone(),
+            0.95,
+            "TestModel".to_string(),
+        );
+
+        assert_eq!(result.point_forecast, forecasts);
+        assert_eq!(result.lower_bound, Some(lower));
+        assert_eq!(result.upper_bound, Some(upper));
+        assert!(result.has_confidence_intervals());
+        assert_eq!(result.model_name, "TestModel");
+    }
+
+    #[test]
+    fn test_model_evaluation_creation() {
+        let eval = ModelEvaluation {
+            model_name: "TestModel".to_string(),
+            mae: 1.0,
+            mse: 2.0,
+            rmse: 1.414,
+            mape: 10.0,
+            smape: 15.0,
+            r_squared: 0.95,
+            aic: Some(-100.0),
+            bic: Some(-95.0),
+        };
+
+        assert_eq!(eval.model_name, "TestModel");
+        assert_eq!(eval.mae, 1.0);
+        assert_eq!(eval.r_squared, 0.95);
+        assert_eq!(eval.aic, Some(-100.0));
+    }
+
+    #[test]
+    fn test_model_evaluation_without_ic() {
+        let eval = ModelEvaluation {
+            model_name: "TestModel".to_string(),
+            mae: 1.0,
+            mse: 2.0,
+            rmse: 1.414,
+            mape: 10.0,
+            smape: 15.0,
+            r_squared: 0.95,
+            aic: None,
+            bic: None,
+        };
+
+        assert!(eval.aic.is_none());
+        assert!(eval.bic.is_none());
+    }
+
+    #[test]
+    fn test_model_builder_fluent_api() {
+        // Test the model builder pattern
+        let arima_config = ModelBuilder::arima()
+            .with_ar(2)
+            .with_differencing(1)
+            .with_ma(1)
+            .build_config();
+
+        assert_eq!(arima_config.model_type, "ARIMA");
+        assert_eq!(arima_config.parameters.get("p"), Some(&2.0));
+        assert_eq!(arima_config.parameters.get("d"), Some(&1.0));
+        assert_eq!(arima_config.parameters.get("q"), Some(&1.0));
+    }
+
+    #[test]
+    fn test_auto_selector_creation() {
+        let selector = AutoSelector::with_aic();
+        assert!(matches!(selector.criteria(), &SelectionCriteria::AIC));
+        assert!(!selector.candidates().is_empty());
+    }
+
+    #[test]
+    fn test_auto_selector_custom_candidates() {
+        let custom_config = ModelBuilder::ar().with_ar(5).build_config();
+        let selector = AutoSelector::with_bic().add_candidate(custom_config);
+        assert!(matches!(selector.criteria(), &SelectionCriteria::BIC));
+
+        // Should have default candidates plus our custom one
+        assert!(selector.candidates().len() > 12);
+    }
+
+    #[test]
+    fn test_model_config_creation() {
+        let config = ModelBuilder::exponential_smoothing()
+            .with_alpha(0.3)
+            .with_beta(0.2)
+            .build_config();
+
+        // Test basic configuration creation
+        assert_eq!(config.model_type, "ES");
+        assert_eq!(config.parameters.get("alpha"), Some(&0.3));
+        assert_eq!(config.parameters.get("beta"), Some(&0.2));
+        assert!(config.parameters.len() >= 2);
+    }
+
+    #[test]
+    fn test_forecast_result_debug() {
+        let result = ForecastResult::new(vec![1.0, 2.0], "TestModel".to_string());
+        let debug_str = format!("{:?}", result);
+        assert!(debug_str.contains("ForecastResult"));
+        assert!(debug_str.contains("point_forecast"));
+    }
+
+    #[test]
+    fn test_model_evaluation_debug() {
+        let eval = ModelEvaluation {
+            model_name: "Test".to_string(),
+            mae: 1.0,
+            mse: 2.0,
+            rmse: 1.414,
+            mape: 10.0,
+            smape: 15.0,
+            r_squared: 0.95,
+            aic: Some(-100.0),
+            bic: Some(-95.0),
+        };
+
+        let debug_str = format!("{:?}", eval);
+        assert!(debug_str.contains("ModelEvaluation"));
+        assert!(debug_str.contains("Test"));
+    }
 }

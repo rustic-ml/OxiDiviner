@@ -1,5 +1,5 @@
 use chrono::{Duration, Utc};
-use oxidiviner_core::OHLCVData;
+use oxidiviner::OHLCVData;
 use oxidiviner_exponential_smoothing::simple::SimpleESModel;
 
 fn create_test_data() -> OHLCVData {

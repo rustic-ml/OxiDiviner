@@ -2,6 +2,7 @@
 // and that they can be used correctly.
 
 // Just importing from the prelude should be sufficient for basic usage
+use oxidiviner::core::ModelOutput;
 use oxidiviner::prelude::*;
 
 #[test]
@@ -36,10 +37,13 @@ fn test_prelude_contains_core_types() {
         evaluation: Some(ModelEvaluation {
             model_name: "TestModel".to_string(),
             mae: 1.0,
+            mse: 2.0,
             rmse: 2.0,
             mape: 3.0,
-            mse: 4.0,
             smape: 5.0,
+            r_squared: 0.8,
+            aic: Some(100.0),
+            bic: Some(105.0),
         }),
     };
 }
@@ -48,7 +52,7 @@ fn test_prelude_contains_core_types() {
 fn test_prelude_contains_model_implementations() {
     // Verify we can use various model implementations from the prelude
     let _ma_model = MAModel::new(5);
-    let _ses_model = SESModel::new(0.3);
+    let _ses_model = SimpleESModel::new(0.3);
     let _hw_model = HoltWintersModel::new(0.2, 0.1, 0.1, 7);
     let _ar_model = ARModel::new(3, true);
 

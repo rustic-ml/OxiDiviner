@@ -5,7 +5,7 @@
 //! and simple use cases where you don't need to configure complex parameters.
 
 use crate::core::{Result, TimeSeriesData};
-use crate::models::autoregressive::ARIMAModel;
+use crate::models::autoregressive::{ARIMAModel, ARModel};
 use crate::models::exponential_smoothing::SimpleESModel;
 use crate::models::moving_average::MAModel;
 use chrono::{DateTime, Utc};
@@ -147,12 +147,9 @@ pub fn compare_models(
 }
 
 /// Quick forecast from just values (uses index-based timestamps)
-pub fn values_only_forecast(
-    values: Vec<f64>,
-    periods: usize,
-) -> Result<(Vec<f64>, String)> {
+pub fn values_only_forecast(values: Vec<f64>, periods: usize) -> Result<(Vec<f64>, String)> {
     use chrono::{Duration, Utc};
-    
+
     let start_time = Utc::now();
     let timestamps: Vec<DateTime<Utc>> = (0..values.len())
         .map(|i| start_time + Duration::days(i as i64))
@@ -162,12 +159,9 @@ pub fn values_only_forecast(
 }
 
 /// Quick forecast for financial data (assumes daily prices)
-pub fn daily_price_forecast(
-    prices: Vec<f64>,
-    periods: usize,
-) -> Result<(Vec<f64>, String)> {
+pub fn daily_price_forecast(prices: Vec<f64>, periods: usize) -> Result<(Vec<f64>, String)> {
     use chrono::{Duration, Utc};
-    
+
     let start_date = Utc::now() - Duration::days(prices.len() as i64);
     let timestamps: Vec<DateTime<Utc>> = (0..prices.len())
         .map(|i| start_date + Duration::days(i as i64))
@@ -177,10 +171,7 @@ pub fn daily_price_forecast(
 }
 
 /// Simple forecast that takes a closure for data generation
-pub fn forecast_with_data<F>(
-    data_fn: F,
-    periods: usize,
-) -> Result<(Vec<f64>, String)>
+pub fn forecast_with_data<F>(data_fn: F, periods: usize) -> Result<(Vec<f64>, String)>
 where
     F: FnOnce() -> (Vec<DateTime<Utc>>, Vec<f64>),
 {
@@ -257,6 +248,10 @@ pub fn forecast_with_config(
             let q = *config.parameters.get("q").unwrap_or(&1.0) as usize;
             arima_with_config(data, periods, Some((p, d, q)))
         }
+        "AR" => {
+            let p = *config.parameters.get("p").unwrap_or(&3.0) as usize;
+            ar(data, periods, Some(p))
+        }
         "MA" => {
             let window = *config.parameters.get("window").unwrap_or(&5.0) as usize;
             moving_average(data, periods, Some(window))
@@ -274,6 +269,26 @@ pub fn forecast_with_config(
     }
 }
 
+/// AR forecast from TimeSeriesData
+pub fn ar(data: TimeSeriesData, periods: usize, order: Option<usize>) -> Result<Vec<f64>> {
+    let p = order.unwrap_or(3);
+    let mut model = ARModel::new(p, true)?;
+    model.fit(&data)?;
+    model.forecast(periods)
+}
+
+/// Exponential smoothing forecast from TimeSeriesData
+pub fn exponential_smoothing(
+    data: TimeSeriesData,
+    periods: usize,
+    alpha: Option<f64>,
+) -> Result<Vec<f64>> {
+    let alpha_val = alpha.unwrap_or(0.3);
+    let mut model = SimpleESModel::new(alpha_val)?;
+    model.fit(&data)?;
+    model.forecast(periods)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -281,9 +296,7 @@ mod tests {
 
     fn generate_test_data() -> (Vec<DateTime<Utc>>, Vec<f64>) {
         let start = Utc::now();
-        let timestamps: Vec<DateTime<Utc>> = (0..20)
-            .map(|i| start + Duration::days(i))
-            .collect();
+        let timestamps: Vec<DateTime<Utc>> = (0..20).map(|i| start + Duration::days(i)).collect();
         let values: Vec<f64> = (0..20)
             .map(|i| 100.0 + (i as f64) * 2.0 + (i as f64 * 0.1).sin() * 5.0)
             .collect();
@@ -342,13 +355,11 @@ mod tests {
 
     #[test]
     fn test_values_only_forecast() {
-        let values: Vec<f64> = (0..20)
-            .map(|i| 100.0 + (i as f64) * 2.0)
-            .collect();
+        let values: Vec<f64> = (0..20).map(|i| 100.0 + (i as f64) * 2.0).collect();
         let result = values_only_forecast(values, 5);
         assert!(result.is_ok());
         let (forecast, model_name) = result.unwrap();
         assert_eq!(forecast.len(), 5);
         assert!(!model_name.is_empty());
     }
-} 
+}

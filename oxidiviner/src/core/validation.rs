@@ -360,6 +360,253 @@ pub struct BacktestResult {
     pub config: BacktestConfig,
 }
 
+/// Model parameter validator with comprehensive validation rules
+pub struct ModelValidator;
+
+impl ModelValidator {
+    /// Validate ARIMA parameters
+    pub fn validate_arima_params(p: usize, d: usize, q: usize) -> Result<()> {
+        if p > 10 {
+            return Err(OxiError::InvalidParameter(
+                "AR order (p) too high: maximum recommended value is 10".to_string(),
+            ));
+        }
+        if d > 2 {
+            return Err(OxiError::InvalidParameter(
+                "Differencing order (d) too high: maximum recommended value is 2".to_string(),
+            ));
+        }
+        if q > 10 {
+            return Err(OxiError::InvalidParameter(
+                "MA order (q) too high: maximum recommended value is 10".to_string(),
+            ));
+        }
+        if p + d + q > 15 {
+            return Err(OxiError::InvalidParameter(
+                "Total model complexity (p+d+q) too high: maximum recommended value is 15"
+                    .to_string(),
+            ));
+        }
+        Ok(())
+    }
+
+    /// Validate smoothing parameters (alpha, beta, gamma)
+    pub fn validate_smoothing_param(param: f64, name: &str) -> Result<()> {
+        if param <= 0.0 || param >= 1.0 {
+            return Err(OxiError::InvalidParameter(format!(
+                "Smoothing parameter {} must be between 0 and 1 (exclusive), got {}",
+                name, param
+            )));
+        }
+        Ok(())
+    }
+
+    /// Validate damping parameter (phi)
+    pub fn validate_damping_param(phi: f64) -> Result<()> {
+        if phi <= 0.0 || phi >= 1.0 {
+            return Err(OxiError::InvalidParameter(format!(
+                "Damping parameter φ must be between 0 and 1 (exclusive), got {}",
+                phi
+            )));
+        }
+        Ok(())
+    }
+
+    /// Validate seasonal period
+    pub fn validate_seasonal_period(period: usize) -> Result<()> {
+        if period < 2 {
+            return Err(OxiError::InvalidParameter(format!(
+                "Seasonal period must be at least 2, got {}",
+                period
+            )));
+        }
+        if period > 366 {
+            return Err(OxiError::InvalidParameter(format!(
+                "Seasonal period too large: maximum recommended value is 366, got {}",
+                period
+            )));
+        }
+        Ok(())
+    }
+
+    /// Validate GARCH parameters for stationarity
+    pub fn validate_garch_stationarity(alpha: &[f64], beta: &[f64]) -> Result<()> {
+        let sum: f64 = alpha.iter().sum::<f64>() + beta.iter().sum::<f64>();
+        if sum >= 1.0 {
+            return Err(OxiError::InvalidParameter(format!(
+                "GARCH stationarity condition violated: sum of α and β parameters must be < 1, got {}",
+                sum
+            )));
+        }
+        Ok(())
+    }
+
+    /// Validate window size for moving average models
+    pub fn validate_window_size(window: usize, data_length: usize) -> Result<()> {
+        if window == 0 {
+            return Err(OxiError::InvalidParameter(
+                "Window size must be greater than 0".to_string(),
+            ));
+        }
+        if window > data_length {
+            return Err(OxiError::InvalidParameter(format!(
+                "Window size ({}) cannot be larger than data length ({})",
+                window, data_length
+            )));
+        }
+        if window > data_length / 2 {
+            return Err(OxiError::InvalidParameter(format!(
+                "Window size ({}) is more than half the data length ({}); consider using a smaller window",
+                window, data_length
+            )));
+        }
+        Ok(())
+    }
+
+    /// Validate forecast horizon
+    pub fn validate_forecast_horizon(horizon: usize, data_length: usize) -> Result<()> {
+        if horizon == 0 {
+            return Err(OxiError::InvalidParameter(
+                "Forecast horizon must be greater than 0".to_string(),
+            ));
+        }
+        if horizon > data_length {
+            return Err(OxiError::InvalidParameter(format!(
+                "Forecast horizon ({}) is longer than the training data length ({}); forecasts may be unreliable",
+                horizon, data_length
+            )));
+        }
+        Ok(())
+    }
+
+    /// Validate confidence level for confidence intervals
+    pub fn validate_confidence_level(confidence: f64) -> Result<()> {
+        if confidence <= 0.0 || confidence >= 1.0 {
+            return Err(OxiError::InvalidParameter(format!(
+                "Confidence level must be between 0 and 1 (exclusive), got {}",
+                confidence
+            )));
+        }
+        if confidence < 0.5 {
+            return Err(OxiError::InvalidParameter(format!(
+                "Confidence level ({}) is less than 0.5; this is unusual for confidence intervals",
+                confidence
+            )));
+        }
+        Ok(())
+    }
+
+    /// Validate that time series data has sufficient length for a model
+    pub fn validate_min_data_length(
+        data_length: usize,
+        min_required: usize,
+        model_name: &str,
+    ) -> Result<()> {
+        if data_length < min_required {
+            return Err(OxiError::InvalidParameter(format!(
+                "{} model requires at least {} data points, got {}",
+                model_name, min_required, data_length
+            )));
+        }
+        Ok(())
+    }
+
+    /// Validate that a parameter is non-negative
+    pub fn validate_non_negative(value: f64, param_name: &str) -> Result<()> {
+        if value < 0.0 {
+            return Err(OxiError::InvalidParameter(format!(
+                "Parameter {} must be non-negative, got {}",
+                param_name, value
+            )));
+        }
+        Ok(())
+    }
+
+    /// Validate that a parameter is positive
+    pub fn validate_positive(value: f64, param_name: &str) -> Result<()> {
+        if value <= 0.0 {
+            return Err(OxiError::InvalidParameter(format!(
+                "Parameter {} must be positive, got {}",
+                param_name, value
+            )));
+        }
+        Ok(())
+    }
+
+    /// Check for reasonable values in time series data
+    pub fn validate_data_quality(data: &[f64], name: &str) -> Result<()> {
+        if data.is_empty() {
+            return Err(OxiError::DataError(format!(
+                "Time series {} is empty",
+                name
+            )));
+        }
+
+        // Check for NaN or infinite values
+        for (i, &value) in data.iter().enumerate() {
+            if value.is_nan() {
+                return Err(OxiError::DataError(format!(
+                    "Time series {} contains NaN at index {}",
+                    name, i
+                )));
+            }
+            if value.is_infinite() {
+                return Err(OxiError::DataError(format!(
+                    "Time series {} contains infinite value at index {}",
+                    name, i
+                )));
+            }
+        }
+
+        // Check for extreme values (potentially indicating data issues)
+        let max_val = data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
+        let min_val = data.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+
+        if max_val / min_val.abs() > 1e10 {
+            return Err(OxiError::DataError(format!(
+                "Time series {} has extreme value range (min: {}, max: {}); consider scaling or transforming the data",
+                name, min_val, max_val
+            )));
+        }
+
+        Ok(())
+    }
+
+    /// Comprehensive validation for model fitting
+    pub fn validate_for_fitting(
+        data: &TimeSeriesData,
+        min_points: usize,
+        model_name: &str,
+    ) -> Result<()> {
+        // Check data quality
+        Self::validate_data_quality(&data.values, &data.name)?;
+
+        // Check minimum data length
+        Self::validate_min_data_length(data.values.len(), min_points, model_name)?;
+
+        // Check timestamps and values have same length
+        if data.timestamps.len() != data.values.len() {
+            return Err(OxiError::DataError(format!(
+                "Timestamps ({}) and values ({}) have different lengths",
+                data.timestamps.len(),
+                data.values.len()
+            )));
+        }
+
+        // Check for monotonic timestamps
+        for i in 1..data.timestamps.len() {
+            if data.timestamps[i] <= data.timestamps[i - 1] {
+                return Err(OxiError::DataError(format!(
+                    "Timestamps are not strictly increasing at index {}",
+                    i
+                )));
+            }
+        }
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -404,5 +651,215 @@ mod tests {
         assert_eq!(splits.len(), 3);
         assert!(splits[0].0.values.len() >= 4); // Minimum training size
         assert!(splits[1].0.values.len() > splits[0].0.values.len()); // Expanding
+    }
+}
+
+#[cfg(test)]
+mod extended_tests {
+    use super::*;
+    use crate::core::TimeSeriesData;
+    use chrono::{DateTime, TimeZone, Utc};
+
+    fn create_test_data() -> TimeSeriesData {
+        let timestamps = (0..10)
+            .map(|i| Utc.timestamp_opt(1609459200 + i * 86400, 0).unwrap())
+            .collect();
+        let values = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+        TimeSeriesData::new(timestamps, values, "test_series").unwrap()
+    }
+
+    #[test]
+    fn test_model_validator_arima_validation() {
+        assert!(ModelValidator::validate_arima_params(1, 1, 1).is_ok());
+        assert!(ModelValidator::validate_arima_params(5, 2, 3).is_ok());
+        assert!(ModelValidator::validate_arima_params(11, 1, 1).is_err());
+        assert!(ModelValidator::validate_arima_params(1, 11, 1).is_err());
+        assert!(ModelValidator::validate_arima_params(1, 1, 11).is_err());
+    }
+
+    #[test]
+    fn test_model_validator_smoothing_param() {
+        assert!(ModelValidator::validate_smoothing_param(0.1, "alpha").is_ok());
+        assert!(ModelValidator::validate_smoothing_param(0.5, "alpha").is_ok());
+        assert!(ModelValidator::validate_smoothing_param(0.9, "alpha").is_ok());
+        assert!(ModelValidator::validate_smoothing_param(0.0, "alpha").is_err());
+        assert!(ModelValidator::validate_smoothing_param(1.0, "alpha").is_err());
+        assert!(ModelValidator::validate_smoothing_param(-0.1, "alpha").is_err());
+        assert!(ModelValidator::validate_smoothing_param(1.1, "alpha").is_err());
+    }
+
+    #[test]
+    fn test_model_validator_seasonal_period() {
+        assert!(ModelValidator::validate_seasonal_period(2).is_ok());
+        assert!(ModelValidator::validate_seasonal_period(12).is_ok());
+        assert!(ModelValidator::validate_seasonal_period(365).is_ok());
+        assert!(ModelValidator::validate_seasonal_period(366).is_ok());
+        assert!(ModelValidator::validate_seasonal_period(0).is_err());
+        assert!(ModelValidator::validate_seasonal_period(1).is_err());
+        assert!(ModelValidator::validate_seasonal_period(367).is_err());
+    }
+
+    #[test]
+    fn test_model_validator_data_quality() {
+        let good_data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        assert!(ModelValidator::validate_data_quality(&good_data, "test").is_ok());
+
+        let nan_data = vec![1.0, f64::NAN, 3.0];
+        assert!(ModelValidator::validate_data_quality(&nan_data, "test").is_err());
+
+        let inf_data = vec![1.0, f64::INFINITY, 3.0];
+        assert!(ModelValidator::validate_data_quality(&inf_data, "test").is_err());
+
+        let empty_data: Vec<f64> = vec![];
+        assert!(ModelValidator::validate_data_quality(&empty_data, "test").is_err());
+    }
+
+    #[test]
+    fn test_model_validator_for_fitting() {
+        let data = create_test_data();
+        assert!(ModelValidator::validate_for_fitting(&data, 5, "TestModel").is_ok());
+        assert!(ModelValidator::validate_for_fitting(&data, 15, "TestModel").is_err());
+    }
+
+    #[test]
+    fn test_model_validator_min_data_length() {
+        assert!(ModelValidator::validate_min_data_length(10, 5, "TestModel").is_ok());
+        assert!(ModelValidator::validate_min_data_length(3, 5, "TestModel").is_err());
+    }
+
+    #[test]
+    fn test_model_validator_non_negative() {
+        assert!(ModelValidator::validate_non_negative(0.0, "param").is_ok());
+        assert!(ModelValidator::validate_non_negative(1.0, "param").is_ok());
+        assert!(ModelValidator::validate_non_negative(-1.0, "param").is_err());
+    }
+
+    #[test]
+    fn test_model_validator_positive() {
+        assert!(ModelValidator::validate_positive(1.0, "param").is_ok());
+        assert!(ModelValidator::validate_positive(0.1, "param").is_ok());
+        assert!(ModelValidator::validate_positive(0.0, "param").is_err());
+        assert!(ModelValidator::validate_positive(-1.0, "param").is_err());
+    }
+
+    #[test]
+    fn test_validation_utils_time_split_basic() {
+        let data = create_test_data();
+        let (train, test) = ValidationUtils::time_split(&data, 0.8).unwrap();
+
+        assert_eq!(train.len(), 8);
+        assert_eq!(test.len(), 2);
+        assert_eq!(train.values[7], 8.0);
+        assert_eq!(test.values[0], 9.0);
+    }
+
+    #[test]
+    fn test_validation_utils_time_split_edge_cases() {
+        let data = create_test_data();
+
+        // Invalid ratio
+        assert!(ValidationUtils::time_split(&data, -0.1).is_err());
+        assert!(ValidationUtils::time_split(&data, 1.1).is_err());
+    }
+
+    #[test]
+    fn test_validation_utils_accuracy_metrics() {
+        let actual = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        let predicted = vec![1.1, 1.9, 3.2, 3.8, 5.1];
+
+        let metrics = ValidationUtils::accuracy_metrics(&actual, &predicted, None).unwrap();
+
+        assert!(metrics.mae > 0.0);
+        assert!(metrics.mse > 0.0);
+        assert!(metrics.rmse > 0.0);
+        assert!(metrics.mape > 0.0);
+        assert!(metrics.smape > 0.0);
+        assert_eq!(metrics.n_observations, 5);
+
+        // RMSE should be sqrt of MSE
+        assert!((metrics.rmse - metrics.mse.sqrt()).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_validation_utils_accuracy_metrics_perfect() {
+        let actual = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+        let predicted = actual.clone();
+
+        let metrics = ValidationUtils::accuracy_metrics(&actual, &predicted, None).unwrap();
+
+        assert_eq!(metrics.mae, 0.0);
+        assert_eq!(metrics.mse, 0.0);
+        assert_eq!(metrics.rmse, 0.0);
+        assert_eq!(metrics.mape, 0.0);
+        assert_eq!(metrics.smape, 0.0);
+    }
+
+    #[test]
+    fn test_validation_utils_accuracy_metrics_errors() {
+        let actual = vec![1.0, 2.0, 3.0];
+        let predicted = vec![1.1, 1.9]; // Different length
+
+        assert!(ValidationUtils::accuracy_metrics(&actual, &predicted, None).is_err());
+
+        let empty_actual: Vec<f64> = vec![];
+        let empty_predicted: Vec<f64> = vec![];
+        assert!(ValidationUtils::accuracy_metrics(&empty_actual, &empty_predicted, None).is_err());
+    }
+
+    #[test]
+    fn test_validation_utils_time_series_cv() {
+        let data = create_test_data();
+        let folds = ValidationUtils::time_series_cv(&data, 3, Some(4)).unwrap();
+
+        assert!(folds.len() > 0);
+        assert!(folds.len() <= 3);
+
+        // Each fold should have training and test data
+        for (train, test) in &folds {
+            assert!(train.len() >= 4); // Minimum training size
+            assert!(test.len() > 0);
+        }
+    }
+
+    #[test]
+    fn test_validation_utils_cv_errors() {
+        let data = create_test_data();
+
+        // Zero splits
+        assert!(ValidationUtils::time_series_cv(&data, 0, None).is_err());
+
+        // Too many splits for data size
+        assert!(ValidationUtils::time_series_cv(&data, 20, None).is_err());
+    }
+
+    #[test]
+    fn test_backtest_config_default() {
+        let config = BacktestConfig::default();
+        assert_eq!(config.initial_window, 50);
+        assert_eq!(config.step_size, 1);
+        assert!(config.expanding_window);
+        assert_eq!(config.forecast_horizon, 1);
+    }
+
+    #[test]
+    fn test_accuracy_report_creation() {
+        let report = AccuracyReport {
+            mae: 1.0,
+            mse: 2.0,
+            rmse: 1.414,
+            mape: 10.0,
+            smape: 15.0,
+            mase: Some(1.2),
+            r_squared: 0.95,
+            n_observations: 100,
+        };
+
+        // Test basic report creation
+        assert_eq!(report.mae, 1.0);
+        assert_eq!(report.mse, 2.0);
+        assert_eq!(report.mase, Some(1.2));
+        assert_eq!(report.r_squared, 0.95);
+        assert_eq!(report.n_observations, 100);
+        assert!(report.rmse > 0.0);
     }
 }

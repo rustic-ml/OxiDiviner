@@ -64,9 +64,9 @@ impl EGARCHModel {
     /// A Result containing the EGARCHModel or an error
     pub fn new(p: usize, q: usize, params: Option<Vec<f64>>) -> Result<Self> {
         // Validate p and q
-        if p == 0 && q == 0 {
+        if p == 0 || q == 0 {
             return Err(OxiError::GarchInvalidParameters(
-                "Both p and q cannot be zero".to_string(),
+                "Both p and q must be greater than 0".to_string(),
             ));
         }
 

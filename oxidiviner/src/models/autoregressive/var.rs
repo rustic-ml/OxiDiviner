@@ -153,9 +153,10 @@ impl VARModel {
     /// * `Result<()>` - Success or error
     pub fn fit(&mut self, data: &TimeSeriesData) -> Result<()> {
         if self.k != 1 {
-            return Err(OxiError::ModelError(
-                format!("Cannot use fit() for VAR model with {} variables. Use fit_multiple() instead.", self.k)
-            ));
+            return Err(OxiError::ModelError(format!(
+                "Cannot use fit() for VAR model with {} variables. Use fit_multiple() instead.",
+                self.k
+            )));
         }
 
         let mut data_map = HashMap::new();
@@ -311,6 +312,18 @@ impl VARModel {
             let smape_value = smape(actual, forecast);
 
             let model_name = format!("{}-{}", self.name, var_name);
+            // Calculate R-squared
+            let actual_mean = actual.iter().sum::<f64>() / actual.len() as f64;
+            let tss = actual
+                .iter()
+                .map(|x| (x - actual_mean).powi(2))
+                .sum::<f64>();
+            let r_squared = if tss > 0.0 {
+                1.0 - (mse_value * actual.len() as f64) / tss
+            } else {
+                0.0
+            };
+
             let eval = ModelEvaluation {
                 model_name,
                 mae: mae_value,
@@ -318,6 +331,9 @@ impl VARModel {
                 rmse: rmse_value,
                 mape: mape_value,
                 smape: smape_value,
+                r_squared,
+                aic: None,
+                bic: None,
             };
 
             evaluations.insert(var_name.clone(), eval);
@@ -479,7 +495,7 @@ impl VARModel {
         // Sanity check: all time series should have the same length
         for i in 1..k {
             if data[i].len() != n {
-                                return Err(OxiError::DataError(
+                return Err(OxiError::DataError(
                     format!("Inconsistent time series lengths. Expected {} values, but got {} for series {}",
                         n, data[i].len(), i)
                 ));
