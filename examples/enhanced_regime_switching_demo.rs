@@ -117,17 +117,18 @@ fn multivariate_regime_demo(
     // Get regime parameters with error handling
     if let Some((means, _covariances)) = mv_model.get_regime_parameters() {
         println!("\nRegime-specific expected returns:");
-        for regime in 0..means.len() {
+        // Print regime means
+        for (regime, regime_means) in means.iter().enumerate() {
             let regime_name = match regime {
                 0 => "Low Risk",
                 1 => "High Risk",
                 _ => "Unknown",
             };
             println!("  {} Market:", regime_name);
-            if means[regime].len() >= 3 {
-                println!("    Stocks: {:.2}%", means[regime][0] * 100.0);
-                println!("    Bonds: {:.2}%", means[regime][1] * 100.0);
-                println!("    Commodities: {:.2}%", means[regime][2] * 100.0);
+            if regime_means.len() >= 3 {
+                println!("    Stocks: {:.2}%", regime_means[0] * 100.0);
+                println!("    Bonds: {:.2}%", regime_means[1] * 100.0);
+                println!("    Commodities: {:.2}%", regime_means[2] * 100.0);
             }
         }
     }
@@ -429,10 +430,10 @@ fn correlation_regime_analysis_demo(
                         }
                         println!();
 
-                        for (i, asset_i) in assets.iter().enumerate() {
-                            print!("{:>8} ", asset_i);
-                            for j in 0..assets.len() {
-                                print!("{:>10.3}", corr_matrix[i][j]);
+                        for (i, row) in corr_matrix.iter().enumerate().take(assets.len()) {
+                            print!("{:>8} ", assets[i]);
+                            for j in (i + 1)..assets.len() {
+                                print!("{:>10.3}", row[j]);
                             }
                             println!();
                         }
@@ -440,9 +441,9 @@ fn correlation_regime_analysis_demo(
                         // Calculate average correlation
                         let mut total_corr = 0.0;
                         let mut count = 0;
-                        for i in 0..assets.len() {
+                        for (i, row) in corr_matrix.iter().enumerate().take(assets.len()) {
                             for j in (i + 1)..assets.len() {
-                                total_corr += corr_matrix[i][j];
+                                total_corr += row[j];
                                 count += 1;
                             }
                         }

@@ -218,7 +218,7 @@ impl TARModel {
                 log_likelihood -= 0.5 * m as f64 * (2.0 * std::f64::consts::PI * residual_var).ln();
 
                 let mut ss_res = 0.0;
-                for (_i, &(t, _)) in regime_data.iter().enumerate() {
+                for &(t, _) in regime_data.iter() {
                     let mut fitted = coeffs[0];
                     for lag in 1..=ar_order {
                         if t >= lag {

@@ -549,8 +549,8 @@ impl HestonStochasticVolatilityModel {
                     let intrinsic =
                         (spot_price - strike * (-risk_free_rate * expiry).exp()).max(0.0);
                     let time_value = option_price - intrinsic;
-                    let rough_iv = (time_value / (spot_price * time_factor)).clamp(0.01, 2.0);
-                    rough_iv
+                    
+                    (time_value / (spot_price * time_factor)).clamp(0.01, 2.0)
                 } else {
                     0.01
                 };

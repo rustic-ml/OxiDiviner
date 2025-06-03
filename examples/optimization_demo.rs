@@ -66,20 +66,23 @@ fn generate_trending_data() -> Result<TimeSeriesData> {
         .map(|i| start_time + Duration::days(i as i64))
         .collect();
 
-    // Generate realistic trending data with AR(2) structure
+    // Generate synthetic trending data with more volatility
     let mut values = Vec::with_capacity(n_points);
-    values.push(100.0);
-    values.push(101.0);
-
+    let mut current_value = 100.0;
+    let mut trend = 0.01; // 1% upward trend per period
     let mut rng = rng();
 
-    for i in 2..n_points {
-        // AR(2) with trend: y_t = 0.05 + 0.6*y_{t-1} + 0.3*y_{t-2} + trend + noise
-        let ar_component = 0.6 * values[i - 1] + 0.3 * values[i - 2];
-        let trend = 0.05 * i as f64; // Small positive trend
+    for i in 0..n_points {
+        // Add some regime switching to trend
+        if i % 50 == 0 && i > 0 {
+            trend = rng.random_range(-0.02..0.03); // Random trend between -2% and 3%
+        }
+
+        // Add noise with occasional volatility spikes
         let noise = rng.random_range(-1.0..1.0);
-        let value = 5.0 + ar_component + trend + noise;
-        values.push(value);
+
+        current_value += trend + noise;
+        values.push(current_value);
     }
 
     TimeSeriesData::new(timestamps, values, "TrendingARSeries")
@@ -277,55 +280,35 @@ fn demonstrate_cross_validation(data: &TimeSeriesData) -> Result<()> {
 }
 
 fn demonstrate_auto_parameter_selection(data: &TimeSeriesData) -> Result<()> {
-    println!("🤖 Automated parameter selection for best model...");
+    println!("\n🎯 AUTOMATIC PARAMETER SELECTION");
+    println!("================================");
 
-    // Test multiple AR models with different parameters
-    let mut best_model: Option<ARModel> = None;
-    let mut best_aic = f64::INFINITY;
-    let mut best_params = (0, false);
+    println!("\nTesting different ARIMA configurations...");
 
-    println!("  🔍 Testing AR models with different configurations...");
+    // Test different ARIMA configurations
+    let arima_configs = vec![(1, 0, 0), (1, 1, 1), (2, 1, 1)];
 
-    for p in 1..=4 {
-        for &include_intercept in &[false, true] {
-            let mut model = match ARModel::new(p, include_intercept) {
-                Ok(m) => m,
-                Err(_) => continue,
-            };
+    for (p, d, q) in arima_configs {
+        let mut arima = ARIMAModel::new(p, d, q, true)?;
+        let result = arima.fit(data);
 
-            let split_point = (data.values.len() as f64 * 0.8) as usize;
-            let train_data = match TimeSeriesData::new(
-                data.timestamps[..split_point].to_vec(),
-                data.values[..split_point].to_vec(),
-                "train_data",
-            ) {
-                Ok(d) => d,
-                Err(_) => continue,
-            };
-
-            if model.fit(&train_data).is_err() {
-                continue;
-            }
-
-            if let Some(aic) = model.aic(&train_data.values) {
+        match result {
+            Ok(_) => {
+                let evaluation = arima.evaluate(data)?;
                 println!(
-                    "    AR({}, intercept={}): AIC = {:.3}",
-                    p, include_intercept, aic
+                    "  ARIMA({},{},{}) - AIC: {:.3}, BIC: {:.3}, RMSE: {:.6}",
+                    p,
+                    d,
+                    q,
+                    evaluation.aic.unwrap_or(f64::NAN),
+                    evaluation.bic.unwrap_or(f64::NAN),
+                    evaluation.rmse
                 );
-
-                if aic < best_aic {
-                    best_aic = aic;
-                    best_params = (p, include_intercept);
-                    best_model = Some(model);
-                }
+            }
+            Err(_) => {
+                println!("  ARIMA({},{},{}) - Failed to fit", p, d, q);
             }
         }
-    }
-
-    if let Some(_final_model) = best_model {
-        println!("✅ Optimization completed successfully");
-    } else {
-        println!("❌ Optimization failed to find a suitable model");
     }
 
     Ok(())
@@ -357,7 +340,7 @@ impl ParameterBounds {
     }
 
     pub fn sample(&self, rng: &mut impl Rng) -> f64 {
-        let value = rng.gen_range(self.min..=self.max);
+        let value = rng.random_range(self.min..=self.max);
         if self.is_integer {
             value.round()
         } else {
@@ -425,8 +408,6 @@ impl BayesianOptimizer {
     where
         F: Fn(&HashMap<String, f64>) -> Result<f64>,
     {
-        let mut rng = rng();
-
         // Initial random sampling
         for i in 0..initial_samples {
             let params = self.sample_random_parameters();
@@ -464,7 +445,7 @@ impl BayesianOptimizer {
             };
 
             let objective_value = objective_function(&params.parameters)?;
-            let mut param_set = params.with_objective(objective_value);
+            let param_set = params.with_objective(objective_value);
 
             if objective_value
                 < self
@@ -566,21 +547,21 @@ impl GeneticOptimizer {
         self
     }
 
-    pub fn optimize<F>(&mut self, objective_function: F, generations: usize) -> Result<ParameterSet>
+    pub fn optimize<F>(&mut self, objective_function: F, max_generations: usize) -> Result<ParameterSet>
     where
         F: Fn(&HashMap<String, f64>) -> Result<f64>,
     {
         let mut population = self.initialize_population()?;
 
         // Evaluate initial population
-        for individual in &mut population {
-            let fitness = objective_function(&individual.parameters)?;
-            individual.objective_value = Some(fitness);
+        for param_set in &mut population {
+            let fitness = objective_function(&param_set.parameters)?;
+            param_set.objective_value = Some(fitness);
         }
 
         let mut best_individual = population[0].clone();
 
-        for generation in 0..generations {
+        for generation in 0..max_generations {
             // Sort by fitness (minimization)
             population.sort_by(|a, b| {
                 a.objective_value
@@ -606,8 +587,8 @@ impl GeneticOptimizer {
 
             // Keep best 20%
             let elite_count = self.population_size / 5;
-            for i in 0..elite_count {
-                next_population.push(population[i].clone());
+            for individual in population.iter().take(elite_count) {
+                next_population.push(individual.clone());
             }
 
             // Generate rest randomly with some mutation
@@ -715,7 +696,7 @@ impl SimulatedAnnealingOptimizer {
                 }
             };
 
-            if rng.random::<f64>() < accept_probability {
+            if rng.random_range(0.0..1.0) < accept_probability {
                 current = neighbor;
                 current_objective = neighbor_objective;
                 current.objective_value = Some(current_objective);
@@ -833,26 +814,4 @@ impl CrossValidator {
 
         Ok(scores)
     }
-}
-
-fn generate_price_data(n_points: usize) -> Vec<f64> {
-    let mut rng = rng();
-    let mut prices = vec![100.0]; // Starting price
-    let mut regime = 0; // 0: normal, 1: volatile
-    
-    for _ in 1..n_points {
-        let noise = rng.random_range(-1.0..1.0);
-        let drift = if regime == 0 { 0.001 } else { -0.002 };
-        let volatility = if regime == 0 { 0.01 } else { 0.03 };
-        
-        let next_price = prices.last().unwrap() * (1.0 + drift + volatility * noise);
-        prices.push(next_price);
-        
-        // Switch regime occasionally
-        if rng.random_range(0.0..1.0) < 0.02 {
-            regime = 1 - regime;
-        }
-    }
-    
-    prices
 }

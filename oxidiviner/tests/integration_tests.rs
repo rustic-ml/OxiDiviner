@@ -2,8 +2,7 @@
 
 use chrono::{Duration, Utc};
 use oxidiviner::prelude::*;
-use rand::Rng;
-use rand::SeedableRng;
+use rand::{Rng, SeedableRng};
 
 // Helper function to generate test data with trend, seasonality, and noise
 fn generate_test_data(
@@ -29,7 +28,7 @@ fn generate_test_data(
         } else {
             0.0
         };
-        let noise = rng.random::<f64>() * 5.0 - 2.5;
+        let noise = rng.gen::<f64>() * 5.0 - 2.5;
 
         let value = 100.0 + trend_component + seasonal_component + noise;
 

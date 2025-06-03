@@ -237,7 +237,7 @@ impl STLModel {
         let mut detrended = data.to_vec();
 
         // Initialize trend using moving average
-        self.moving_average(&data, &mut trend)?;
+        self.moving_average(data, &mut trend)?;
 
         for _iteration in 0..self.max_iterations {
             // Step 1: Remove trend to get detrended series

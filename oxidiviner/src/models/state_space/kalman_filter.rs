@@ -24,8 +24,8 @@
 
 use crate::core::{Forecaster, ModelEvaluation, OxiError, Result, TimeSeriesData};
 use crate::math::metrics::{mae, mape, mse, rmse, smape};
-use chrono::{DateTime, Duration, Utc};
 use std::f64::consts::PI;
+use chrono::{DateTime, Duration, Utc};
 
 /// Kalman Filter for dynamic time series forecasting
 ///

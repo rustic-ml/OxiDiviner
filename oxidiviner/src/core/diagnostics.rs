@@ -436,8 +436,7 @@ impl ModelDiagnostics {
         let bp_statistic = acf_values
             .iter()
             .take(ljung_box_lags)
-            .enumerate()
-            .map(|(_i, &acf)| acf.powi(2))
+            .map(|&acf| acf.powi(2))
             .sum::<f64>()
             * n as f64;
         let bp_p_value = Self::chi_square_p_value(bp_statistic, ljung_box_lags as f64);

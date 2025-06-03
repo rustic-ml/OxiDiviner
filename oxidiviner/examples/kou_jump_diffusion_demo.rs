@@ -7,10 +7,10 @@
 //! - Comparison with Merton Jump-Diffusion model
 //! - Advanced options pricing with realistic jump distributions
 
-use chrono;
+use chrono::{DateTime, Duration, Utc};
+use oxidiviner::prelude::*;
 use oxidiviner::core::{Forecaster, TimeSeriesData};
 use oxidiviner::models::financial::{KouJumpDiffusionModel, MertonJumpDiffusionModel};
-use std::collections::HashMap;
 
 fn main() -> oxidiviner::Result<()> {
     println!("🚀 Kou Double-Exponential Jump-Diffusion Model Demo");
@@ -337,7 +337,7 @@ fn main() -> oxidiviner::Result<()> {
     println!("----------------------------------");
 
     // Generate synthetic market data with asymmetric characteristics
-    let market_data = generate_asymmetric_market_data(252 * 2, initial_price).unwrap(); // 2 years of daily data
+    let market_data = generate_asymmetric_market_data(252 * 2, initial_price)?; // 2 years of daily data
 
     println!(
         "  📊 Calibrating to {} observations with asymmetric jumps...",
@@ -359,9 +359,9 @@ fn main() -> oxidiviner::Result<()> {
         MertonJumpDiffusionModel::new(0.08, 0.25, 4.0, -0.02, 0.04, 1.0 / 252.0)?;
 
     // Fit both models
-    let now = chrono::Utc::now();
-    let timestamps: Vec<chrono::DateTime<chrono::Utc>> = (0..market_data.len())
-        .map(|i| now - chrono::Duration::days((market_data.len() - i - 1) as i64))
+    let now = Utc::now();
+    let timestamps: Vec<DateTime<Utc>> = (0..market_data.len())
+        .map(|i| now - Duration::days((market_data.len() - i - 1) as i64))
         .collect();
 
     let ts_data = TimeSeriesData {
@@ -499,7 +499,7 @@ fn calculate_percentile(returns: &[f64], percentile: f64) -> f64 {
 }
 
 /// Generate asymmetric market data with realistic crash/rally patterns
-fn generate_asymmetric_market_data(n: usize, initial_price: f64) -> Result<Vec<f64>, &'static str> {
+fn generate_asymmetric_market_data(n: usize, initial_price: f64) -> oxidiviner::Result<Vec<f64>> {
     use rand::prelude::*;
     use rand_distr::{Exp, Normal};
 
@@ -515,8 +515,8 @@ fn generate_asymmetric_market_data(n: usize, initial_price: f64) -> Result<Vec<f
     // Asymmetric jump parameters
     let jump_prob = 0.025; // 2.5% chance per day
     let upward_jump_prob = 0.3; // 30% of jumps are upward
-    let upward_exp = Exp::new(12.0).map_err(|_| "Failed to create upward exponential")?;
-    let downward_exp = Exp::new(20.0).map_err(|_| "Failed to create downward exponential")?;
+    let upward_exp = Exp::new(12.0).map_err(|_| OxiError::ModelError("Failed to create upward exponential".to_string()))?;
+    let downward_exp = Exp::new(20.0).map_err(|_| OxiError::ModelError("Failed to create downward exponential".to_string()))?;
 
     let mut current_vol = base_vol;
 
@@ -530,7 +530,7 @@ fn generate_asymmetric_market_data(n: usize, initial_price: f64) -> Result<Vec<f
 
         // Normal return component
         let mut return_val = rng
-            .sample(Normal::new(daily_drift, current_vol).map_err(|_| "Failed to create normal")?);
+            .sample(Normal::new(daily_drift, current_vol).map_err(|_| OxiError::ModelError("Failed to create normal".to_string()))?);
 
         // Asymmetric jump events
         if rng.gen::<f64>() < jump_prob {
