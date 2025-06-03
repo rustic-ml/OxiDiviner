@@ -399,11 +399,19 @@ impl GJRGARCHModel {
 
             // Add ARCH and asymmetry components
             for i in 0..p {
-                if h <= i {
+                if h <= i + 1 {
                     // We have actual residuals available
-                    let eps_squared = residuals[n - h + i].powi(2);
-                    let indicator = if residuals[n - h + i] < 0.0 { 1.0 } else { 0.0 };
-                    var_h += self.alpha[i] * eps_squared + self.gamma[i] * eps_squared * indicator;
+                    let residual_idx = n - h + i;
+                    if residual_idx < n {
+                        let eps_squared = residuals[residual_idx].powi(2);
+                        let indicator = if residuals[residual_idx] < 0.0 {
+                            1.0
+                        } else {
+                            0.0
+                        };
+                        var_h +=
+                            self.alpha[i] * eps_squared + self.gamma[i] * eps_squared * indicator;
+                    }
                 } else {
                     // Expected value of future squared residuals is the variance
                     // Expected value of indicator is 0.5 under zero mean normality
@@ -417,7 +425,10 @@ impl GJRGARCHModel {
             for j in 0..q {
                 if h <= j + 1 {
                     // We have actual variances available
-                    var_h += self.beta[j] * variance[n - h + j + 1];
+                    let variance_idx = n - h + j;
+                    if variance_idx < n {
+                        var_h += self.beta[j] * variance[variance_idx];
+                    }
                 } else if h > j + 1 && h - j - 2 < forecast.len() {
                     // Use previously forecasted variances
                     var_h += self.beta[j] * forecast[h - j - 2];

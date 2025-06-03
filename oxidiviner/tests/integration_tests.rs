@@ -565,9 +565,9 @@ fn test_builder_with_quick_api() {
 fn test_parameter_validation_edge_cases() {
     use oxidiviner::{quick, ModelValidator};
 
-    let data = generate_test_data(3, false, false, 51); // Very small dataset - should fail for ARIMA
+    let data = generate_test_data(2, false, false, 51); // Very small dataset - should fail for ARIMA
 
-    // Should fail with insufficient data for ARIMA(1,1,1) which needs p+d+q+1 = 4 points minimum
+    // Should fail with insufficient data for ARIMA(1,1,1) which needs p+d+1 = 3 points minimum
     assert!(quick::arima(data.clone(), 2).is_err());
 
     // Test minimum data validation

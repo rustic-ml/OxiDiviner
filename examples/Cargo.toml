@@ -102,4 +102,19 @@ path = "garch-models/basic_garch_example.rs"
 
 [[bin]]
 name = "stock_volatility_analysis"
-path = "garch-models/stock_volatility_analysis.rs" 
+path = "garch-models/stock_volatility_analysis.rs"
+
+# Accuracy Measurement
+[[bin]]
+name = "accuracy_measurement"
+path = "accuracy_measurement.rs"
+
+# Accuracy Improvements
+[[bin]]
+name = "accuracy_improvements"
+path = "accuracy_improvements.rs"
+
+# Phase 2: Advanced Optimization Demo
+[[bin]]
+name = "optimization_demo"
+path = "optimization_demo.rs" 

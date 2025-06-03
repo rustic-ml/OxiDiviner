@@ -172,6 +172,129 @@ impl ARIMAModel {
     pub fn intercept(&self) -> Option<f64> {
         self.arma_model.as_ref()?.intercept()
     }
+
+    /// Forecast with confidence intervals using bootstrap simulation
+    pub fn forecast_with_confidence(
+        &self,
+        horizon: usize,
+        confidence: f64,
+    ) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>)> {
+        if confidence <= 0.0 || confidence >= 1.0 {
+            return Err(OxiError::InvalidParameter(
+                "Confidence level must be between 0 and 1".to_string(),
+            ));
+        }
+
+        if self.arma_model.is_none() || self.last_values.is_none() {
+            return Err(OxiError::ARNotFitted);
+        }
+
+        // Get point forecasts
+        let point_forecasts = self.forecast(horizon)?;
+
+        // Get residuals from the ARMA model for bootstrap
+        let arma = self.arma_model.as_ref().unwrap();
+        let residuals = arma.residuals().ok_or_else(|| {
+            OxiError::ModelError("No residuals available for confidence intervals".to_string())
+        })?;
+
+        // Calculate residual standard deviation
+        let residual_std = {
+            let mean_residual = residuals.iter().sum::<f64>() / residuals.len() as f64;
+            let variance = residuals
+                .iter()
+                .map(|r| (r - mean_residual).powi(2))
+                .sum::<f64>()
+                / (residuals.len() - 1) as f64;
+            variance.sqrt()
+        };
+
+        // For ARIMA models, we can use analytical approximation for confidence intervals
+        // The forecast error variance increases with horizon
+        let alpha = 1.0 - confidence;
+        let z_score = Self::normal_quantile(1.0 - alpha / 2.0);
+
+        let mut lower_bounds = Vec::with_capacity(horizon);
+        let mut upper_bounds = Vec::with_capacity(horizon);
+
+        for h in 0..horizon {
+            // Forecast error variance increases with horizon for ARIMA models
+            // This is a simplified approximation - in practice, you'd calculate the exact MSE
+            let forecast_std = residual_std * (1.0 + h as f64 * 0.1).sqrt();
+
+            lower_bounds.push(point_forecasts[h] - z_score * forecast_std);
+            upper_bounds.push(point_forecasts[h] + z_score * forecast_std);
+        }
+
+        Ok((point_forecasts, lower_bounds, upper_bounds))
+    }
+
+    /// Calculate the normal quantile (inverse CDF) using Box-Muller approximation
+    fn normal_quantile(p: f64) -> f64 {
+        if p <= 0.0 {
+            return f64::NEG_INFINITY;
+        }
+        if p >= 1.0 {
+            return f64::INFINITY;
+        }
+        if (p - 0.5).abs() < 1e-10 {
+            return 0.0;
+        }
+
+        let a = [
+            -3.969_683_028_665_376e1,
+            2.209_460_984_245_205e2,
+            -2.759_285_104_469_687e2,
+            1.383_577_518_672_69e2,
+            -3.066_479_806_614_716e1,
+            2.506_628_277_459_239,
+        ];
+
+        let b = [
+            -5.447_609_879_822_406e1,
+            1.615_858_368_580_409e2,
+            -1.556_989_798_598_866e2,
+            6.680_131_188_771_972e1,
+            -1.328_068_155_288_572e1,
+        ];
+
+        let c = [
+            -7.784_894_002_430_293e-3,
+            -3.223_964_580_411_365e-1,
+            -2.400_758_277_161_838,
+            -2.549_732_539_343_734,
+            4.374_664_141_464_968,
+            2.938_163_982_698_783,
+        ];
+
+        let d = [
+            7.784_695_709_041_462e-3,
+            3.224_671_290_700_398e-1,
+            2.445_134_137_142_996,
+            3.754_408_661_907_416,
+        ];
+
+        let p_low = 0.02425;
+        let p_high = 1.0 - p_low;
+
+        if p < p_low {
+            // Rational approximation for lower region
+            let q = (-2.0 * p.ln()).sqrt();
+            (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5])
+                / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0)
+        } else if p <= p_high {
+            // Rational approximation for central region
+            let q = p - 0.5;
+            let r = q * q;
+            (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q
+                / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1.0)
+        } else {
+            // Rational approximation for upper region
+            let q = (-2.0 * (1.0 - p).ln()).sqrt();
+            -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5])
+                / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0)
+        }
+    }
 }
 
 impl Forecaster for ARIMAModel {
@@ -213,8 +336,7 @@ impl Forecaster for ARIMAModel {
         .map_err(|e| OxiError::ModelError(format!("Failed to create differenced series: {}", e)))?;
 
         // Create and fit an ARMA model on the differenced data
-        let mut arma =
-            ARMAModel::new(self.p, self.q, self.include_intercept).map_err(OxiError::from)?;
+        let mut arma = ARMAModel::new(self.p, self.q, self.include_intercept)?;
 
         arma.fit(&differenced_series)?;
 
@@ -277,8 +399,8 @@ impl Forecaster for ARIMAModel {
             mape,
             smape,
             r_squared,
-            aic: None, // Can be computed but not implemented yet
-            bic: None, // Can be computed but not implemented yet
+            aic: self.arma_model.as_ref().and_then(|arma| arma.aic()),
+            bic: self.arma_model.as_ref().and_then(|arma| arma.bic()),
         })
     }
 

@@ -249,6 +249,69 @@ impl ARModel {
 
         Ok(x)
     }
+
+    /// Calculate residuals (errors) from fitted values
+    fn calculate_residuals(&self, data: &[f64]) -> Option<Vec<f64>> {
+        if let Some(ref fitted) = self.fitted_values {
+            if fitted.len() <= data.len() {
+                let start_idx = data.len() - fitted.len();
+                let residuals = fitted
+                    .iter()
+                    .zip(&data[start_idx..])
+                    .map(|(f, d)| d - f)
+                    .collect();
+                Some(residuals)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Calculate log-likelihood for the fitted AR model
+    fn log_likelihood(&self, data: &[f64]) -> Option<f64> {
+        if let Some(residuals) = self.calculate_residuals(data) {
+            let n = residuals.len() as f64;
+            let sigma_squared = residuals.iter().map(|r| r * r).sum::<f64>() / n;
+
+            if sigma_squared > 0.0 {
+                // Log-likelihood for AR model (assuming normal errors)
+                let log_lik = -0.5 * n * (2.0 * std::f64::consts::PI * sigma_squared).ln()
+                    - 0.5 * residuals.iter().map(|r| r * r).sum::<f64>() / sigma_squared;
+                Some(log_lik)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Calculate Akaike Information Criterion (AIC)
+    pub fn aic(&self, data: &[f64]) -> Option<f64> {
+        if let Some(log_lik) = self.log_likelihood(data) {
+            let k = self.p + if self.include_intercept { 1 } else { 0 };
+            Some(-2.0 * log_lik + 2.0 * k as f64)
+        } else {
+            None
+        }
+    }
+
+    /// Calculate Bayesian Information Criterion (BIC)
+    pub fn bic(&self, data: &[f64]) -> Option<f64> {
+        if let Some(log_lik) = self.log_likelihood(data) {
+            let n = if let Some(residuals) = self.calculate_residuals(data) {
+                residuals.len() as f64
+            } else {
+                return None;
+            };
+            let k = self.p + if self.include_intercept { 1 } else { 0 };
+            Some(-2.0 * log_lik + k as f64 * n.ln())
+        } else {
+            None
+        }
+    }
 }
 
 impl Forecaster for ARModel {
@@ -364,8 +427,8 @@ impl Forecaster for ARModel {
                     0.0
                 }
             },
-            aic: None, // Can be computed but not implemented yet
-            bic: None, // Can be computed but not implemented yet
+            aic: self.aic(&test_data.values),
+            bic: self.bic(&test_data.values),
         })
     }
 

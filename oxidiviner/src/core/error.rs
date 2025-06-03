@@ -184,6 +184,11 @@ pub enum OxiError {
     /// Invalid lag value in math operation
     #[error("Math invalid lag value: {0}")]
     MathInvalidLag(usize),
+
+    // Optimization-specific errors
+    /// Error related to optimization operations
+    #[error("Optimization Error: {0}")]
+    OptimizationError(String),
 }
 
 /// Unified Result type for all OxiDiviner operations

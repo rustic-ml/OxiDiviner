@@ -294,13 +294,13 @@ impl Forecaster for SARIMAModel {
         .map_err(|e| OxiError::ModelError(format!("Failed to create differenced series: {}", e)))?;
 
         // Create and fit an ARIMA model on the seasonally differenced data
-        let mut arima = ARIMAModel::new(combined_p, self.d, combined_q, self.include_intercept)
-            .map_err(OxiError::from)?;
+        let mut arima_model =
+            ARIMAModel::new(combined_p, self.d, combined_q, self.include_intercept)?;
 
-        arima.fit(&differenced_series)?;
+        arima_model.fit(&differenced_series)?;
 
         // Store the fitted ARIMA model
-        self.arima_model = Some(arima);
+        self.arima_model = Some(arima_model);
 
         Ok(())
     }

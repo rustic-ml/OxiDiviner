@@ -120,6 +120,8 @@ pub struct ETSModel {
     seasonal: Option<Vec<f64>>,
     /// Fitted values over the training period
     fitted_values: Option<Vec<f64>>,
+    /// Training data (stored for AIC/BIC calculation)
+    training_data: Option<Vec<f64>>,
 }
 
 impl ETSModel {
@@ -231,6 +233,7 @@ impl ETSModel {
             trend: None,
             seasonal: None,
             fitted_values: None,
+            training_data: None,
         })
     }
 
@@ -346,166 +349,228 @@ impl ETSModel {
     pub fn fitted_values(&self) -> Option<&Vec<f64>> {
         self.fitted_values.as_ref()
     }
-}
 
-impl Forecaster for ETSModel {
-    fn name(&self) -> &str {
-        &self.name
+    /// Calculate AIC for the ETS model
+    pub fn aic(&self) -> Option<f64> {
+        if let (Some(ref fitted), Some(ref training_data)) =
+            (&self.fitted_values, &self.training_data)
+        {
+            if fitted.len() == training_data.len() {
+                let residuals: Vec<f64> = training_data
+                    .iter()
+                    .zip(fitted.iter())
+                    .map(|(actual, fitted)| actual - fitted)
+                    .collect();
+
+                let n = residuals.len() as f64;
+                let sigma_squared = residuals.iter().map(|r| r * r).sum::<f64>() / n;
+
+                if sigma_squared > 0.0 {
+                    // Calculate number of parameters
+                    let mut k = 1.0; // alpha parameter
+                    if self.trend_type != TrendType::None {
+                        k += 1.0; // beta parameter
+                    }
+                    if self.trend_type == TrendType::DampedAdditive
+                        || self.trend_type == TrendType::DampedMultiplicative
+                    {
+                        k += 1.0; // phi parameter
+                    }
+                    if self.seasonal_type != SeasonalType::None {
+                        k += 1.0; // gamma parameter
+                        if let Some(period) = self.period {
+                            k += (period - 1) as f64; // seasonal components
+                        }
+                    }
+
+                    // Log-likelihood calculation
+                    let log_lik = -0.5 * n * (2.0 * std::f64::consts::PI * sigma_squared).ln()
+                        - 0.5 * residuals.iter().map(|r| r * r).sum::<f64>() / sigma_squared;
+
+                    Some(-2.0 * log_lik + 2.0 * k)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
 
-    fn fit(&mut self, data: &TimeSeriesData) -> Result<()> {
+    /// Calculate BIC for the ETS model
+    pub fn bic(&self) -> Option<f64> {
+        if let (Some(ref fitted), Some(ref training_data)) =
+            (&self.fitted_values, &self.training_data)
+        {
+            if fitted.len() == training_data.len() {
+                let residuals: Vec<f64> = training_data
+                    .iter()
+                    .zip(fitted.iter())
+                    .map(|(actual, fitted)| actual - fitted)
+                    .collect();
+
+                let n = residuals.len() as f64;
+                let sigma_squared = residuals.iter().map(|r| r * r).sum::<f64>() / n;
+
+                if sigma_squared > 0.0 {
+                    // Calculate number of parameters
+                    let mut k = 1.0; // alpha parameter
+                    if self.trend_type != TrendType::None {
+                        k += 1.0; // beta parameter
+                    }
+                    if self.trend_type == TrendType::DampedAdditive
+                        || self.trend_type == TrendType::DampedMultiplicative
+                    {
+                        k += 1.0; // phi parameter
+                    }
+                    if self.seasonal_type != SeasonalType::None {
+                        k += 1.0; // gamma parameter
+                        if let Some(period) = self.period {
+                            k += (period - 1) as f64; // seasonal components
+                        }
+                    }
+
+                    // Log-likelihood calculation
+                    let log_lik = -0.5 * n * (2.0 * std::f64::consts::PI * sigma_squared).ln()
+                        - 0.5 * residuals.iter().map(|r| r * r).sum::<f64>() / sigma_squared;
+
+                    Some(-2.0 * log_lik + k * n.ln())
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    fn fit_internal(&mut self, data: &TimeSeriesData) -> Result<()> {
         if data.is_empty() {
             return Err(OxiError::ESEmptyData);
         }
 
         let n = data.values.len();
-        let min_size = match self.seasonal_type {
-            SeasonalType::None => 2,
-            _ => 2 * self.period.unwrap(),
-        };
 
-        if n < min_size {
-            return Err(OxiError::ESInsufficientData {
-                actual: n,
-                expected: min_size,
-            });
-        }
+        // Initialize level, trend, and seasonal components
+        let mut level = data.values[0];
+        let mut trend = 0.0;
+        let mut seasonal = Vec::new();
 
-        // Setup initial values
-        match (self.trend_type, self.seasonal_type) {
-            // Simple Exponential Smoothing
-            (TrendType::None, SeasonalType::None) => {
-                self.level = Some(data.values[0]);
-                self.trend = None;
-                self.seasonal = None;
+        // Initialize seasonal components if needed
+        if self.seasonal_type != SeasonalType::None {
+            let period = self.period.unwrap();
+
+            if n < 2 * period {
+                return Err(OxiError::ESInsufficientData {
+                    actual: n,
+                    expected: 2 * period,
+                });
             }
 
-            // Holt's Linear Method (with or without damping)
-            (TrendType::Additive | TrendType::DampedAdditive, SeasonalType::None) => {
-                self.level = Some(data.values[0]);
-                self.trend = Some(data.values[1] - data.values[0]);
-                self.seasonal = None;
-            }
+            seasonal = vec![1.0; period]; // Default seasonal factors
 
-            // Holt-Winters Methods
-            (
-                TrendType::Additive | TrendType::DampedAdditive,
-                SeasonalType::Additive | SeasonalType::Multiplicative,
-            ) => {
-                let period = self.period.unwrap();
+            // Initialize seasonal factors
+            for s in 0..period {
+                let mut sum = 0.0;
+                let mut count = 0;
 
-                // Initialize level as average of first season
-                self.level = Some(data.values[0..period].iter().sum::<f64>() / period as f64);
-
-                // Initialize trend using first two seasons
-                let first_season_avg = data.values[0..period].iter().sum::<f64>() / period as f64;
-                let second_season_avg =
-                    data.values[period..2 * period].iter().sum::<f64>() / period as f64;
-                self.trend = Some((second_season_avg - first_season_avg) / period as f64);
-
-                // Initialize seasonal components
-                let mut seasonal = vec![0.0; period];
-                if self.seasonal_type == SeasonalType::Additive {
-                    // Additive seasonality
-                    for i in 0..period {
-                        seasonal[i] = data.values[i] - self.level.unwrap();
-                    }
-                } else {
-                    // Multiplicative seasonality
-                    for i in 0..period {
-                        seasonal[i] = data.values[i] / self.level.unwrap();
+                for i in (s..n).step_by(period) {
+                    if i < n {
+                        sum += data.values[i];
+                        count += 1;
                     }
                 }
-                self.seasonal = Some(seasonal);
-            }
 
-            // Unsupported model types
-            _ => {
-                return Err(OxiError::ESUnsupportedModelType(format!(
-                    "ETS({},{},{})",
-                    self.error_type, self.trend_type, self.seasonal_type
-                )));
+                if count > 0 {
+                    let avg = sum / count as f64;
+                    seasonal[s] = match self.seasonal_type {
+                        SeasonalType::Additive => avg - level,
+                        SeasonalType::Multiplicative => {
+                            if level != 0.0 {
+                                avg / level
+                            } else {
+                                1.0
+                            }
+                        }
+                        SeasonalType::None => 1.0,
+                    };
+                }
             }
         }
 
-        // Prepare to store fitted values
+        // Initialize trend if needed
+        if self.trend_type != TrendType::None && n > 1 {
+            trend = data.values[1] - data.values[0];
+        }
+
         let mut fitted_values = Vec::with_capacity(n);
 
-        // Initialize with the first-step forecast
-        match (self.trend_type, self.seasonal_type) {
-            (TrendType::None, SeasonalType::None) => {
-                fitted_values.push(self.level.unwrap());
-            }
-            (TrendType::Additive | TrendType::DampedAdditive, SeasonalType::None) => {
-                fitted_values.push(self.level.unwrap());
-                fitted_values.push(self.level.unwrap() + self.trend.unwrap());
-            }
-            (TrendType::Additive | TrendType::DampedAdditive, SeasonalType::Additive) => {
-                let period = self.period.unwrap();
-                let level = self.level.unwrap();
-                let _trend = self.trend.unwrap();
-                let seasonal = self.seasonal.as_ref().unwrap();
-
-                for i in 0..period {
-                    fitted_values.push(level + seasonal[i]);
-                }
-            }
-            (TrendType::Additive | TrendType::DampedAdditive, SeasonalType::Multiplicative) => {
-                let period = self.period.unwrap();
-                let level = self.level.unwrap();
-                let seasonal = self.seasonal.as_ref().unwrap();
-
-                for i in 0..period {
-                    fitted_values.push(level * seasonal[i]);
-                }
-            }
-            _ => {
-                return Err(OxiError::ESUnsupportedModelType(format!(
-                    "ETS({},{},{})",
-                    self.error_type, self.trend_type, self.seasonal_type
-                )));
-            }
-        }
-
-        // Apply the model recursively to update parameters
-        let start_idx = match self.seasonal_type {
-            SeasonalType::None => 1,
-            _ => self.period.unwrap(),
-        };
-
-        let mut level = self.level.unwrap();
-        let mut trend = self.trend.unwrap_or(0.0);
-        let mut seasonal = self.seasonal.clone().unwrap_or_default();
-
-        for i in start_idx..n {
-            let s_idx = if self.seasonal_type != SeasonalType::None {
-                i % self.period.unwrap()
-            } else {
-                0
-            };
-
-            // Store the forecast for this step
+        // Apply exponential smoothing
+        for i in 0..n {
+            // Forecast for this period using previous parameters
             let forecast = match (self.trend_type, self.seasonal_type) {
                 (TrendType::None, SeasonalType::None) => level,
                 (TrendType::Additive, SeasonalType::None) => level + trend,
+                (TrendType::Multiplicative, SeasonalType::None) => level * trend,
                 (TrendType::DampedAdditive, SeasonalType::None) => {
                     level + self.phi.unwrap() * trend
                 }
-                (TrendType::Additive, SeasonalType::Additive) => level + trend + seasonal[s_idx],
-                (TrendType::DampedAdditive, SeasonalType::Additive) => {
-                    level + self.phi.unwrap() * trend + seasonal[s_idx]
+                (TrendType::DampedMultiplicative, SeasonalType::None) => {
+                    level * trend.powf(self.phi.unwrap())
+                }
+                (TrendType::None, SeasonalType::Additive) => {
+                    let period = self.period.unwrap();
+                    let s_idx = i % period;
+                    level + seasonal[s_idx]
+                }
+                (TrendType::None, SeasonalType::Multiplicative) => {
+                    let period = self.period.unwrap();
+                    let s_idx = i % period;
+                    level * seasonal[s_idx]
+                }
+                (TrendType::Additive, SeasonalType::Additive) => {
+                    let period = self.period.unwrap();
+                    let s_idx = i % period;
+                    level + trend + seasonal[s_idx]
                 }
                 (TrendType::Additive, SeasonalType::Multiplicative) => {
+                    let period = self.period.unwrap();
+                    let s_idx = i % period;
                     (level + trend) * seasonal[s_idx]
                 }
+                (TrendType::Multiplicative, SeasonalType::Additive) => {
+                    let period = self.period.unwrap();
+                    let s_idx = i % period;
+                    level * trend + seasonal[s_idx]
+                }
+                (TrendType::Multiplicative, SeasonalType::Multiplicative) => {
+                    let period = self.period.unwrap();
+                    let s_idx = i % period;
+                    level * trend * seasonal[s_idx]
+                }
+                (TrendType::DampedAdditive, SeasonalType::Additive) => {
+                    let period = self.period.unwrap();
+                    let s_idx = i % period;
+                    level + self.phi.unwrap() * trend + seasonal[s_idx]
+                }
                 (TrendType::DampedAdditive, SeasonalType::Multiplicative) => {
+                    let period = self.period.unwrap();
+                    let s_idx = i % period;
                     (level + self.phi.unwrap() * trend) * seasonal[s_idx]
                 }
-                _ => {
-                    return Err(OxiError::ESUnsupportedModelType(format!(
-                        "ETS({},{},{})",
-                        self.error_type, self.trend_type, self.seasonal_type
-                    )));
+                (TrendType::DampedMultiplicative, SeasonalType::Additive) => {
+                    let period = self.period.unwrap();
+                    let s_idx = i % period;
+                    level * trend.powf(self.phi.unwrap()) + seasonal[s_idx]
+                }
+                (TrendType::DampedMultiplicative, SeasonalType::Multiplicative) => {
+                    let period = self.period.unwrap();
+                    let s_idx = i % period;
+                    level * trend.powf(self.phi.unwrap()) * seasonal[s_idx]
                 }
             };
 
@@ -526,13 +591,62 @@ impl Forecaster for ETSModel {
                         + (1.0 - self.beta.unwrap()) * trend;
                 }
 
-                // Damped Trend Method
+                // Multiplicative Trend
+                (TrendType::Multiplicative, SeasonalType::None) => {
+                    let old_level = level;
+                    if level != 0.0 {
+                        level = self.alpha * data.values[i] + (1.0 - self.alpha) * level * trend;
+                        trend = self.beta.unwrap() * (level / old_level)
+                            + (1.0 - self.beta.unwrap()) * trend;
+                    }
+                }
+
+                // Damped Additive Trend Method
                 (TrendType::DampedAdditive, SeasonalType::None) => {
                     let old_level = level;
                     level = self.alpha * data.values[i]
                         + (1.0 - self.alpha) * (level + self.phi.unwrap() * trend);
                     trend = self.beta.unwrap() * (level - old_level)
                         + (1.0 - self.beta.unwrap()) * self.phi.unwrap() * trend;
+                }
+
+                // Damped Multiplicative Trend Method
+                (TrendType::DampedMultiplicative, SeasonalType::None) => {
+                    let old_level = level;
+                    if level != 0.0 {
+                        level = self.alpha * data.values[i]
+                            + (1.0 - self.alpha) * level * trend.powf(self.phi.unwrap());
+                        trend = self.beta.unwrap()
+                            * (level / old_level).powf(1.0 / self.phi.unwrap())
+                            + (1.0 - self.beta.unwrap()) * trend;
+                    }
+                }
+
+                // Seasonal only (no trend)
+                (TrendType::None, SeasonalType::Additive) => {
+                    let period = self.period.unwrap();
+                    let s_idx = i % period;
+                    let prev_s_idx = (i + period - (period % n)) % period;
+
+                    level = self.alpha * (data.values[i] - seasonal[prev_s_idx])
+                        + (1.0 - self.alpha) * level;
+                    seasonal[s_idx] = self.gamma.unwrap() * (data.values[i] - level)
+                        + (1.0 - self.gamma.unwrap()) * seasonal[prev_s_idx];
+                }
+
+                (TrendType::None, SeasonalType::Multiplicative) => {
+                    let period = self.period.unwrap();
+                    let s_idx = i % period;
+                    let prev_s_idx = (i + period - (period % n)) % period;
+
+                    if seasonal[prev_s_idx] != 0.0 {
+                        level = self.alpha * (data.values[i] / seasonal[prev_s_idx])
+                            + (1.0 - self.alpha) * level;
+                        if level != 0.0 {
+                            seasonal[s_idx] = self.gamma.unwrap() * (data.values[i] / level)
+                                + (1.0 - self.gamma.unwrap()) * seasonal[prev_s_idx];
+                        }
+                    }
                 }
 
                 // Additive Holt-Winters
@@ -557,20 +671,128 @@ impl Forecaster for ETSModel {
                     let s_idx = i % period;
                     let prev_s_idx = (i + period - (period % n)) % period;
 
-                    level = self.alpha * (data.values[i] / seasonal[prev_s_idx])
-                        + (1.0 - self.alpha) * (level + trend);
-                    trend = self.beta.unwrap() * (level - old_level)
-                        + (1.0 - self.beta.unwrap()) * trend;
-                    seasonal[s_idx] = self.gamma.unwrap() * (data.values[i] / level)
+                    if seasonal[prev_s_idx] != 0.0 {
+                        level = self.alpha * (data.values[i] / seasonal[prev_s_idx])
+                            + (1.0 - self.alpha) * (level + trend);
+                        trend = self.beta.unwrap() * (level - old_level)
+                            + (1.0 - self.beta.unwrap()) * trend;
+                        if level != 0.0 {
+                            seasonal[s_idx] = self.gamma.unwrap() * (data.values[i] / level)
+                                + (1.0 - self.gamma.unwrap()) * seasonal[prev_s_idx];
+                        }
+                    }
+                }
+
+                // Multiplicative trend with additive seasonality
+                (TrendType::Multiplicative, SeasonalType::Additive) => {
+                    let old_level = level;
+                    let period = self.period.unwrap();
+                    let s_idx = i % period;
+                    let prev_s_idx = (i + period - (period % n)) % period;
+
+                    level = self.alpha * (data.values[i] - seasonal[prev_s_idx])
+                        + (1.0 - self.alpha) * level * trend;
+                    if old_level != 0.0 {
+                        trend = self.beta.unwrap() * (level / old_level)
+                            + (1.0 - self.beta.unwrap()) * trend;
+                    }
+                    seasonal[s_idx] = self.gamma.unwrap() * (data.values[i] - level)
                         + (1.0 - self.gamma.unwrap()) * seasonal[prev_s_idx];
                 }
 
-                // Other combinations are not yet implemented
-                _ => {
-                    return Err(OxiError::ESUnsupportedModelType(format!(
-                        "ETS({},{},{})",
-                        self.error_type, self.trend_type, self.seasonal_type
-                    )));
+                // Multiplicative trend with multiplicative seasonality
+                (TrendType::Multiplicative, SeasonalType::Multiplicative) => {
+                    let old_level = level;
+                    let period = self.period.unwrap();
+                    let s_idx = i % period;
+                    let prev_s_idx = (i + period - (period % n)) % period;
+
+                    if seasonal[prev_s_idx] != 0.0 {
+                        level = self.alpha * (data.values[i] / seasonal[prev_s_idx])
+                            + (1.0 - self.alpha) * level * trend;
+                        if old_level != 0.0 {
+                            trend = self.beta.unwrap() * (level / old_level)
+                                + (1.0 - self.beta.unwrap()) * trend;
+                        }
+                        if level != 0.0 {
+                            seasonal[s_idx] = self.gamma.unwrap() * (data.values[i] / level)
+                                + (1.0 - self.gamma.unwrap()) * seasonal[prev_s_idx];
+                        }
+                    }
+                }
+
+                // Damped additive trend with additive seasonality
+                (TrendType::DampedAdditive, SeasonalType::Additive) => {
+                    let old_level = level;
+                    let period = self.period.unwrap();
+                    let s_idx = i % period;
+                    let prev_s_idx = (i + period - (period % n)) % period;
+
+                    level = self.alpha * (data.values[i] - seasonal[prev_s_idx])
+                        + (1.0 - self.alpha) * (level + self.phi.unwrap() * trend);
+                    trend = self.beta.unwrap() * (level - old_level)
+                        + (1.0 - self.beta.unwrap()) * self.phi.unwrap() * trend;
+                    seasonal[s_idx] = self.gamma.unwrap() * (data.values[i] - level)
+                        + (1.0 - self.gamma.unwrap()) * seasonal[prev_s_idx];
+                }
+
+                // Damped additive trend with multiplicative seasonality
+                (TrendType::DampedAdditive, SeasonalType::Multiplicative) => {
+                    let old_level = level;
+                    let period = self.period.unwrap();
+                    let s_idx = i % period;
+                    let prev_s_idx = (i + period - (period % n)) % period;
+
+                    if seasonal[prev_s_idx] != 0.0 {
+                        level = self.alpha * (data.values[i] / seasonal[prev_s_idx])
+                            + (1.0 - self.alpha) * (level + self.phi.unwrap() * trend);
+                        trend = self.beta.unwrap() * (level - old_level)
+                            + (1.0 - self.beta.unwrap()) * self.phi.unwrap() * trend;
+                        if level != 0.0 {
+                            seasonal[s_idx] = self.gamma.unwrap() * (data.values[i] / level)
+                                + (1.0 - self.gamma.unwrap()) * seasonal[prev_s_idx];
+                        }
+                    }
+                }
+
+                // Damped multiplicative trend with additive seasonality
+                (TrendType::DampedMultiplicative, SeasonalType::Additive) => {
+                    let old_level = level;
+                    let period = self.period.unwrap();
+                    let s_idx = i % period;
+                    let prev_s_idx = (i + period - (period % n)) % period;
+
+                    level = self.alpha * (data.values[i] - seasonal[prev_s_idx])
+                        + (1.0 - self.alpha) * level * trend.powf(self.phi.unwrap());
+                    if old_level != 0.0 {
+                        trend = self.beta.unwrap()
+                            * (level / old_level).powf(1.0 / self.phi.unwrap())
+                            + (1.0 - self.beta.unwrap()) * trend;
+                    }
+                    seasonal[s_idx] = self.gamma.unwrap() * (data.values[i] - level)
+                        + (1.0 - self.gamma.unwrap()) * seasonal[prev_s_idx];
+                }
+
+                // Damped multiplicative trend with multiplicative seasonality
+                (TrendType::DampedMultiplicative, SeasonalType::Multiplicative) => {
+                    let old_level = level;
+                    let period = self.period.unwrap();
+                    let s_idx = i % period;
+                    let prev_s_idx = (i + period - (period % n)) % period;
+
+                    if seasonal[prev_s_idx] != 0.0 {
+                        level = self.alpha * (data.values[i] / seasonal[prev_s_idx])
+                            + (1.0 - self.alpha) * level * trend.powf(self.phi.unwrap());
+                        if old_level != 0.0 {
+                            trend = self.beta.unwrap()
+                                * (level / old_level).powf(1.0 / self.phi.unwrap())
+                                + (1.0 - self.beta.unwrap()) * trend;
+                        }
+                        if level != 0.0 {
+                            seasonal[s_idx] = self.gamma.unwrap() * (data.values[i] / level)
+                                + (1.0 - self.gamma.unwrap()) * seasonal[prev_s_idx];
+                        }
+                    }
                 }
             }
         }
@@ -588,11 +810,12 @@ impl Forecaster for ETSModel {
             None
         };
         self.fitted_values = Some(fitted_values);
+        self.training_data = Some(data.values.clone());
 
         Ok(())
     }
 
-    fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
+    fn forecast_internal(&self, horizon: usize) -> Result<Vec<f64>> {
         if self.level.is_none() {
             return Err(OxiError::ESNotFitted);
         }
@@ -602,28 +825,41 @@ impl Forecaster for ETSModel {
         }
 
         let level = self.level.unwrap();
-        let _trend = self.trend.unwrap_or(0.0);
+        let _trend = self.trend.unwrap_or(
+            if matches!(
+                self.trend_type,
+                TrendType::Multiplicative | TrendType::DampedMultiplicative
+            ) {
+                1.0
+            } else {
+                0.0
+            },
+        );
 
         let mut forecasts = Vec::with_capacity(horizon);
 
         match (self.trend_type, self.seasonal_type) {
             // Simple Exponential Smoothing
             (TrendType::None, SeasonalType::None) => {
-                // In SES, all forecasts are the same
                 forecasts = vec![level; horizon];
             }
 
             // Holt's Linear Method
             (TrendType::Additive, SeasonalType::None) => {
-                // Linear increase
                 for h in 1..=horizon {
                     forecasts.push(level + h as f64 * _trend);
                 }
             }
 
-            // Damped Trend Method
+            // Multiplicative Trend
+            (TrendType::Multiplicative, SeasonalType::None) => {
+                for h in 1..=horizon {
+                    forecasts.push(level * _trend.powi(h as i32));
+                }
+            }
+
+            // Damped Additive Trend Method
             (TrendType::DampedAdditive, SeasonalType::None) => {
-                // Damped trend
                 let phi = self.phi.unwrap();
                 for h in 1..=horizon {
                     let mut damping_sum = 0.0;
@@ -635,6 +871,47 @@ impl Forecaster for ETSModel {
                     }
 
                     forecasts.push(level + damping_sum * _trend);
+                }
+            }
+
+            // Damped Multiplicative Trend Method
+            (TrendType::DampedMultiplicative, SeasonalType::None) => {
+                let phi = self.phi.unwrap();
+                for h in 1..=horizon {
+                    let mut damping_sum = 0.0;
+                    let mut phi_power = phi;
+
+                    for _ in 1..=h {
+                        damping_sum += phi_power;
+                        phi_power *= phi;
+                    }
+
+                    forecasts.push(level * _trend.powf(damping_sum));
+                }
+            }
+
+            // Seasonal only (no trend)
+            (TrendType::None, SeasonalType::Additive) => {
+                if let Some(ref seasonal) = self.seasonal {
+                    let period = self.period.unwrap();
+                    for h in 1..=horizon {
+                        let s_idx = (h - 1) % period;
+                        forecasts.push(level + seasonal[s_idx]);
+                    }
+                } else {
+                    return Err(OxiError::ESNotFitted);
+                }
+            }
+
+            (TrendType::None, SeasonalType::Multiplicative) => {
+                if let Some(ref seasonal) = self.seasonal {
+                    let period = self.period.unwrap();
+                    for h in 1..=horizon {
+                        let s_idx = (h - 1) % period;
+                        forecasts.push(level * seasonal[s_idx]);
+                    }
+                } else {
+                    return Err(OxiError::ESNotFitted);
                 }
             }
 
@@ -666,16 +943,139 @@ impl Forecaster for ETSModel {
                 }
             }
 
-            // Other combinations are not yet implemented
-            _ => {
-                return Err(OxiError::ESUnsupportedModelType(format!(
-                    "ETS({},{},{})",
-                    self.error_type, self.trend_type, self.seasonal_type
-                )));
+            // Multiplicative trend with additive seasonality
+            (TrendType::Multiplicative, SeasonalType::Additive) => {
+                if let Some(ref seasonal) = self.seasonal {
+                    let period = self.period.unwrap();
+
+                    for h in 1..=horizon {
+                        let s_idx = (h - 1) % period;
+                        forecasts.push(level * _trend.powi(h as i32) + seasonal[s_idx]);
+                    }
+                } else {
+                    return Err(OxiError::ESNotFitted);
+                }
+            }
+
+            // Multiplicative trend with multiplicative seasonality
+            (TrendType::Multiplicative, SeasonalType::Multiplicative) => {
+                if let Some(ref seasonal) = self.seasonal {
+                    let period = self.period.unwrap();
+
+                    for h in 1..=horizon {
+                        let s_idx = (h - 1) % period;
+                        forecasts.push(level * _trend.powi(h as i32) * seasonal[s_idx]);
+                    }
+                } else {
+                    return Err(OxiError::ESNotFitted);
+                }
+            }
+
+            // Damped trends with seasonality
+            (TrendType::DampedAdditive, SeasonalType::Additive) => {
+                if let Some(ref seasonal) = self.seasonal {
+                    let period = self.period.unwrap();
+                    let phi = self.phi.unwrap();
+
+                    for h in 1..=horizon {
+                        let s_idx = (h - 1) % period;
+                        let mut damping_sum = 0.0;
+                        let mut phi_power = phi;
+
+                        for _ in 1..=h {
+                            damping_sum += phi_power;
+                            phi_power *= phi;
+                        }
+
+                        forecasts.push(level + damping_sum * _trend + seasonal[s_idx]);
+                    }
+                } else {
+                    return Err(OxiError::ESNotFitted);
+                }
+            }
+
+            (TrendType::DampedAdditive, SeasonalType::Multiplicative) => {
+                if let Some(ref seasonal) = self.seasonal {
+                    let period = self.period.unwrap();
+                    let phi = self.phi.unwrap();
+
+                    for h in 1..=horizon {
+                        let s_idx = (h - 1) % period;
+                        let mut damping_sum = 0.0;
+                        let mut phi_power = phi;
+
+                        for _ in 1..=h {
+                            damping_sum += phi_power;
+                            phi_power *= phi;
+                        }
+
+                        forecasts.push((level + damping_sum * _trend) * seasonal[s_idx]);
+                    }
+                } else {
+                    return Err(OxiError::ESNotFitted);
+                }
+            }
+
+            (TrendType::DampedMultiplicative, SeasonalType::Additive) => {
+                if let Some(ref seasonal) = self.seasonal {
+                    let period = self.period.unwrap();
+                    let phi = self.phi.unwrap();
+
+                    for h in 1..=horizon {
+                        let s_idx = (h - 1) % period;
+                        let mut damping_sum = 0.0;
+                        let mut phi_power = phi;
+
+                        for _ in 1..=h {
+                            damping_sum += phi_power;
+                            phi_power *= phi;
+                        }
+
+                        forecasts.push(level * _trend.powf(damping_sum) + seasonal[s_idx]);
+                    }
+                } else {
+                    return Err(OxiError::ESNotFitted);
+                }
+            }
+
+            (TrendType::DampedMultiplicative, SeasonalType::Multiplicative) => {
+                if let Some(ref seasonal) = self.seasonal {
+                    let period = self.period.unwrap();
+                    let phi = self.phi.unwrap();
+
+                    for h in 1..=horizon {
+                        let s_idx = (h - 1) % period;
+                        let mut damping_sum = 0.0;
+                        let mut phi_power = phi;
+
+                        for _ in 1..=h {
+                            damping_sum += phi_power;
+                            phi_power *= phi;
+                        }
+
+                        forecasts.push(level * _trend.powf(damping_sum) * seasonal[s_idx]);
+                    }
+                } else {
+                    return Err(OxiError::ESNotFitted);
+                }
             }
         }
 
         Ok(forecasts)
+    }
+}
+
+impl Forecaster for ETSModel {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn fit(&mut self, data: &TimeSeriesData) -> Result<()> {
+        self.fit_internal(data)
+    }
+
+    fn forecast(&self, horizon: usize) -> Result<Vec<f64>> {
+        self.forecast_internal(horizon)
     }
 
     fn evaluate(&self, test_data: &TimeSeriesData) -> Result<ModelEvaluation> {
@@ -713,8 +1113,8 @@ impl Forecaster for ETSModel {
             mape,
             smape,
             r_squared,
-            aic: None,
-            bic: None,
+            aic: self.aic(),
+            bic: self.bic(),
         })
     }
 

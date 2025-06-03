@@ -15,7 +15,7 @@ fn main() -> std::result::Result<(), Box<dyn Error>> {
 
     // Load OHLCV data from CSV
     println!("Loading AAPL daily OHLCV data...");
-    let data = load_ohlcv_data("csv/AAPL_daily_ohlcv.csv")?;
+    let data = load_ohlcv_data("examples/csv/AAPL_daily_ohlcv.csv")?;
 
     println!(
         "Data loaded: {} rows from {} to {}",

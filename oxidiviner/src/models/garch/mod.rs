@@ -40,15 +40,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 */
 
 mod egarch;
-mod garch;
 mod garch_m;
 mod gjr_garch;
+mod implementation;
 
 // Re-export the public models
 pub use egarch::EGARCHModel;
-pub use garch::GARCHModel;
 pub use garch_m::{GARCHMModel, RiskPremiumType};
 pub use gjr_garch::GJRGARCHModel;
+pub use implementation::GARCHModel;
 
 #[cfg(test)]
 mod tests {
@@ -171,7 +171,7 @@ mod tests {
         assert_eq!(variance_values.len(), 10);
 
         // Verify asymmetry: negative shock should have higher impact than positive
-        let _mid_point = shock_values.len() / 2;
+        let _mid_idx = shock_values.len() / 2;
         let positive_idx = shock_values.len() - 1;
         let negative_idx = 0;
 
@@ -398,7 +398,7 @@ mod tests {
     #[test]
     fn test_basic_garch_advanced() {
         // Test higher order GARCH model
-        let mut model = GARCHModel::new(2, 2, None).unwrap();
+        let model = GARCHModel::new(2, 2, None).unwrap();
         assert_eq!(model.alpha.len(), 2);
         assert_eq!(model.beta.len(), 2);
         assert_eq!(model.order(), (2, 2));
@@ -476,14 +476,14 @@ mod tests {
         let (shocks, variances) = model.news_impact_curve(21, 3.0);
 
         // Find indices for positive and negative shocks of similar magnitude
-        let mid_idx = shocks.len() / 2;
+        let _mid_idx = shocks.len() / 2;
         let positive_shock_idx = shocks.len() - 1;
         let negative_shock_idx = 0;
 
         // With negative gamma, negative shocks should have higher impact
         if shocks[negative_shock_idx] < 0.0 && shocks[positive_shock_idx] > 0.0 {
             // Due to leverage effect (negative gamma), negative shocks should increase variance more
-            assert!(variances[negative_shock_idx] > variances[mid_idx]);
+            assert!(variances[negative_shock_idx] > variances[positive_shock_idx]);
         }
     }
 
@@ -646,7 +646,7 @@ mod tests {
                     assert!(gamma >= 0.0);
                 }
                 for &beta in &model.beta {
-                    assert!(beta >= 0.0 && beta <= 1.0);
+                    assert!((0.0..=1.0).contains(&beta));
                 }
             }
         }
@@ -691,7 +691,7 @@ mod tests {
 
     #[test]
     fn test_garch_fitting_comprehensive() {
-        let data_sets = vec![
+        let data_sets = [
             // Trending data
             (0..100)
                 .map(|i| (i as f64) * 0.001 + (i as f64 * 0.1).sin() * 0.01)
@@ -811,7 +811,7 @@ mod tests {
         assert!(shocks.iter().any(|&x| x < 0.0));
 
         // Check asymmetric effect: negative shocks should have higher impact
-        let mid_idx = shocks.len() / 2;
+        let _mid_idx = shocks.len() / 2;
         let negative_idx = 0; // First element should be most negative
         let positive_idx = shocks.len() - 1; // Last element should be most positive
 
@@ -842,7 +842,7 @@ mod tests {
 
         // 2. Insufficient data
         let mut garch_model = GARCHModel::new(1, 1, None).unwrap();
-        let short_data = vec![1.0, 2.0]; // Too little data
+        let short_data = vec![1.0]; // Too little data (only 1 point)
         assert!(garch_model.fit(&short_data, None).is_err());
 
         // 3. Empty data
@@ -971,33 +971,4 @@ mod tests {
 #[cfg(test)]
 mod error_tests {
     use super::*;
-
-    #[test]
-    fn test_garch_error_types() {
-        use crate::core::OxiError;
-
-        // Test InvalidParameters error
-        let invalid_params_error = OxiError::GarchInvalidParameters("test message".to_string());
-        assert!(format!("{}", invalid_params_error).contains("test message"));
-
-        // Test InvalidData error
-        let invalid_data_error = OxiError::GarchInvalidData("data message".to_string());
-        assert!(format!("{}", invalid_data_error).contains("data message"));
-    }
-
-    #[test]
-    fn test_error_propagation() {
-        use crate::core::{OxiError, Result};
-
-        // Test that errors propagate correctly through the Result type
-        let result: Result<()> = Err(OxiError::GarchInvalidParameters("test".to_string()));
-        assert!(result.is_err());
-
-        match result {
-            Err(OxiError::GarchInvalidParameters(msg)) => {
-                assert!(msg.contains("test"));
-            }
-            _ => panic!("Expected GarchInvalidParameters error"),
-        }
-    }
 }

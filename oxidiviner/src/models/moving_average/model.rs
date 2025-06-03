@@ -285,7 +285,7 @@ mod tests {
         if let Err(err) = result {
             // Check the error message contains the right information
             let err_msg = format!("{:?}", err);
-            assert!(err_msg.contains("Data must have at least") || err_msg.contains("window"));
+            assert!(err_msg.contains("MATimeSeriesTooShort") || err_msg.contains("window"));
         }
     }
 

@@ -136,7 +136,7 @@ impl VARModel {
         }
 
         // Fit the VAR model
-        self.fit_var_model(&all_values).map_err(OxiError::from)?;
+        self.fit_var_model(&all_values)?;
 
         Ok(())
     }

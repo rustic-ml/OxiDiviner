@@ -1,11 +1,12 @@
 # 🔮 OxiDiviner
 
-![OxiDiviner Logo](OxiDiviner_250px.JPG)
+![OxiDiviner Logo](https://raw.githubusercontent.com/rustic-ml/OxiDiviner/main/OxiDiviner_250px.JPG)
 
 [![Crates.io](https://img.shields.io/crates/v/oxidiviner.svg)](https://crates.io/crates/oxidiviner)
 [![Documentation](https://docs.rs/oxidiviner/badge.svg)](https://docs.rs/oxidiviner)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/rustic-ml/OxiDiviner/blob/main/LICENSE)
 [![GitHub](https://img.shields.io/badge/github-rustic--ml/OxiDiviner-8da0cb?logo=github)](https://github.com/rustic-ml/OxiDiviner)
+[![X (Twitter)](https://img.shields.io/badge/follow-@CelsisDurham-1DA1F2?logo=x&logoColor=white)](https://x.com/CelsisDurham)
 
 > **The Rust Oracle for Time Series Forecasting** 🦀
 
@@ -25,12 +26,37 @@ Whether you're forecasting financial markets, predicting business metrics, or an
 ## 🎯 **Core Features**
 
 ### **Forecasting Models**
+
+#### **📊 Traditional Time Series Models**
 - **ARIMA** (AutoRegressive Integrated Moving Average) with seasonal support
 - **Moving Averages** with adaptive window optimization
 - **Exponential Smoothing** (Simple, Holt's Linear, Holt-Winters)  
 - **AutoRegressive** models (AR, ARMA, VAR, SARIMA)
 - **GARCH** models for volatility and risk forecasting
 - **ETS** (Error, Trend, Seasonal) state space models
+
+#### **🚀 Advanced Forecasting Models**
+- **Kalman Filters** - State-space models for dynamic forecasting with hidden states
+  - Local Level Model (random walk with noise)
+  - Local Linear Trend Model (level + trend dynamics)
+  - Seasonal Model (level + trend + seasonal components)
+- **Markov Regime-Switching** - Capture different market states and behavioral regimes
+  - Two-regime models (bull/bear markets, high/low volatility)
+  - Three-regime models (bear/neutral/bull markets)
+  - N-regime models with custom specifications
+- **Vector Error Correction Models (VECM)** - Cointegration-based forecasting
+  - Long-run equilibrium relationships
+  - Error correction mechanisms
+  - Multi-variate forecasting with cointegrated series
+- **Threshold Autoregressive (TAR)** - Non-linear regime-dependent models
+  - Threshold detection and regime switching
+  - Regime-dependent autoregressive dynamics
+  - Momentum vs. mean-reversion modeling
+- **STL Decomposition** - Seasonal-Trend decomposition using Loess
+  - Trend, seasonal, and remainder component extraction
+  - Seasonal strength and trend strength metrics
+  - Component-based forecasting with explicit seasonality
+- **Copula Models** - Dependency structure modeling (foundation implemented)
 
 ### **API Design Philosophy**
 - **Quick API**: One-line forecasting for rapid prototyping
@@ -43,6 +69,7 @@ Whether you're forecasting financial markets, predicting business metrics, or an
 - **Cross-Validation**: Time series-aware validation techniques
 - **Model Selection**: Automatic best-model identification  
 - **Data Quality**: Stationarity testing, missing value handling
+- **Model Diagnostics**: Innovation analysis, Ljung-Box testing, confidence intervals
 
 ## 🚀 **Quick Start**
 
@@ -139,6 +166,112 @@ if let Some(eval) = output.evaluation {
 }
 ```
 
+### **🚀 Advanced Models Examples**
+
+#### **State-Space Models (Kalman Filters)**
+```rust
+use oxidiviner::models::state_space::kalman_filter::KalmanFilter;
+
+// Local level model (random walk + noise)
+let mut kalman = KalmanFilter::local_level(1.0, 0.5)?;
+kalman.fit(&data)?;
+let forecasts = kalman.forecast(10)?;
+
+// With confidence intervals
+let (point_forecasts, lower_bounds, upper_bounds) = 
+    kalman.forecast_with_intervals(10, 0.95)?;
+
+// Access state estimates
+if let Some(state) = kalman.get_state() {
+    println!("Current level estimate: {:.3}", state[0]);
+}
+```
+
+#### **Regime-Switching Models**
+```rust
+use oxidiviner::models::regime_switching::markov_switching::MarkovSwitchingModel;
+
+// Two-regime model for bull/bear markets
+let mut markov = MarkovSwitchingModel::two_regime(Some(1000), Some(1e-6));
+markov.fit(&market_data)?;
+
+// Classify current market regime
+let (current_regime, probability) = markov.classify_current_regime()?;
+println!("Current regime: {} (prob: {:.3})", current_regime, probability);
+
+// Get regime parameters
+if let Some((means, std_devs)) = markov.get_regime_parameters() {
+    for (i, (mean, std)) in means.iter().zip(std_devs.iter()).enumerate() {
+        println!("Regime {}: μ={:.3}, σ={:.3}", i, mean, std);
+    }
+}
+```
+
+#### **Cointegration Models (VECM)**
+```rust
+use oxidiviner::models::cointegration::vecm::VECMModel;
+
+// Vector Error Correction Model for pairs trading
+let mut vecm = VECMModel::new(1, 2, true, false)?; // 1 cointegrating relation, lag=2
+vecm.fit_multiple(&[series1, series2])?;
+let forecasts = vecm.forecast_multiple(10)?;
+
+// Check cointegrating relationships
+if let Some(coint_vectors) = vecm.get_cointegrating_vectors() {
+    println!("Cointegrating vector: {:?}", coint_vectors[0]);
+}
+
+// Error correction terms
+if let Some(ect) = vecm.get_error_correction_terms() {
+    let latest_error = ect[0].last().unwrap();
+    println!("Current deviation from equilibrium: {:.3}", latest_error);
+}
+```
+
+#### **Non-linear Models (TAR)**
+```rust
+use oxidiviner::models::nonlinear::tar::TARModel;
+
+// Threshold Autoregressive model
+let mut tar = TARModel::new(vec![2, 3], 1)?; // AR(2) and AR(3) regimes, delay=1
+tar.fit(&data)?;
+
+// Get threshold and regime analysis
+if let Some(threshold) = tar.get_threshold() {
+    println!("Estimated threshold: {:.3}", threshold);
+}
+
+if let Some(regime_seq) = tar.get_regime_sequence() {
+    let regime_0_pct = regime_seq.iter().filter(|&&x| x == 0).count() as f64 
+                      / regime_seq.len() as f64 * 100.0;
+    println!("Time in regime 0: {:.1}%", regime_0_pct);
+}
+```
+
+#### **Decomposition Models (STL)**
+```rust
+use oxidiviner::models::decomposition::stl::STLModel;
+
+// STL decomposition for seasonal data
+let mut stl = STLModel::new(12, Some(7), Some(21))?; // Monthly seasonality
+stl.fit(&seasonal_data)?;
+
+// Get decomposed components
+if let Some((trend, seasonal, remainder)) = stl.get_components() {
+    println!("Latest trend: {:.3}", trend.last().unwrap());
+    println!("Latest seasonal: {:.3}", seasonal.last().unwrap());
+}
+
+// Measure seasonal and trend strength
+let seasonal_strength = stl.seasonal_strength()?;
+let trend_strength = stl.trend_strength()?;
+println!("Seasonal strength: {:.3}", seasonal_strength);
+println!("Trend strength: {:.3}", trend_strength);
+
+// Forecast with decomposed components
+let forecasts = stl.forecast(12)?; // Next 12 periods
+```
+
 ## 📊 **Working with Data**
 
 ### **TimeSeriesData Creation**
@@ -185,6 +318,7 @@ let is_valid = ModelValidator::validate_minimum_data(data.len(), 10, "ARIMA")?;
 
 ### **Available Models & Parameters**
 
+#### **📊 Traditional Models**
 | Model | Constructor | Key Parameters | Use Case |
 |-------|-------------|----------------|-----------|
 | **SimpleESModel** | `new(alpha)` | α ∈ (0,1) | Stable series, no trend |
@@ -193,6 +327,18 @@ let is_valid = ModelValidator::validate_minimum_data(data.len(), 10, "ARIMA")?;
 | **ARIMAModel** | `new(p, d, q, intercept)` | p,d,q ≥ 0 | Complex temporal dependencies |
 | **MAModel** | `new(window)` | window > 0 | Smoothing, noise reduction |
 | **GARCHModel** | `new(p, q, mean_model)` | p,q ≥ 1 | Volatility modeling |
+
+#### **🚀 Advanced Models**
+| Model | Constructor | Key Parameters | Use Case |
+|-------|-------------|----------------|-----------|
+| **KalmanFilter** | `local_level(proc_var, obs_var)` | variances > 0 | State-space filtering |
+| **KalmanFilter** | `local_linear_trend(level_var, trend_var, obs_var)` | variances > 0 | Dynamic trend tracking |
+| **KalmanFilter** | `seasonal_model(level_var, trend_var, seasonal_var, obs_var, period)` | variances > 0, period ≥ 2 | Seasonal state-space |
+| **MarkovSwitchingModel** | `two_regime(max_iter, tolerance)` | max_iter > 0, tolerance > 0 | Bull/bear markets |
+| **MarkovSwitchingModel** | `three_regime(max_iter, tolerance)` | max_iter > 0, tolerance > 0 | Bear/neutral/bull |
+| **VECMModel** | `new(coint_relations, lag_order, constant, trend)` | relations ≥ 1, lag ≥ 1 | Cointegrated series |
+| **TARModel** | `new(ar_orders, delay)` | orders ≥ 1, delay ≥ 1 | Non-linear dynamics |
+| **STLModel** | `new(period, seasonal_smoother, trend_smoother)` | period ≥ 2, smoothers odd | Seasonal decomposition |
 
 ### **Parameter Validation**
 
@@ -266,6 +412,7 @@ OxiDiviner provides extensive examples in two locations:
 | **[ARIMA Models](oxidiviner/examples/arima_example.rs)** | ARIMA forecasting & evaluation | `cargo run --example arima_example` |
 | **[AR Models](oxidiviner/examples/ar_example.rs)** | AutoRegressive model comparison | `cargo run --example ar_example` |
 | **[GARCH Models](oxidiviner/examples/garch_example.rs)** | Volatility modeling & risk analysis | `cargo run --example garch_example` |
+| **[Advanced Forecasting Models](oxidiviner/examples/advanced_forecasting_models.rs)** | State-space, regime-switching, cointegration, TAR, STL | `cargo run --example advanced_forecasting_models` |
 
 ### **🏗️ Comprehensive Examples**
 *Run from examples directory with `cd examples && cargo run --bin <name>`*
@@ -403,6 +550,7 @@ OxiDiviner implements well-established forecasting algorithms based on:
 - **💡 Examples**: [examples/](examples/) directory
 - **🐛 Issues**: [GitHub Issues](https://github.com/rustic-ml/OxiDiviner/issues)
 - **💬 Discussions**: [GitHub Discussions](https://github.com/rustic-ml/OxiDiviner/discussions)
+- **🐦 Follow on X**: [@CelsisDurham](https://x.com/CelsisDurham)
 
 ---
 

@@ -16,6 +16,7 @@ use crate::models::exponential_smoothing::ESError;
 /// - y_t is the observed value at time t
 /// - α is the smoothing parameter (0 < α < 1)
 /// - ŷ_{t+h|t} is the h-step ahead forecast from time t
+#[derive(Debug, Clone)]
 pub struct SimpleESModel {
     /// Model name
     name: String,
@@ -25,6 +26,8 @@ pub struct SimpleESModel {
     level: Option<f64>,
     /// Fitted values over the training period
     fitted_values: Option<Vec<f64>>,
+    /// Training data (stored for AIC/BIC calculation)
+    training_data: Option<Vec<f64>>,
 }
 
 impl SimpleESModel {
@@ -48,6 +51,7 @@ impl SimpleESModel {
             alpha,
             level: None,
             fitted_values: None,
+            training_data: None,
         })
     }
 
@@ -82,6 +86,72 @@ impl SimpleESModel {
     /// Get the fitted values if available.
     pub fn fitted_values(&self) -> Option<&Vec<f64>> {
         self.fitted_values.as_ref()
+    }
+
+    /// Calculate residuals from fitted values and actual data
+    fn calculate_residuals(&self, data: &[f64]) -> Option<Vec<f64>> {
+        if let Some(ref fitted) = self.fitted_values {
+            if fitted.len() == data.len() {
+                let residuals = data
+                    .iter()
+                    .zip(fitted.iter())
+                    .map(|(actual, fitted)| actual - fitted)
+                    .collect();
+                Some(residuals)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Calculate log-likelihood for the fitted SES model
+    fn log_likelihood(&self, data: &[f64]) -> Option<f64> {
+        if let Some(residuals) = self.calculate_residuals(data) {
+            let n = residuals.len() as f64;
+            let sigma_squared = residuals.iter().map(|r| r * r).sum::<f64>() / n;
+
+            if sigma_squared > 0.0 {
+                // Log-likelihood for SES model (assuming normal errors)
+                let log_lik = -0.5 * n * (2.0 * std::f64::consts::PI * sigma_squared).ln()
+                    - 0.5 * residuals.iter().map(|r| r * r).sum::<f64>() / sigma_squared;
+                Some(log_lik)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Calculate Akaike Information Criterion (AIC)
+    pub fn aic(&self) -> Option<f64> {
+        if let Some(ref data) = self.training_data {
+            if let Some(log_lik) = self.log_likelihood(data) {
+                let k = 2.0; // alpha parameter + initial level
+                Some(-2.0 * log_lik + 2.0 * k)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Calculate Bayesian Information Criterion (BIC)
+    pub fn bic(&self) -> Option<f64> {
+        if let Some(ref data) = self.training_data {
+            if let Some(log_lik) = self.log_likelihood(data) {
+                let n = data.len() as f64;
+                let k = 2.0; // alpha parameter + initial level
+                Some(-2.0 * log_lik + k * n.ln())
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
 }
 
@@ -119,6 +189,7 @@ impl Forecaster for SimpleESModel {
         // Store the final level and fitted values
         self.level = Some(level);
         self.fitted_values = Some(fitted_values);
+        self.training_data = Some(data.values.clone());
 
         Ok(())
     }
@@ -167,8 +238,8 @@ impl Forecaster for SimpleESModel {
             mape,
             smape,
             r_squared,
-            aic: None,
-            bic: None,
+            aic: self.aic(),
+            bic: self.bic(),
         })
     }
 

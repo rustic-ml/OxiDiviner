@@ -8,7 +8,9 @@ use crate::models::autoregressive::ARIMAModel;
 use crate::models::exponential_smoothing::SimpleESModel;
 use crate::models::moving_average::MAModel;
 use chrono::{DateTime, Utc};
+use rayon::prelude::*;
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 /// A collection of time series for batch processing
 pub struct BatchTimeSeries {
@@ -130,9 +132,7 @@ impl BatchTimeSeries {
         let mut errors = HashMap::new();
 
         if config.parallel {
-            // TODO: Implement parallel processing using rayon
-            // For now, fall back to sequential processing
-            self.forecast_sequential(config, &mut forecasts, &mut models_used, &mut errors)?;
+            self.forecast_parallel(config, &mut forecasts, &mut models_used, &mut errors)?;
         } else {
             self.forecast_sequential(config, &mut forecasts, &mut models_used, &mut errors)?;
         }
@@ -166,6 +166,72 @@ impl BatchTimeSeries {
                 }
             }
         }
+        Ok(())
+    }
+
+    /// Parallel forecasting implementation using rayon
+    fn forecast_parallel(
+        &self,
+        config: &BatchConfig,
+        forecasts: &mut HashMap<String, Vec<f64>>,
+        models_used: &mut HashMap<String, String>,
+        errors: &mut HashMap<String, String>,
+    ) -> Result<()> {
+        // Convert series to a vector for parallel processing
+        let series_vec: Vec<(String, &TimeSeriesData)> = self
+            .series
+            .iter()
+            .map(|(name, data)| (name.clone(), data))
+            .collect();
+
+        // Use Arc<Mutex<>> for thread-safe accumulation of results
+        let forecasts_mutex = Arc::new(Mutex::new(HashMap::new()));
+        let models_used_mutex = Arc::new(Mutex::new(HashMap::new()));
+        let errors_mutex = Arc::new(Mutex::new(HashMap::new()));
+        let first_error = Arc::new(Mutex::new(None));
+
+        // Process series in parallel
+        series_vec
+            .par_iter()
+            .for_each(|(name, data)| match self.forecast_single(data, config) {
+                Ok((forecast, model_name)) => {
+                    forecasts_mutex
+                        .lock()
+                        .unwrap()
+                        .insert(name.clone(), forecast);
+                    models_used_mutex
+                        .lock()
+                        .unwrap()
+                        .insert(name.clone(), model_name);
+                }
+                Err(e) => {
+                    errors_mutex
+                        .lock()
+                        .unwrap()
+                        .insert(name.clone(), e.to_string());
+                    if !config.continue_on_error {
+                        let mut first_err = first_error.lock().unwrap();
+                        if first_err.is_none() {
+                            *first_err = Some(e);
+                        }
+                    }
+                }
+            });
+
+        // Check if we should return early due to error
+        if let Some(err) = first_error.lock().unwrap().take() {
+            return Err(err);
+        }
+
+        // Move results back to the output HashMaps
+        let forecasts_result = forecasts_mutex.lock().unwrap();
+        let models_used_result = models_used_mutex.lock().unwrap();
+        let errors_result = errors_mutex.lock().unwrap();
+
+        forecasts.extend(forecasts_result.clone());
+        models_used.extend(models_used_result.clone());
+        errors.extend(errors_result.clone());
+
         Ok(())
     }
 

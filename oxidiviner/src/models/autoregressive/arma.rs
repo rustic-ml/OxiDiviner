@@ -452,6 +452,46 @@ impl ARMAModel {
 
         Ok(())
     }
+
+    /// Calculate log-likelihood for the fitted ARMA model
+    fn log_likelihood(&self) -> Option<f64> {
+        if let Some(ref residuals) = self.residuals {
+            let n = residuals.len() as f64;
+            let sigma_squared = residuals.iter().map(|r| r * r).sum::<f64>() / n;
+
+            if sigma_squared > 0.0 {
+                // Log-likelihood for ARMA model (assuming normal errors)
+                let log_lik = -0.5 * n * (2.0 * std::f64::consts::PI * sigma_squared).ln()
+                    - 0.5 * residuals.iter().map(|r| r * r).sum::<f64>() / sigma_squared;
+                Some(log_lik)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Calculate Akaike Information Criterion (AIC)
+    pub fn aic(&self) -> Option<f64> {
+        if let Some(log_lik) = self.log_likelihood() {
+            let k = self.p + self.q + if self.include_intercept { 1 } else { 0 };
+            Some(-2.0 * log_lik + 2.0 * k as f64)
+        } else {
+            None
+        }
+    }
+
+    /// Calculate Bayesian Information Criterion (BIC)
+    pub fn bic(&self) -> Option<f64> {
+        if let (Some(log_lik), Some(ref residuals)) = (self.log_likelihood(), &self.residuals) {
+            let n = residuals.len() as f64;
+            let k = self.p + self.q + if self.include_intercept { 1 } else { 0 };
+            Some(-2.0 * log_lik + k as f64 * n.ln())
+        } else {
+            None
+        }
+    }
 }
 
 impl Forecaster for ARMAModel {
@@ -476,8 +516,7 @@ impl Forecaster for ARMAModel {
         }
 
         // Fit the ARMA model parameters
-        self.fit_arma_parameters(&data.values)
-            .map_err(OxiError::from)?;
+        self.fit_arma_parameters(&data.values)?;
 
         Ok(())
     }
@@ -569,8 +608,8 @@ impl Forecaster for ARMAModel {
             mape,
             smape,
             r_squared,
-            aic: None,
-            bic: None,
+            aic: self.aic(),
+            bic: self.bic(),
         })
     }
 

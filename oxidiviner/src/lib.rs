@@ -68,6 +68,13 @@ pub use models::exponential_smoothing::{
 pub use models::garch::{EGARCHModel, GARCHMModel, GARCHModel, GJRGARCHModel, RiskPremiumType};
 pub use models::moving_average::MAModel;
 
+// Advanced forecasting models
+pub use models::cointegration::VECMModel;
+pub use models::decomposition::STLModel;
+pub use models::nonlinear::TARModel;
+pub use models::regime_switching::MarkovSwitchingModel;
+pub use models::state_space::KalmanFilter;
+
 /// Prelude module for convenient imports
 ///
 /// This module re-exports the most commonly used types and traits,
@@ -96,12 +103,18 @@ pub mod prelude {
     // Individual models for advanced usage
     pub use crate::models::{
         autoregressive::{ARIMAModel, ARMAModel, ARModel, SARIMAModel, VARModel},
+        cointegration::VECMModel,
+        decomposition::STLModel,
         exponential_smoothing::{
             DailyETSModel, ETSModel, HoltLinearModel, HoltWintersModel, MinuteETSModel,
             SimpleESModel,
         },
         garch::{EGARCHModel, GARCHMModel, GARCHModel, GJRGARCHModel},
         moving_average::MAModel,
+        nonlinear::TARModel,
+        regime_switching::MarkovSwitchingModel,
+        // Advanced forecasting models
+        state_space::KalmanFilter,
     };
 }
 
