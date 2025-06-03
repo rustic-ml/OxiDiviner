@@ -148,7 +148,7 @@ fn create_sample_data(n: usize, name: &str) -> std::result::Result<TimeSeriesDat
     let base_time = Utc::now();
 
     // Initialize random number generator
-    let mut rng = rand::rng();
+    let mut rng = rand::thread_rng();
 
     // Generate a sinusoidal pattern with some noise
     for i in 0..n {

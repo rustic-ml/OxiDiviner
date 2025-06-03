@@ -58,7 +58,7 @@ fn create_realistic_sample_data(n: usize) -> Result<TimeSeriesData> {
     let mut values = Vec::with_capacity(n);
 
     let base_time = Utc::now() - Duration::days(n as i64);
-    let mut rng = rand::rng();
+    let mut rng = rand::thread_rng();
 
     for i in 0..n {
         let timestamp = base_time + Duration::days(i as i64);

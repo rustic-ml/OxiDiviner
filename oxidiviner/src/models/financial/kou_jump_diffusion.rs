@@ -366,7 +366,7 @@ impl KouJumpDiffusionModel {
             let mut total_jump = 0.0;
 
             for _ in 0..num_jumps {
-                let is_upward = rng.random::<f64>() < self.upward_jump_prob;
+                let is_upward = rng.gen::<f64>() < self.upward_jump_prob;
                 let jump_size = if is_upward {
                     upward_exp.sample(rng) // Positive jump
                 } else {
@@ -412,20 +412,20 @@ impl KouJumpDiffusionModel {
             let current_price = *path.last().unwrap();
 
             // Continuous component (geometric Brownian motion)
-            let brownian_increment = normal.sample(&mut rand::rng());
+            let brownian_increment = normal.sample(&mut rand::thread_rng());
             let drift_component = (self.drift - 0.5 * self.volatility.powi(2)) * self.time_step;
             let diffusion_component = self.volatility * self.time_step.sqrt() * brownian_increment;
 
             // Jump component with asymmetric exponential distribution
-            let num_jumps = poisson.sample(&mut rand::rng()) as usize;
+            let num_jumps = poisson.sample(&mut rand::thread_rng()) as usize;
             let mut total_jump = 0.0;
 
             for _ in 0..num_jumps {
-                let is_upward = rand::rng().random::<f64>() < self.upward_jump_prob;
+                let is_upward = rand::thread_rng().gen::<f64>() < self.upward_jump_prob;
                 let jump_size = if is_upward {
-                    upward_exp.sample(&mut rand::rng()) // Positive jump
+                    upward_exp.sample(&mut rand::thread_rng()) // Positive jump
                 } else {
-                    -downward_exp.sample(&mut rand::rng()) // Negative jump
+                    -downward_exp.sample(&mut rand::thread_rng()) // Negative jump
                 };
                 total_jump += jump_size;
             }

@@ -171,7 +171,7 @@ exclude = [
 
 [workspace.dependencies]
 chrono = { version = ">=0.4.41", features = ["serde"] }
-rand = ">=0.9.1"
+rand = "0.8"
 statrs = ">=0.18.0"
 plotters = { version = ">=0.3.7" }
 polars = { version = ">=0.47.1", features = ["lazy", "dtype-full"] }
@@ -179,7 +179,7 @@ thiserror = ">=2.0.12"
 ndarray = { version = ">=0.16.1" }
 serde = { version = ">=1.0.219", features = ["derive"] }
 nalgebra = ">=0.33.0"
-rand_distr = ">=0.4.3"
+rand_distr = "0.4"
 
 [profile.test]
 opt-level = 1

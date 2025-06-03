@@ -384,8 +384,8 @@ impl HestonStochasticVolatilityModel {
             let current_vol = current_variance.sqrt();
 
             // Generate correlated random variables
-            let z1 = normal.sample(&mut rand::rng());
-            let z2 = normal.sample(&mut rand::rng());
+            let z1 = normal.sample(&mut rand::thread_rng());
+            let z2 = normal.sample(&mut rand::thread_rng());
             let w1 = z1;
             let w2 = self.correlation * z1 + (1.0 - self.correlation.powi(2)).sqrt() * z2;
 

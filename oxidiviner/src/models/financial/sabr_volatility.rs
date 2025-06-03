@@ -381,8 +381,8 @@ impl SABRVolatilityModel {
             let current_vol = volatilities[step - 1].max(0.0);
 
             // Generate correlated random variables
-            let z1 = normal.sample(&mut rand::rng());
-            let z2 = normal.sample(&mut rand::rng());
+            let z1 = normal.sample(&mut rand::thread_rng());
+            let z2 = normal.sample(&mut rand::thread_rng());
             let w1 = z1;
             let w2 = self.correlation * z1 + (1.0 - self.correlation.powi(2)).sqrt() * z2;
 
