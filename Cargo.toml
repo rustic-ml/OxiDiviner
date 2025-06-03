@@ -14,26 +14,80 @@ timeout = "300s"
 out = ["Html", "Lcov", "Stdout"]
 output-dir = "target/coverage"
 exclude = [
-    "*.md",
-    "*.jpg", 
-    "*.jpeg",
+    # Development and IDE files
+    ".cursor/**",
+    ".vscode/**",
+    ".idea/**",
+    ".cargo/**",
+
+    "target/",
+    
+    # Version control and CI/CD
+    ".git/**",
+    ".github/**",
+    ".gitignore",
+    
+    # Build artifacts and dependencies
+    "target/**",
+    "Cargo.lock",
+    
+    # Development documentation and summaries
+    "Enhancements.md",
+    "CODE_OPTIMIZATION_SUMMARY.md",
+    "CHANGELOG.md",
+    "FIXES_SUMMARY.md",
+    "COMPLETION_SUMMARY.md",
+    "CODE_COVERAGE_REPORT.md",
+    "EXAMPLES_COMPLETE.md",
+    "MIGRATION_COMPLETE.md",
+    "SEPARATE_MODULES_SUMMARY.md",
+    "SUBCRATE_REMOVAL_COMPLETE.md",
+    "MIGRATION_SUMMARY.md",
+    "PUBLISHING_PLAN.md",
+    "FINAL_SUMMARY.md",
+    "GUIDELINES.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    
+    # Development scripts and configuration
+    "run_coverage.sh",
+    "publish_crates.sh",
+    "update_examples.sh",
+    "tag_version.sh",
+    "tarpaulin.toml",
+    
+    # Images and media files
+    "*.JPG",
+    "*.jpg",
+    "*.jpeg", 
     "*.png",
     "*.gif",
-    ".gitignore",
-    ".codecov.yml",
-    "target/**/*",
-    "Cargo.lock",
+    "OxiDiviner*.JPG",
+    
+    # Coverage and profiling files
+    "target/coverage/**",
+    "target/tarpaulin/**",
     "*.profraw",
+    "tarpaulin-report.html",
+    "lcov.info",
+    "coverage.json",
     "*.bak",
-    ".github/**/*",
-    ".git/**/*",
-    "run_coverage.sh",
-    "examples/**/*",
-    "csv/**/*",
+    
+    # Development documentation
+    "docs/**",
+    
+    # Integration tests (keep unit tests in src/)
+    "tests/**",
+    
+    # OS-specific files
+    ".DS_Store",
+    "Thumbs.db",
+    "*.tmp",
+    "*.temp",
 ]
 
 [workspace.package]
-version = "0.4.3"
+version = "1.0.0"
 edition = "2021"
 license = "MIT"
 authors = ["OxiDiviner Team"]
@@ -45,15 +99,74 @@ documentation = "https://docs.rs/oxidiviner"
 keywords = ["time-series", "forecasting", "statistics", "analysis", "data"]
 categories = ["science", "mathematics", "algorithms", "finance"]
 exclude = [
+    # Development and IDE files
     ".cursor/**",
-    "Cargo.lock",
-    "target/**",
-    "update_examples.sh",
+    ".vscode/**",
+    ".idea/**",
+    ".cargo/**",
+    
+    # Version control and CI/CD
     ".git/**",
+    ".github/**",
     ".gitignore",
+    
+    # Build artifacts and dependencies
+    "target/**",
+    "Cargo.lock",
+    
+    # Development documentation and summaries
+    "Enhancements.md",
+    "CODE_OPTIMIZATION_SUMMARY.md",
+    "CHANGELOG.md",
+    "FIXES_SUMMARY.md",
+    "COMPLETION_SUMMARY.md",
+    "CODE_COVERAGE_REPORT.md",
+    "EXAMPLES_COMPLETE.md",
+    "MIGRATION_COMPLETE.md",
+    "SEPARATE_MODULES_SUMMARY.md",
+    "SUBCRATE_REMOVAL_COMPLETE.md",
+    "MIGRATION_SUMMARY.md",
+    "PUBLISHING_PLAN.md",
+    "FINAL_SUMMARY.md",
     "GUIDELINES.md",
     "CODE_OF_CONDUCT.md",
     "CONTRIBUTING.md",
+    
+    # Development scripts and configuration
+    "run_coverage.sh",
+    "publish_crates.sh",
+    "update_examples.sh",
+    "tag_version.sh",
+    "tarpaulin.toml",
+    
+    # Images and media files
+    "*.JPG",
+    "*.jpg",
+    "*.jpeg", 
+    "*.png",
+    "*.gif",
+    "OxiDiviner*.JPG",
+    
+    # Coverage and profiling files
+    "target/coverage/**",
+    "target/tarpaulin/**",
+    "*.profraw",
+    "tarpaulin-report.html",
+    "lcov.info",
+    "coverage.json",
+    "*.bak",
+    
+    # Development documentation
+    "docs/**",
+    
+    # Integration tests (keep unit tests in src/)
+    "tests/**",
+    
+    # OS-specific files
+    ".DS_Store",
+    "Thumbs.db",
+    "*.tmp",
+    "*.temp",
 ]
 
 [workspace.dependencies]

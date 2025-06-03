@@ -970,5 +970,5 @@ mod tests {
 
 #[cfg(test)]
 mod error_tests {
-    use super::*;
+    // This module is currently empty but reserved for error-specific tests
 }

@@ -92,7 +92,7 @@ impl TARModel {
             .ok_or_else(|| OxiError::ModelError("TAR model not fitted".to_string()))?;
 
         let n = training_data.values.len();
-        let max_ar_order = *self.ar_orders.iter().max().unwrap();
+        let _max_ar_order = *self.ar_orders.iter().max().unwrap();
 
         // Initialize with last observations
         let mut extended_series = training_data.values.clone();
@@ -218,7 +218,7 @@ impl TARModel {
                 log_likelihood -= 0.5 * m as f64 * (2.0 * std::f64::consts::PI * residual_var).ln();
 
                 let mut ss_res = 0.0;
-                for (i, &(t, _)) in regime_data.iter().enumerate() {
+                for (_i, &(t, _)) in regime_data.iter().enumerate() {
                     let mut fitted = coeffs[0];
                     for lag in 1..=ar_order {
                         if t >= lag {

@@ -571,8 +571,8 @@ fn test_parameter_validation_edge_cases() {
     assert!(quick::arima(data.clone(), 2).is_err());
 
     // Test minimum data validation
-    assert!(ModelValidator::validate_minimum_data(5, 10, "ARIMA").is_err());
-    assert!(ModelValidator::validate_minimum_data(15, 10, "ARIMA").is_ok());
+    assert!(ModelValidator::validate_min_data_length(5, 10, "ARIMA").is_err());
+    assert!(ModelValidator::validate_min_data_length(15, 10, "ARIMA").is_ok());
 
     // Test forecast horizon validation
     assert!(ModelValidator::validate_forecast_horizon(20, 5).is_err());

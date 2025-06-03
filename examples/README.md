@@ -1,6 +1,6 @@
 # OxiDiviner Examples
 
-This directory contains various examples demonstrating how to use the OxiDiviner library for time series analysis and forecasting.
+This directory contains **comprehensive examples** demonstrating how to use the OxiDiviner library for time series analysis and forecasting, including **advanced regime-switching models** and **institutional-grade financial modeling**.
 
 ## Running Examples
 
@@ -16,54 +16,73 @@ cargo run --bin <example_name>
 
 ## Examples Overview
 
-### Main Examples
+### 🚀 **Enhanced Regime-Switching Models**
 
-- **standard_interface_demo.rs** - Demonstrates the standardized forecasting interface used across all models
-- **ohlcv_forecasting_example.rs** - Shows how to work with OHLCV (Open-High-Low-Close-Volume) financial data
+- **✨ enhanced_regime_switching_demo.rs** - **COMPREHENSIVE**: Multivariate regime detection and higher-order dependencies
+  - Multivariate regime detection across multiple assets (stocks, bonds, commodities)
+  - Portfolio regime analysis with risk metrics and correlation switching
+  - Higher-order dependencies and complex temporal patterns
+  - Duration-dependent models and regime persistence analysis
+  - Cross-asset correlation regime analysis with crisis vs normal market detection
+  - Model comparison and selection framework
 
-### Model-Specific Examples
+### 🎯 **Core Examples**
 
-#### Exponential Smoothing Models
+- **quick_start.rs** - **START HERE**: Fastest way to get started with OxiDiviner
+- **standard_interface_demo.rs** - Demonstrates the standardized forecasting interface
+- **api_improvements_demo.rs** - Advanced API features and builder patterns
+- **quick_start_improved.rs** - Enhanced quick start with validation and comparison
 
-- **ses_demo.rs** - Simple Exponential Smoothing basic usage
-- **ses_model_example.rs** - More comprehensive SES model demonstration
-- **holt_demo.rs** - Holt's Linear Trend model usage
-- **holt_winters_demo.rs** - Holt-Winters Seasonal model usage
-- **es_models_comparison.rs** - Comparison of different exponential smoothing models
-- **es_parameter_tuning.rs** - Parameter tuning for exponential smoothing models
-- **ses_parameter_tuning.rs** - Parameter tuning specifically for SES models
-- **ets_demo.rs** - Error-Trend-Seasonal (ETS) model usage
-- **ets_model_demo.rs** - More comprehensive ETS model demonstration
-- **ets_model_complete.rs** - Complete example of ETS model usage
+### 💼 **Financial Models**
 
-#### Autoregressive Models
+- **heston_stochastic_volatility_demo.rs** - Gold-standard volatility modeling with mean reversion
+- **sabr_volatility_demo.rs** - Industry-standard FX and rates volatility surface modeling
 
-- **autoregressive_demo.rs** - Demonstrates AR, ARMA, ARIMA, SARIMA, and VAR models
-- **ma_demo.rs** - Moving Average (MA) model usage
+### 🔧 **Advanced Features**
 
-#### GARCH Models
+- **optimization_demo.rs** - Advanced parameter optimization techniques (Bayesian, Genetic, Simulated Annealing)
+- **advanced_diagnostics_demo.rs** - Comprehensive model diagnostics and validation
+- **accuracy_measurement.rs** - Accuracy measurement and validation frameworks
+- **accuracy_improvements.rs** - Ensemble methods and accuracy enhancement techniques
 
-- **basic_garch_example.rs** - Basic GARCH model usage
-- **stock_volatility_analysis.rs** - Using GARCH for stock volatility analysis
+### 📊 **Data Handling**
 
-### OHLCV Data Handling
+- **ohlcv_forecasting_example.rs** - Working with OHLCV (Open-High-Low-Close-Volume) financial data
 
-- **ohlcv_data_processor.rs** - Example of processing OHLCV data
+### 📁 **Specialized Examples**
 
-### Notes
+#### Exponential Smoothing Models (`exponential-smoothing-models/`)
+- **ses_demo.rs** - Simple Exponential Smoothing
+- **holt_demo.rs** - Holt's Linear Trend model
+- **holt_winters_demo.rs** - Holt-Winters seasonal model
+- **ets_model_complete.rs** - Complete ETS model implementation
+- **es_models_comparison.rs** - Comparison of different ES models
 
-Some examples require additional data files that are not included in the repository:
+#### Autoregressive Models (`autoregressive-models/`)
+- **autoregressive_demo.rs** - Comprehensive AR/ARIMA/SARIMA demonstrations
+- **var_demo.rs** - Vector Autoregression models
+- **vecm_demo.rs** - Vector Error Correction models
 
-1. **ohlcv_data_processor.rs** - Requires CSV files in the examples/csv directory
-2. **simple_forecast.rs** - Requires CSV files and uses an older API structure
-3. **ets_simple_demo.rs** - A simplified demonstration that is not meant to be run fully
+#### GARCH Models (`garch-models/`)
+- **basic_garch_example.rs** - Standard GARCH volatility modeling
+- **advanced_garch_demo.rs** - Advanced GARCH variants (GJR, EGARCH, GARCH-M)
+- **stock_volatility_analysis.rs** - Real-world stock volatility analysis
 
-To run these examples, you would need to provide the appropriate data files or update the code to work with your own data.
+#### OHLCV Data Handling (`ohlcv-handling/`)
+- **data_processor.rs** - OHLCV data processing and transformation
 
-## Advanced Usage
+## 🎯 **Recommended Learning Path**
 
-For more advanced examples and practical applications, please refer to the documentation at [docs.rs/oxidiviner](https://docs.rs/oxidiviner).
+1. **Start with**: `quick_start.rs` - Get familiar with basic concepts
+2. **Learn APIs**: `api_improvements_demo.rs` - Understand builder patterns and advanced features
+3. **Financial Models**: `heston_stochastic_volatility_demo.rs` - Professional financial modeling
+4. **Advanced Features**: `enhanced_regime_switching_demo.rs` - State-of-the-art regime detection
+5. **Optimization**: `optimization_demo.rs` - Parameter optimization techniques
 
-## Note on Deprecated Methods
+## 🔧 **Example Categories**
 
-Some examples contain deprecated Rand crate function calls which will be updated in a future release. This does not affect the functionality of the OxiDiviner library itself. 
+- **🟢 Beginner**: quick_start.rs, standard_interface_demo.rs
+- **🟡 Intermediate**: api_improvements_demo.rs, heston_stochastic_volatility_demo.rs
+- **🔴 Advanced**: enhanced_regime_switching_demo.rs, optimization_demo.rs
+
+All examples are self-contained and include comprehensive documentation and explanations. 

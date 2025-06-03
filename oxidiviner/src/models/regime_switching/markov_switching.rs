@@ -444,9 +444,7 @@ impl MarkovSwitchingModel {
         let mut new_initial_probs = vec![0.0; self.num_regimes];
 
         // Update initial probabilities
-        for regime in 0..self.num_regimes {
-            new_initial_probs[regime] = gamma[0][regime];
-        }
+        new_initial_probs[..self.num_regimes].copy_from_slice(&gamma[0][..self.num_regimes]);
 
         // Update means
         for regime in 0..self.num_regimes {

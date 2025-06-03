@@ -1,5 +1,4 @@
-use crate::{OxiError, Result, TimeSeriesData};
-use chrono::{Duration, TimeZone, Utc};
+use crate::core::{OxiError, Result, TimeSeriesData};
 use serde::{Deserialize, Serialize};
 
 /// Accuracy metrics for forecast evaluation
@@ -367,6 +366,13 @@ pub struct ModelValidator;
 impl ModelValidator {
     /// Validate ARIMA parameters
     pub fn validate_arima_params(p: usize, d: usize, q: usize) -> Result<()> {
+        // Check that at least one parameter is non-zero
+        if p == 0 && d == 0 && q == 0 {
+            return Err(OxiError::InvalidParameter(
+                "ARIMA model must have at least one non-zero parameter (p, d, or q)".to_string(),
+            ));
+        }
+
         if p > 10 {
             return Err(OxiError::InvalidParameter(
                 "AR order (p) too high: maximum recommended value is 10".to_string(),
@@ -606,12 +612,59 @@ impl ModelValidator {
 
         Ok(())
     }
+
+    /// Validate moving average model parameters
+    pub fn validate_ma_params(window: usize) -> Result<()> {
+        if window == 0 {
+            return Err(OxiError::InvalidParameter(
+                "Moving average window must be positive".to_string(),
+            ));
+        }
+        if window > 50 {
+            return Err(OxiError::InvalidParameter(
+                "Moving average window too large (max 50)".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
+    /// Validate exponential smoothing model parameters
+    pub fn validate_exponential_smoothing_params(
+        alpha: f64,
+        beta: Option<f64>,
+        gamma: Option<f64>,
+    ) -> Result<()> {
+        Self::validate_smoothing_param(alpha, "alpha")?;
+
+        if let Some(beta) = beta {
+            Self::validate_smoothing_param(beta, "beta")?;
+        }
+
+        if let Some(gamma) = gamma {
+            Self::validate_smoothing_param(gamma, "gamma")?;
+        }
+
+        Ok(())
+    }
+
+    /// Validate GARCH stationarity constraints
+    pub fn validate_garch_stationarity_constraints(alpha: &[f64], beta: &[f64]) -> Result<()> {
+        let sum: f64 = alpha.iter().sum::<f64>() + beta.iter().sum::<f64>();
+        if sum >= 1.0 {
+            return Err(OxiError::InvalidParameter(format!(
+                "GARCH stationarity condition violated: sum of α and β parameters must be < 1, got {}",
+                sum
+            )));
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{Duration, TimeZone, Utc};
+    use crate::core::TimeSeriesData;
+    use chrono::{Duration, Utc};
 
     fn create_test_data() -> TimeSeriesData {
         let timestamps = (0..10).map(|i| Utc::now() + Duration::days(i)).collect();
@@ -659,7 +712,7 @@ mod tests {
 mod extended_tests {
     use super::*;
     use crate::core::TimeSeriesData;
-    use chrono::{Duration, Utc};
+    use chrono::{TimeZone, Utc};
 
     fn create_test_data() -> TimeSeriesData {
         let timestamps = (0..10)
@@ -814,7 +867,7 @@ mod extended_tests {
 
         assert!(!folds.is_empty());
 
-        for (train, test) in folds {
+        for (_train, test) in folds {
             assert!(!test.is_empty());
         }
     }

@@ -10,20 +10,10 @@ chrono = { version = "0.4.41", features = ["serde"] }
 rand = "0.9.1"
 rand_distr = "0.5.0"
 
-# Basic Working Demo
-[[bin]]
-name = "basic_working_demo"
-path = "basic_working_demo.rs"
-
 # API Improvements Demo
 [[bin]]
 name = "api_improvements_demo"
 path = "api_improvements_demo.rs"
-
-# Simple API Demo
-[[bin]]
-name = "simple_api_demo"
-path = "simple_api_demo.rs"
 
 # Standard Interface Demo
 [[bin]]
@@ -35,6 +25,11 @@ path = "standard_interface_demo.rs"
 name = "quick_start_improved"
 path = "quick_start_improved.rs"
 
+# Quick Start Demo
+[[bin]]
+name = "quick_start"
+path = "quick_start.rs"
+
 # OHLCV Data Examples
 [[bin]]
 name = "ohlcv_forecasting_example"
@@ -44,6 +39,38 @@ path = "ohlcv_forecasting_example.rs"
 [[bin]]
 name = "ohlcv_data_processor"
 path = "ohlcv-handling/data_processor.rs"
+
+# Financial Models
+[[bin]]
+name = "heston_stochastic_volatility_demo"
+path = "heston_stochastic_volatility_demo.rs"
+
+[[bin]]
+name = "sabr_volatility_demo"
+path = "sabr_volatility_demo.rs"
+
+# Enhanced Regime-Switching Models
+[[bin]]
+name = "enhanced_regime_switching_demo"
+path = "enhanced_regime_switching_demo.rs"
+
+# Advanced Features
+[[bin]]
+name = "optimization_demo"
+path = "optimization_demo.rs"
+
+[[bin]]
+name = "advanced_diagnostics_demo"
+path = "advanced_diagnostics_demo.rs"
+
+# Accuracy Measurement
+[[bin]]
+name = "accuracy_measurement"
+path = "accuracy_measurement.rs"
+
+[[bin]]
+name = "accuracy_improvements"
+path = "accuracy_improvements.rs"
 
 # Exponential Smoothing Models
 [[bin]]
@@ -104,17 +131,12 @@ path = "garch-models/basic_garch_example.rs"
 name = "stock_volatility_analysis"
 path = "garch-models/stock_volatility_analysis.rs"
 
-# Accuracy Measurement
-[[bin]]
-name = "accuracy_measurement"
-path = "accuracy_measurement.rs"
+# Financial Models
+# Temporarily commented out until files are created
+# [[bin]]
+# name = "merton_jump_diffusion_demo"
+# path = "merton_jump_diffusion_demo.rs"
 
-# Accuracy Improvements
-[[bin]]
-name = "accuracy_improvements"
-path = "accuracy_improvements.rs"
-
-# Phase 2: Advanced Optimization Demo
-[[bin]]
-name = "optimization_demo"
-path = "optimization_demo.rs" 
+# [[bin]]
+# name = "kou_jump_diffusion_demo"
+# path = "kou_jump_diffusion_demo.rs" 

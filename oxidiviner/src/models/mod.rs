@@ -15,6 +15,7 @@ This module contains all the time series forecasting models available in OxiDivi
 * **Non-linear Models** - For threshold and regime-dependent behavior
 * **Decomposition Models** - For seasonal-trend analysis and forecasting
 * **Copula Models** - For dependency structure modeling
+* **Financial Models** - For advanced quantitative finance applications
 
 ## Usage
 
@@ -23,6 +24,7 @@ use oxidiviner::models::garch::GARCHModel;
 use oxidiviner::models::exponential_smoothing::SimpleExponentialSmoothing;
 use oxidiviner::models::state_space::KalmanFilter;
 use oxidiviner::models::regime_switching::MarkovSwitchingModel;
+use oxidiviner::models::financial::MertonJumpDiffusionModel;
 
 // Create and use models...
 ```
@@ -44,3 +46,6 @@ pub mod decomposition;
 pub mod nonlinear;
 pub mod regime_switching;
 pub mod state_space;
+
+// Advanced financial models
+pub mod financial;

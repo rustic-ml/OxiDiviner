@@ -14,7 +14,6 @@
 
 use crate::core::{Forecaster, ModelEvaluation, OxiError, Result, TimeSeriesData};
 use crate::math::metrics::{mae, mape, mse, rmse, smape};
-use chrono::{DateTime, Utc};
 
 /// Vector Error Correction Model for cointegrated time series
 #[derive(Debug, Clone)]
@@ -491,7 +490,7 @@ impl VECMModel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{Duration, Utc};
+    use chrono::{DateTime, Duration, Utc};
 
     fn create_cointegrated_data() -> Vec<TimeSeriesData> {
         let start_time = Utc::now();

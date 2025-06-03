@@ -12,7 +12,7 @@
 use chrono::{Duration, Utc};
 use oxidiviner::models::autoregressive::{ARIMAModel, ARModel};
 use oxidiviner::prelude::*;
-use rand::{thread_rng, Rng};
+use rand::{rng, Rng};
 use std::collections::HashMap;
 
 fn main() -> Result<()> {
@@ -71,13 +71,13 @@ fn generate_trending_data() -> Result<TimeSeriesData> {
     values.push(100.0);
     values.push(101.0);
 
-    let mut rng = thread_rng();
+    let mut rng = rng();
 
     for i in 2..n_points {
         // AR(2) with trend: y_t = 0.05 + 0.6*y_{t-1} + 0.3*y_{t-2} + trend + noise
         let ar_component = 0.6 * values[i - 1] + 0.3 * values[i - 2];
         let trend = 0.05 * i as f64; // Small positive trend
-        let noise = rng.gen_range(-1.0..1.0);
+        let noise = rng.random_range(-1.0..1.0);
         let value = 5.0 + ar_component + trend + noise;
         values.push(value);
     }
@@ -322,28 +322,10 @@ fn demonstrate_auto_parameter_selection(data: &TimeSeriesData) -> Result<()> {
         }
     }
 
-    if let Some(final_model) = best_model {
-        println!("  🏆 Best model selected:");
-        println!("    AR({}, intercept={})", best_params.0, best_params.1);
-        println!("    AIC = {:.3}", best_aic);
-
-        // Evaluate on full dataset
-        let mut full_model = ARModel::new(best_params.0, best_params.1)?;
-        full_model.fit(data)?;
-
-        // Generate forecasts
-        let forecasts = full_model.forecast(10)?;
-        println!(
-            "  📈 Next 10 forecasts: {:?}",
-            forecasts
-                .iter()
-                .map(|&x| format!("{:.1}", x))
-                .collect::<Vec<_>>()
-        );
-
-        println!("  ✅ Automated parameter selection completed successfully");
+    if let Some(_final_model) = best_model {
+        println!("✅ Optimization completed successfully");
     } else {
-        println!("  ❌ No suitable model found");
+        println!("❌ Optimization failed to find a suitable model");
     }
 
     Ok(())
@@ -443,13 +425,13 @@ impl BayesianOptimizer {
     where
         F: Fn(&HashMap<String, f64>) -> Result<f64>,
     {
-        let mut rng = thread_rng();
+        let mut rng = rng();
 
         // Initial random sampling
         for i in 0..initial_samples {
             let params = self.sample_random_parameters();
             let objective_value = objective_function(&params.parameters)?;
-            let mut param_set = params.with_objective(objective_value);
+            let param_set = params.with_objective(objective_value);
 
             if self.best_parameters.is_none()
                 || objective_value
@@ -509,7 +491,7 @@ impl BayesianOptimizer {
     }
 
     fn sample_random_parameters(&self) -> ParameterSet {
-        let mut rng = thread_rng();
+        let mut rng = rng();
         let mut parameters = HashMap::new();
 
         for (name, bounds) in &self.parameter_space {
@@ -520,14 +502,14 @@ impl BayesianOptimizer {
     }
 
     fn sample_near_best_parameters(&self) -> ParameterSet {
-        let mut rng = thread_rng();
+        let mut rng = rng();
         let mut parameters = HashMap::new();
 
         if let Some(best) = &self.best_parameters {
             for (name, bounds) in &self.parameter_space {
                 let best_val = best.parameters[name];
                 let range = bounds.max - bounds.min;
-                let perturbation = rng.gen_range(-0.2..0.2) * range;
+                let perturbation = rng.random_range(-0.2..0.2) * range;
                 let new_val = (best_val + perturbation).clamp(bounds.min, bounds.max);
 
                 let final_val = if bounds.is_integer {
@@ -653,7 +635,7 @@ impl GeneticOptimizer {
     }
 
     fn sample_random_parameters(&self) -> ParameterSet {
-        let mut rng = thread_rng();
+        let mut rng = rng();
         let mut parameters = HashMap::new();
 
         for (name, bounds) in &self.parameter_space {
@@ -707,7 +689,7 @@ impl SimulatedAnnealingOptimizer {
     where
         F: Fn(&HashMap<String, f64>) -> Result<f64>,
     {
-        let mut rng = thread_rng();
+        let mut rng = rng();
 
         let mut current = self.sample_random_parameters();
         let mut current_objective = objective_function(&current.parameters)?;
@@ -725,14 +707,15 @@ impl SimulatedAnnealingOptimizer {
             let neighbor_objective = objective_function(&neighbor.parameters)?;
 
             let delta = neighbor_objective - current_objective;
-            let accept = if delta < 0.0 {
-                true // Accept if better
-            } else {
-                let probability = (-delta / temperature).exp();
-                rng.gen::<f64>() < probability
+            let accept_probability = {
+                if delta < 0.0 {
+                    1.0
+                } else {
+                    (-delta / temperature).exp()
+                }
             };
 
-            if accept {
+            if rng.random::<f64>() < accept_probability {
                 current = neighbor;
                 current_objective = neighbor_objective;
                 current.objective_value = Some(current_objective);
@@ -757,7 +740,7 @@ impl SimulatedAnnealingOptimizer {
     }
 
     fn sample_random_parameters(&self) -> ParameterSet {
-        let mut rng = thread_rng();
+        let mut rng = rng();
         let mut parameters = HashMap::new();
 
         for (name, bounds) in &self.parameter_space {
@@ -768,17 +751,17 @@ impl SimulatedAnnealingOptimizer {
     }
 
     fn generate_neighbor(&self, current: &ParameterSet) -> Result<ParameterSet> {
-        let mut rng = thread_rng();
+        let mut rng = rng();
         let mut neighbor_params = current.parameters.clone();
 
         // Randomly modify one parameter
         let param_names: Vec<_> = self.parameter_space.keys().collect();
-        let selected_param = param_names[rng.gen_range(0..param_names.len())];
+        let selected_param = param_names[rng.random_range(0..param_names.len())];
         let bounds = &self.parameter_space[selected_param];
 
         let current_val = neighbor_params[selected_param];
         let range = bounds.max - bounds.min;
-        let perturbation = rng.gen_range(-0.1..0.1) * range;
+        let perturbation = rng.random_range(-0.1..0.1) * range;
         let new_val = (current_val + perturbation).clamp(bounds.min, bounds.max);
 
         let final_val = if bounds.is_integer {
@@ -850,4 +833,26 @@ impl CrossValidator {
 
         Ok(scores)
     }
+}
+
+fn generate_price_data(n_points: usize) -> Vec<f64> {
+    let mut rng = rng();
+    let mut prices = vec![100.0]; // Starting price
+    let mut regime = 0; // 0: normal, 1: volatile
+    
+    for _ in 1..n_points {
+        let noise = rng.random_range(-1.0..1.0);
+        let drift = if regime == 0 { 0.001 } else { -0.002 };
+        let volatility = if regime == 0 { 0.01 } else { 0.03 };
+        
+        let next_price = prices.last().unwrap() * (1.0 + drift + volatility * noise);
+        prices.push(next_price);
+        
+        // Switch regime occasionally
+        if rng.random_range(0.0..1.0) < 0.02 {
+            regime = 1 - regime;
+        }
+    }
+    
+    prices
 }

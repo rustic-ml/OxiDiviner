@@ -141,12 +141,12 @@ impl STLModel {
             .trend
             .as_ref()
             .ok_or_else(|| OxiError::ModelError("STL not fitted".to_string()))?;
-        let seasonal = self
+        let _seasonal = self
             .seasonal
             .as_ref()
             .ok_or_else(|| OxiError::ModelError("STL not fitted".to_string()))?;
 
-        let n = trend.len();
+        let _n = trend.len();
         let mut forecasts = Vec::with_capacity(horizon);
 
         // Forecast trend component (linear extrapolation)

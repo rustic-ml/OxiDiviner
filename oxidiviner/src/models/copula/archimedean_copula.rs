@@ -200,7 +200,7 @@ impl ArchimedeanCopulaModel {
                     let term2 = term1.powf(1.0 / theta);
                     let term3 = (-term2).exp();
                     let term4 = term1.powf(1.0 / theta - 2.0);
-                    let term5 = (theta - 1.0) * (ln_u * ln_v);
+                    let _term5 = (theta - 1.0) * (ln_u * ln_v);
                     let density_val = term3 * term4 * (term1 + (theta - 1.0)) / (u * v);
                     density_val.abs() // Ensure positive
                 }

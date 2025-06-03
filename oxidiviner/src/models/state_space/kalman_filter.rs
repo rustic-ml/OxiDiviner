@@ -24,7 +24,7 @@
 
 use crate::core::{Forecaster, ModelEvaluation, OxiError, Result, TimeSeriesData};
 use crate::math::metrics::{mae, mape, mse, rmse, smape};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use std::f64::consts::PI;
 
 /// Kalman Filter for dynamic time series forecasting
@@ -758,7 +758,6 @@ impl KalmanFilter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{Duration, Utc};
 
     fn create_test_data() -> TimeSeriesData {
         let start_time = Utc::now();

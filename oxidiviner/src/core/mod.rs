@@ -97,6 +97,7 @@ fn example() -> Result<()> {
 use serde::{Deserialize, Serialize};
 
 pub mod data;
+pub mod diagnostics;
 pub mod error;
 pub mod persistence;
 pub mod streaming;
@@ -105,304 +106,41 @@ pub mod validation;
 
 // Re-export the main components
 pub use data::{OHLCVData, TimeSeriesData};
+pub use diagnostics::{
+    DiagnosticReport, ForecastDiagnostics, ModelDiagnostics, ResidualAnalysis, SpecificationTests,
+    TestResult,
+};
 pub use error::{OxiError, Result};
+pub use persistence::{ModelPersistence, ModelState, Persistable, PersistedModel};
+pub use streaming::{batch_process, RunningStats, StreamingBuffer, StreamingProcessor};
+pub use validation::{
+    AccuracyReport, BacktestConfig, BacktestResult, ModelValidator, ValidationUtils,
+};
 
-/// Comprehensive model parameter validation utilities
-pub struct ModelValidator;
-
-impl ModelValidator {
-    /// Validate ARIMA model parameters
-    ///
-    /// # Arguments
-    /// * `p` - Autoregressive order
-    /// * `d` - Differencing order
-    /// * `q` - Moving average order
-    ///
-    /// # Returns
-    /// * `Result<()>` - Success or validation error
-    pub fn validate_arima_params(p: usize, d: usize, q: usize) -> Result<()> {
-        if p > 10 {
-            return Err(OxiError::InvalidParameter(
-                "AR order (p) too high (max 10). Consider using a simpler model.".into(),
-            ));
-        }
-
-        if d > 2 {
-            return Err(OxiError::InvalidParameter(
-                "Differencing order (d) too high (max 2). Higher orders rarely needed.".into(),
-            ));
-        }
-
-        if q > 10 {
-            return Err(OxiError::InvalidParameter(
-                "MA order (q) too high (max 10). Consider using a simpler model.".into(),
-            ));
-        }
-
-        if p == 0 && d == 0 && q == 0 {
-            return Err(OxiError::InvalidParameter(
-                "At least one of p, d, or q must be greater than 0".into(),
-            ));
-        }
-
-        Ok(())
-    }
-
-    /// Validate autoregressive model parameters
-    ///
-    /// # Arguments
-    /// * `order` - AR model order
-    ///
-    /// # Returns
-    /// * `Result<()>` - Success or validation error
-    pub fn validate_ar_params(order: usize) -> Result<()> {
-        if order == 0 {
-            return Err(OxiError::InvalidParameter(
-                "AR order must be greater than 0".into(),
-            ));
-        }
-
-        if order > 20 {
-            return Err(OxiError::InvalidParameter(
-                "AR order too high (max 20). Consider using ARIMA or other models.".into(),
-            ));
-        }
-
-        Ok(())
-    }
-
-    /// Validate moving average model parameters
-    ///
-    /// # Arguments
-    /// * `window` - Moving average window size
-    ///
-    /// # Returns
-    /// * `Result<()>` - Success or validation error
-    pub fn validate_ma_params(window: usize) -> Result<()> {
-        if window == 0 {
-            return Err(OxiError::InvalidParameter(
-                "Moving average window must be greater than 0".into(),
-            ));
-        }
-
-        if window > 100 {
-            return Err(OxiError::InvalidParameter(
-                "Moving average window too large (max 100). Large windows may not be meaningful."
-                    .into(),
-            ));
-        }
-
-        Ok(())
-    }
-
-    /// Validate exponential smoothing parameters
-    ///
-    /// # Arguments
-    /// * `alpha` - Smoothing parameter for level
-    /// * `beta` - Optional smoothing parameter for trend
-    /// * `gamma` - Optional smoothing parameter for seasonality
-    ///
-    /// # Returns
-    /// * `Result<()>` - Success or validation error
-    pub fn validate_exponential_smoothing_params(
-        alpha: f64,
-        beta: Option<f64>,
-        gamma: Option<f64>,
-    ) -> Result<()> {
-        if !(0.0..=1.0).contains(&alpha) {
-            return Err(OxiError::InvalidParameter(
-                "Alpha parameter must be between 0 and 1".into(),
-            ));
-        }
-
-        if let Some(beta) = beta {
-            if !(0.0..=1.0).contains(&beta) {
-                return Err(OxiError::InvalidParameter(
-                    "Beta parameter must be between 0 and 1".into(),
-                ));
-            }
-        }
-
-        if let Some(gamma) = gamma {
-            if !(0.0..=1.0).contains(&gamma) {
-                return Err(OxiError::InvalidParameter(
-                    "Gamma parameter must be between 0 and 1".into(),
-                ));
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Validate GARCH model parameters
-    ///
-    /// # Arguments
-    /// * `p` - GARCH order
-    /// * `q` - ARCH order
-    ///
-    /// # Returns
-    /// * `Result<()>` - Success or validation error
-    pub fn validate_garch_params(p: usize, q: usize) -> Result<()> {
-        if p == 0 && q == 0 {
-            return Err(OxiError::InvalidParameter(
-                "At least one of GARCH order (p) or ARCH order (q) must be greater than 0".into(),
-            ));
-        }
-
-        if p > 5 {
-            return Err(OxiError::InvalidParameter(
-                "GARCH order (p) too high (max 5). Higher orders rarely improve fit.".into(),
-            ));
-        }
-
-        if q > 5 {
-            return Err(OxiError::InvalidParameter(
-                "ARCH order (q) too high (max 5). Higher orders rarely improve fit.".into(),
-            ));
-        }
-
-        Ok(())
-    }
-
-    /// Validate forecast horizon
-    ///
-    /// # Arguments
-    /// * `horizon` - Number of periods to forecast
-    /// * `data_size` - Size of training data
-    ///
-    /// # Returns
-    /// * `Result<()>` - Success or validation error
-    pub fn validate_forecast_horizon(horizon: usize, data_size: usize) -> Result<()> {
-        if horizon == 0 {
-            return Err(OxiError::InvalidParameter(
-                "Forecast horizon must be greater than 0".into(),
-            ));
-        }
-
-        if horizon > data_size / 2 {
-            return Err(OxiError::InvalidParameter(
-                format!(
-                    "Forecast horizon ({}) too large relative to training data size ({}). Consider horizon <= {}",
-                    horizon, data_size, data_size / 2
-                )
-            ));
-        }
-
-        Ok(())
-    }
-
-    /// Validate minimum data requirements
-    ///
-    /// # Arguments
-    /// * `data_size` - Size of available data
-    /// * `min_required` - Minimum required data points
-    /// * `model_name` - Name of the model for error messages
-    ///
-    /// # Returns
-    /// * `Result<()>` - Success or validation error
-    pub fn validate_minimum_data(
-        data_size: usize,
-        min_required: usize,
-        model_name: &str,
-    ) -> Result<()> {
-        if data_size < min_required {
-            return Err(OxiError::DataError(format!(
-                "{} requires at least {} data points, but only {} provided",
-                model_name, min_required, data_size
-            )));
-        }
-
-        Ok(())
-    }
-
-    /// Validate a single smoothing parameter
-    pub fn validate_smoothing_param(value: f64, param_name: &str) -> Result<()> {
-        if !(0.0..=1.0).contains(&value) {
-            return Err(OxiError::ValidationError(format!(
-                "{} must be between 0.0 and 1.0, got {}",
-                param_name, value
-            )));
-        }
-        Ok(())
-    }
-
-    /// Validate damping parameter
-    pub fn validate_damping_param(phi: f64) -> Result<()> {
-        if !(0.0..=1.0).contains(&phi) {
-            return Err(OxiError::ValidationError(format!(
-                "Damping parameter phi must be between 0.0 and 1.0, got {}",
-                phi
-            )));
-        }
-        Ok(())
-    }
-
-    /// Validate seasonal period
-    pub fn validate_seasonal_period(period: usize) -> Result<()> {
-        if period < 2 {
-            return Err(OxiError::ValidationError(format!(
-                "Seasonal period must be at least 2, got {}",
-                period
-            )));
-        }
-        if period > 365 {
-            return Err(OxiError::ValidationError(format!(
-                "Seasonal period {} seems too large (>365), please verify",
-                period
-            )));
-        }
-        Ok(())
-    }
-
-    /// Validate data for fitting
-    pub fn validate_for_fitting(
-        data: &TimeSeriesData,
-        min_points: usize,
-        model_name: &str,
-    ) -> Result<()> {
-        // Check minimum data points
-        Self::validate_minimum_data(data.values.len(), min_points, model_name)?;
-
-        // Check for NaN or infinite values
-        for (i, &value) in data.values.iter().enumerate() {
-            if value.is_nan() {
-                return Err(OxiError::ValidationError(format!(
-                    "NaN value found at index {} in time series data",
-                    i
-                )));
-            }
-            if value.is_infinite() {
-                return Err(OxiError::ValidationError(format!(
-                    "Infinite value found at index {} in time series data",
-                    i
-                )));
-            }
-        }
-
-        // Check for extreme values (optional warning)
-        let mean = data.values.iter().sum::<f64>() / data.values.len() as f64;
-        let variance =
-            data.values.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / data.values.len() as f64;
-        let std_dev = variance.sqrt();
-
-        for (i, &value) in data.values.iter().enumerate() {
-            if (value - mean).abs() > 5.0 * std_dev {
-                eprintln!(
-                    "Warning: Potential outlier at index {} (value: {}, mean: {}, std: {})",
-                    i, value, mean, std_dev
-                );
-            }
-        }
-
-        Ok(())
-    }
-}
-
-/// Central trait that all forecasting models must implement
+/// The central trait that all forecasting models must implement
 ///
 /// The Forecaster trait provides a common interface for time series models.
-/// It includes methods for fitting models to data, generating forecasts,
-/// and evaluating model performance.
+/// All forecasting models in OxiDiviner implement this trait, ensuring
+/// consistency and enabling polymorphic usage.
+///
+/// # Basic Usage Pattern
+///
+/// 1. Create a model instance
+/// 2. Fit the model to training data using `fit()`
+/// 3. Generate forecasts using `forecast()` or `predict()`
+/// 4. Evaluate the model using `evaluate()`
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use oxidiviner::core::{Forecaster, TimeSeriesData};
+/// use oxidiviner::models::ARModel;
+///
+/// let mut model = ARModel::new(2)?; // AR(2) model
+/// model.fit(&training_data)?;
+/// let forecasts = model.forecast(5)?; // Forecast 5 periods
+/// let evaluation = model.evaluate(&test_data)?;
+/// ```
 pub trait Forecaster {
     /// Get the name of the model
     fn name(&self) -> &str;
