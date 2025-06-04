@@ -45,7 +45,19 @@ rand = { workspace = true }
 chrono = { workspace = true }
 nalgebra = { workspace = true }
 rand_distr = { workspace = true }
+criterion = "0.5"
 
 [features]
 default = []
 ndarray_support = ["ndarray"]
+
+# Examples
+[[example]]
+name = "accuracy_improvements_demo"
+path = "../examples/accuracy_improvements_demo.rs"
+
+# Benchmarks
+[[bench]]
+name = "accuracy_improvements_benchmark"
+path = "../benches/accuracy_improvements_benchmark.rs"
+harness = false

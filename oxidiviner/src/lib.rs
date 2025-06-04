@@ -49,6 +49,31 @@ pub mod batch;
 pub mod financial;
 pub mod quick;
 
+/// # Ensemble Forecasting Methods
+///
+/// Provides tools for combining multiple forecasting models to improve
+/// prediction accuracy and robustness. Includes various ensemble strategies
+/// like averaging, weighted averaging, median, and stacking.
+///
+/// For detailed usage and a list of available methods, see the [`ensemble`]
+/// module documentation.
+///
+/// [`ensemble`]: ensemble
+pub mod ensemble;
+
+/// # Parameter Optimization Engine
+///
+/// Offers automated parameter tuning for various forecasting models.
+/// Helps in finding optimal model configurations by searching through
+/// parameter spaces using methods like Grid Search and evaluating
+/// performance with metrics such as MAE, RMSE, etc.
+///
+/// For detailed usage and configuration options, see the [`optimization`]
+/// module documentation.
+///
+/// [`optimization`]: optimization
+pub mod optimization;
+
 // Re-export from core
 pub use crate::core::*;
 
@@ -113,8 +138,17 @@ pub mod prelude {
         moving_average::MAModel,
         nonlinear::TARModel,
         regime_switching::MarkovSwitchingModel,
-        // Advanced forecasting models
         state_space::KalmanFilter,
+    };
+
+    // Re-export key components from ensemble and optimization modules
+    pub use crate::ensemble::{
+        EnsembleBuilder, EnsembleForecast, EnsembleMethod, EnsemblePerformance,
+        EnsembleUtils, ModelForecast, ModelPerformance as EnsembleModelPerformance
+    };
+    pub use crate::optimization::{
+        OptimizerBuilder, ParameterOptimizer, OptimizationConfig, OptimizationMethod,
+        OptimizationMetric, OptimizationResult, ConvergenceInfo
     };
 }
 
