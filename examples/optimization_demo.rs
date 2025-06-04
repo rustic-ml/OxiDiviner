@@ -547,7 +547,11 @@ impl GeneticOptimizer {
         self
     }
 
-    pub fn optimize<F>(&mut self, objective_function: F, max_generations: usize) -> Result<ParameterSet>
+    pub fn optimize<F>(
+        &mut self,
+        objective_function: F,
+        max_generations: usize,
+    ) -> Result<ParameterSet>
     where
         F: Fn(&HashMap<String, f64>) -> Result<f64>,
     {

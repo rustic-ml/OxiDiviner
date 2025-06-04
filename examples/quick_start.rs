@@ -28,7 +28,7 @@ fn main() -> Result<()> {
 
     let selector = AutoSelector::with_aic().max_models(5);
     match selector.select_best(&data) {
-        Ok((mut best_model, score, model_name)) => {
+        Ok((best_model, score, model_name)) => {
             println!("✓ Best model: {} (AIC: {:.2})", model_name, score);
             let forecast = best_model.quick_forecast(7)?;
             println!("📈 7-day forecast: {:?}\n", &forecast[..3]);

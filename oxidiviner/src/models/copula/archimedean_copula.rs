@@ -38,8 +38,6 @@ impl std::fmt::Display for ArchimedeanType {
 pub struct ArchimedeanCopulaModel {
     /// Type of Archimedean copula
     copula_type: ArchimedeanType,
-    /// Number of variables (currently supports bivariate only)
-    n_variables: usize,
     /// Copula parameter (θ)
     theta: f64,
     /// Marginal data (after transformation to uniform)
@@ -55,26 +53,19 @@ impl ArchimedeanCopulaModel {
     ///
     /// # Arguments
     /// * `copula_type` - Type of Archimedean copula
-    /// * `n_variables` - Number of variables (currently only supports 2)
     ///
     /// # Example
     /// ```rust
     /// use oxidiviner::models::copula::{ArchimedeanCopulaModel, ArchimedeanType};
     ///
-    /// let model = ArchimedeanCopulaModel::new(ArchimedeanType::Clayton, 2).unwrap();
+    /// let model = ArchimedeanCopulaModel::new(ArchimedeanType::Clayton).unwrap();
     /// ```
-    pub fn new(copula_type: ArchimedeanType, n_variables: usize) -> Result<Self> {
-        if n_variables != 2 {
-            return Err(OxiError::ModelError(
-                "Archimedean copulas currently only support bivariate case".to_string(),
-            ));
-        }
-
+    pub fn new(copula_type: ArchimedeanType) -> Result<Self> {
+        // Currently only supports bivariate case, n_variables was removed.
         Ok(Self {
             copula_type,
-            n_variables,
             theta: 1.0, // Default parameter
-            uniform_data: vec![Vec::new(); n_variables],
+            uniform_data: vec![Vec::new(); 2], // Hardcoded to 2 for bivariate
             is_fitted: false,
             n_obs: 0,
         })
@@ -101,64 +92,6 @@ impl ArchimedeanCopulaModel {
             self.uniform_data[var_idx] = uniform_vals;
         }
         Ok(())
-    }
-
-    /// Generator function φ(t) for different copula families
-    fn generator(&self, t: f64) -> f64 {
-        match self.copula_type {
-            ArchimedeanType::Clayton => {
-                if self.theta <= 0.0 {
-                    return f64::INFINITY;
-                }
-                (t.powf(-self.theta) - 1.0) / self.theta
-            }
-            ArchimedeanType::Gumbel => {
-                if self.theta < 1.0 {
-                    return f64::INFINITY;
-                }
-                (-t.ln()).powf(self.theta)
-            }
-            ArchimedeanType::Frank => {
-                if self.theta == 0.0 {
-                    return -t.ln();
-                }
-                -(((-self.theta * t).exp() - 1.0) / ((-self.theta).exp() - 1.0)).ln()
-            }
-        }
-    }
-
-    /// Inverse generator function φ^(-1)(t)
-    fn generator_inverse(&self, t: f64) -> f64 {
-        match self.copula_type {
-            ArchimedeanType::Clayton => {
-                if self.theta <= 0.0 || t < 0.0 {
-                    return 0.0;
-                }
-                (1.0 + self.theta * t).powf(-1.0 / self.theta)
-            }
-            ArchimedeanType::Gumbel => {
-                if self.theta < 1.0 || t < 0.0 {
-                    return 0.0;
-                }
-                (-t.powf(1.0 / self.theta)).exp()
-            }
-            ArchimedeanType::Frank => {
-                if self.theta == 0.0 {
-                    return (-t).exp();
-                }
-                if t <= 0.0 {
-                    return 1.0;
-                }
-                -(((-self.theta).exp() - 1.0) * (-t).exp() + 1.0).ln() / self.theta
-            }
-        }
-    }
-
-    /// Copula CDF C(u,v)
-    fn copula_cdf(&self, u: f64, v: f64) -> f64 {
-        let phi_u = self.generator(u);
-        let phi_v = self.generator(v);
-        self.generator_inverse(phi_u + phi_v)
     }
 
     /// Log-likelihood function for parameter estimation
@@ -447,7 +380,7 @@ mod tests {
 
     #[test]
     fn test_clayton_copula() {
-        let mut model = ArchimedeanCopulaModel::new(ArchimedeanType::Clayton, 2).unwrap();
+        let mut model = ArchimedeanCopulaModel::new(ArchimedeanType::Clayton).unwrap();
         let data = generate_test_data();
 
         let result = model.fit_bivariate(&data);
@@ -458,7 +391,7 @@ mod tests {
 
     #[test]
     fn test_gumbel_copula() {
-        let mut model = ArchimedeanCopulaModel::new(ArchimedeanType::Gumbel, 2).unwrap();
+        let mut model = ArchimedeanCopulaModel::new(ArchimedeanType::Gumbel).unwrap();
         let data = generate_test_data();
 
         let result = model.fit_bivariate(&data);
@@ -468,7 +401,7 @@ mod tests {
 
     #[test]
     fn test_frank_copula() {
-        let mut model = ArchimedeanCopulaModel::new(ArchimedeanType::Frank, 2).unwrap();
+        let mut model = ArchimedeanCopulaModel::new(ArchimedeanType::Frank).unwrap();
         let data = generate_test_data();
 
         let result = model.fit_bivariate(&data);
@@ -478,17 +411,17 @@ mod tests {
 
     #[test]
     fn test_kendall_tau() {
-        let mut model = ArchimedeanCopulaModel::new(ArchimedeanType::Clayton, 2).unwrap();
+        let mut model = ArchimedeanCopulaModel::new(ArchimedeanType::Clayton).unwrap();
         let data = generate_test_data();
 
         model.fit_bivariate(&data).unwrap();
         let tau = model.kendall_tau().unwrap();
-        assert!(tau >= 0.0 && tau <= 1.0);
+        assert!((0.0..=1.0).contains(&tau));
     }
 
     #[test]
     fn test_simulation() {
-        let mut model = ArchimedeanCopulaModel::new(ArchimedeanType::Clayton, 2).unwrap();
+        let mut model = ArchimedeanCopulaModel::new(ArchimedeanType::Clayton).unwrap();
         let data = generate_test_data();
 
         model.fit_bivariate(&data).unwrap();
@@ -503,7 +436,7 @@ mod tests {
 
     #[test]
     fn test_information_criteria() {
-        let mut model = ArchimedeanCopulaModel::new(ArchimedeanType::Frank, 2).unwrap();
+        let mut model = ArchimedeanCopulaModel::new(ArchimedeanType::Frank).unwrap();
         let data = generate_test_data();
 
         model.fit_bivariate(&data).unwrap();

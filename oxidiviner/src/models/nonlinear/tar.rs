@@ -111,17 +111,19 @@ impl TARModel {
             let regime = if threshold_var <= threshold { 0 } else { 1 };
 
             // Forecast next value
-            let mut forecast = self.constants.as_ref().unwrap()[regime];
+            let mut forecast_val = self.constants.as_ref().unwrap()[regime];
 
             let ar_order = self.ar_orders[regime];
-            for lag in 1..=ar_order {
-                if current_n >= lag {
-                    forecast += self.ar_coefficients.as_ref().unwrap()[regime][lag - 1]
-                        * extended_series[current_n - lag];
+            let ar_coeffs_for_regime = &self.ar_coefficients.as_ref().unwrap()[regime];
+
+            for (lag_zero_indexed, coeff_val) in ar_coeffs_for_regime.iter().enumerate().take(ar_order) {
+                let lag_actual = lag_zero_indexed + 1;
+                if current_n >= lag_actual {
+                    forecast_val += *coeff_val * extended_series[current_n - lag_actual];
                 }
             }
 
-            extended_series.push(forecast);
+            extended_series.push(forecast_val);
         }
 
         Ok(extended_series[n..].to_vec())
@@ -149,17 +151,17 @@ impl TARModel {
         let start_idx = (n as f64 * 0.15) as usize;
         let end_idx = (n as f64 * 0.85) as usize;
 
-        let mut best_threshold = sorted_data[start_idx];
+        let mut best_threshold = sorted_data[start_idx.min(n.saturating_sub(1))]; // Ensure start_idx is valid
         let mut best_log_likelihood = f64::NEG_INFINITY;
 
         // Grid search over potential thresholds
-        for i in start_idx..end_idx {
-            let threshold = sorted_data[i];
-
-            if let Ok(ll) = self.calculate_log_likelihood_for_threshold(data, threshold) {
-                if ll > best_log_likelihood {
-                    best_log_likelihood = ll;
-                    best_threshold = threshold;
+        if start_idx < end_idx { // Ensure the range is valid
+            for &threshold in &sorted_data[start_idx..end_idx] {
+                if let Ok(ll) = self.calculate_log_likelihood_for_threshold(data, threshold) {
+                    if ll > best_log_likelihood {
+                        best_log_likelihood = ll;
+                        best_threshold = threshold;
+                    }
                 }
             }
         }
@@ -414,10 +416,7 @@ impl TARModel {
         // Calculate residual variance
         let mut ss_res = 0.0;
         for i in 0..n {
-            let mut fitted = 0.0;
-            for j in 0..k {
-                fitted += x[i][j] * coeffs[j];
-            }
+            let fitted: f64 = x[i].iter().zip(coeffs.iter()).map(|(val_x, val_coeff)| val_x * val_coeff).sum();
             let residual = y[i] - fitted;
             ss_res += residual * residual;
         }

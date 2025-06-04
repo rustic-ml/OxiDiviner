@@ -15,6 +15,11 @@
 use crate::core::{Forecaster, ModelEvaluation, OxiError, Result, TimeSeriesData};
 use crate::math::metrics::{mae, mape, mse, rmse, smape};
 
+// Type aliases for complex types
+pub type CointegratingVectors = Vec<Vec<f64>>;
+pub type AdjustmentCoefficients = Vec<Vec<f64>>;
+pub type VarCoefficients = Vec<Vec<Vec<f64>>>;
+
 /// Vector Error Correction Model for cointegrated time series
 #[derive(Debug, Clone)]
 pub struct VECMModel {
@@ -186,25 +191,28 @@ impl VECMModel {
             let mut forecast_changes = vec![0.0; self.num_variables];
 
             // Calculate error correction terms
-            for coint_rel in 0..self.num_coint_relations {
+            for (coint_rel_idx, current_coint_vector) in coint_vectors.iter().enumerate().take(self.num_coint_relations) {
                 let mut ect = 0.0;
-                for i in 0..self.num_variables {
-                    ect += coint_vectors[coint_rel][i] * last_levels[i];
+                for (i, current_last_level_val) in last_levels.iter().enumerate().take(self.num_variables) {
+                    ect += current_coint_vector[i] * current_last_level_val;
                 }
 
                 // Apply adjustment
-                for i in 0..self.num_variables {
-                    forecast_changes[i] += adjustment_coeffs[i][coint_rel] * ect;
+                for (i, forecast_change_item) in forecast_changes.iter_mut().enumerate().take(self.num_variables) {
+                    *forecast_change_item += adjustment_coeffs[i][coint_rel_idx] * ect;
                 }
             }
 
             // Add VAR dynamics
             for i in 0..self.num_variables {
-                for lag in 0..self.lag_order {
-                    for j in 0..self.num_variables {
-                        if lag < last_differences[j].len() {
-                            forecast_changes[i] +=
-                                var_coefficients[i][lag][j] * last_differences[j][lag];
+                for lag_k_idx in 0..self.lag_order {
+                    let coefficients_for_lag = &var_coefficients[i][lag_k_idx];
+
+                    for (j_series_idx, lag_history_for_series_j) in last_differences.iter().enumerate().take(self.num_variables) {
+                        if lag_k_idx < lag_history_for_series_j.len() {
+                            let coefficient = coefficients_for_lag[j_series_idx];
+                            let lagged_difference = lag_history_for_series_j[lag_k_idx];
+                            forecast_changes[i] += coefficient * lagged_difference;
                         }
                     }
                 }
@@ -263,7 +271,7 @@ impl VECMModel {
     fn johansen_cointegration_test(
         &self,
         data: &[TimeSeriesData],
-    ) -> Result<(Vec<Vec<f64>>, Vec<Vec<f64>>)> {
+    ) -> Result<(CointegratingVectors, AdjustmentCoefficients)> {
         let n = data[0].values.len();
 
         // This is a simplified implementation of Johansen test
@@ -283,23 +291,23 @@ impl VECMModel {
         // Simplified cointegration test using OLS regression
         // In reality, you'd use maximum likelihood estimation
 
-        let mut coint_vectors = vec![vec![0.0; self.num_variables]; self.num_coint_relations];
-        let mut adjustment_coeffs = vec![vec![0.0; self.num_coint_relations]; self.num_variables];
+        let mut coint_vectors: CointegratingVectors = vec![vec![0.0; self.num_variables]; self.num_coint_relations];
+        let mut adjustment_coeffs: AdjustmentCoefficients = vec![vec![0.0; self.num_coint_relations]; self.num_variables];
 
         // Initialize with simple relationships
-        for r in 0..self.num_coint_relations {
+        for (r, current_coint_vector_row) in coint_vectors.iter_mut().enumerate().take(self.num_coint_relations) {
             if r < self.num_variables {
-                coint_vectors[r][r] = 1.0;
+                current_coint_vector_row[r] = 1.0;
                 if r + 1 < self.num_variables {
-                    coint_vectors[r][r + 1] = -1.0; // Simple pair relationship
+                    current_coint_vector_row[r + 1] = -1.0; // Simple pair relationship
                 }
             }
         }
 
         // Simple adjustment coefficients (normally estimated via ML)
-        for i in 0..self.num_variables {
-            for r in 0..self.num_coint_relations {
-                adjustment_coeffs[i][r] = -0.1; // Weak mean reversion
+        for adj_coeff_row in adjustment_coeffs.iter_mut().take(self.num_variables) {
+            for val in adj_coeff_row.iter_mut().take(self.num_coint_relations) {
+                *val = -0.1; // Weak mean reversion
             }
         }
 
@@ -336,10 +344,10 @@ impl VECMModel {
 
         // Calculate error correction terms
         let mut ec_terms = vec![vec![0.0; n - 1]; self.num_coint_relations];
-        for r in 0..self.num_coint_relations {
-            for t in 0..n - 1 {
-                for i in 0..self.num_variables {
-                    ec_terms[r][t] += coint_vectors[r][i] * data[i].values[t];
+        for r_idx in 0..self.num_coint_relations { // Renamed r to r_idx for clarity
+            for t_idx in 0..n - 1 { // Renamed t to t_idx for clarity
+                for (i, series_data_item) in data.iter().enumerate().take(self.num_variables) {
+                    ec_terms[r_idx][t_idx] += coint_vectors[r_idx][i] * series_data_item.values[t_idx];
                 }
             }
         }
@@ -351,7 +359,6 @@ impl VECMModel {
     fn calculate_fitted_values(&mut self, data: &[TimeSeriesData]) -> Result<()> {
         let n = data[0].values.len();
         let mut fitted_values = vec![vec![0.0; n - self.lag_order]; self.num_variables];
-        let mut residuals = vec![vec![0.0; n - self.lag_order]; self.num_variables];
 
         for t in self.lag_order..n {
             for i in 0..self.num_variables {
@@ -361,23 +368,25 @@ impl VECMModel {
                 let mut predicted_change = 0.0;
 
                 // Error correction terms
-                if let (Some(adjustment_coeffs), Some(ec_terms)) =
+                if let (Some(adjustment_coeffs_data), Some(ec_terms_data)) =
                     (&self.adjustment_coeffs, &self.error_correction_terms)
                 {
-                    for r in 0..self.num_coint_relations {
-                        if t - 1 < ec_terms[r].len() {
-                            predicted_change += adjustment_coeffs[i][r] * ec_terms[r][t - 1];
+                    for (r_idx, current_ec_term_row) in ec_terms_data.iter().enumerate().take(self.num_coint_relations) {
+                        if t > 0 && (t - 1) < current_ec_term_row.len() { // Ensure t-1 is valid index
+                            predicted_change += adjustment_coeffs_data[i][r_idx] * current_ec_term_row[t - 1];
                         }
                     }
                 }
 
                 // VAR terms
-                if let Some(var_coeffs) = &self.var_coefficients {
-                    for lag in 1..=self.lag_order {
-                        if t > lag {
-                            for j in 0..self.num_variables {
-                                let diff = data[j].values[t - lag] - data[j].values[t - lag - 1];
-                                predicted_change += var_coeffs[i][lag - 1][j] * diff;
+                if let Some(var_coeffs_data) = &self.var_coefficients {
+                    for lag_idx in 1..=self.lag_order {
+                        if t >= lag_idx {
+                            for (j, series_data_item) in data.iter().enumerate().take(self.num_variables) {
+                                if t > lag_idx {
+                                    let diff = series_data_item.values[t - lag_idx] - series_data_item.values[t - lag_idx - 1];
+                                    predicted_change += var_coeffs_data[i][lag_idx - 1][j] * diff;
+                                }
                             }
                         }
                     }
@@ -385,27 +394,48 @@ impl VECMModel {
 
                 fitted += predicted_change;
                 fitted_values[i][t - self.lag_order] = fitted;
-                residuals[i][t - self.lag_order] = data[i].values[t] - fitted;
             }
         }
 
         self.fitted_values = Some(fitted_values);
-        self.residuals = Some(residuals);
+
+        // Calculate residuals based on the stored fitted_values
+        let mut local_residuals = vec![vec![0.0; n - self.lag_order]; self.num_variables];
+        for (i, mut_residual_row) in local_residuals.iter_mut().enumerate().take(self.num_variables) {
+            for (t_idx, val_in_row) in mut_residual_row.iter_mut().enumerate().take(n - self.lag_order) {
+                // Ensure data[i] and self.fitted_values.as_ref().unwrap()[i] are valid accesses
+                // data is &[TimeSeriesData], self.fitted_values is Option<Vec<Vec<f64>>>
+                *val_in_row = data[i].values[t_idx + self.lag_order] 
+                                          - self.fitted_values.as_ref().unwrap()[i][t_idx];
+            }
+        }
+        self.residuals = Some(local_residuals);
 
         Ok(())
     }
 
     fn calculate_information_criteria(&mut self, n: usize) -> Result<()> {
-        if let Some(residuals) = &self.residuals {
+        if let Some(residuals_data) = &self.residuals { // Renamed for clarity
             // Calculate log-likelihood (simplified)
             let mut log_likelihood = 0.0;
-            let num_obs = n - self.lag_order;
+            let num_obs = n as f64;
 
-            for i in 0..self.num_variables {
-                let var_residuals =
-                    residuals[i].iter().map(|&x| x * x).sum::<f64>() / num_obs as f64;
-                log_likelihood -=
-                    0.5 * num_obs as f64 * (2.0 * std::f64::consts::PI * var_residuals).ln();
+            for series_residual_vector in residuals_data.iter().take(self.num_variables) {
+                let sum_sq_residuals: f64 = series_residual_vector.iter().map(|&x| x * x).sum();
+                if num_obs > 0.0 { // Avoid division by zero if num_obs is 0
+                    let var_residuals = sum_sq_residuals / num_obs;
+                    if var_residuals > 0.0 { // Avoid log(0) or log(<0)
+                        log_likelihood -=
+                            0.5 * num_obs * (2.0 * std::f64::consts::PI * var_residuals).ln();
+                    } else {
+                        // Handle zero or negative variance case, e.g. perfect fit or problematic residuals
+                        // This might indicate issues, but for likelihood, can skip or add a large penalty.
+                        // For now, skip adding to likelihood if variance is not positive.
+                    }
+                } else {
+                    // Handle case where num_obs is 0 (e.g. n <= self.lag_order)
+                    // Log likelihood contribution would be zero or undefined.
+                }
             }
 
             // Calculate number of parameters
@@ -416,7 +446,7 @@ impl VECMModel {
                 if self.include_trend { 1 } else { 0 });
 
             let aic = -2.0 * log_likelihood + 2.0 * num_params as f64;
-            let bic = -2.0 * log_likelihood + (num_params as f64) * (num_obs as f64).ln();
+            let bic = -2.0 * log_likelihood + (num_params as f64) * num_obs.ln();
 
             self.log_likelihood = Some(log_likelihood);
             self.information_criteria = Some((aic, bic));

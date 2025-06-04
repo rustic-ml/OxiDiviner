@@ -7,9 +7,9 @@
 //! 4. Best practice recommendations
 
 use chrono::{Duration, Utc};
-use oxidiviner::prelude::*;
 use oxidiviner::ensemble::{EnsembleBuilder, EnsembleMethod};
-use oxidiviner::optimization::{OptimizerBuilder, OptimizationMethod, OptimizationMetric};
+use oxidiviner::optimization::{OptimizationMethod, OptimizationMetric, OptimizerBuilder};
+use oxidiviner::prelude::*;
 use std::collections::HashMap;
 
 fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
@@ -95,7 +95,9 @@ fn generate_challenging_datasets() -> HashMap<String, TimeSeriesData> {
 }
 
 /// Test baseline model performance
-fn test_baseline_models(data: &TimeSeriesData) -> std::result::Result<HashMap<String, ModelResult>, Box<dyn std::error::Error>> {
+fn test_baseline_models(
+    data: &TimeSeriesData,
+) -> std::result::Result<HashMap<String, ModelResult>, Box<dyn std::error::Error>> {
     let mut results = HashMap::new();
     let split_point = (data.len() as f64 * 0.8) as usize;
 
@@ -140,7 +142,9 @@ fn test_baseline_models(data: &TimeSeriesData) -> std::result::Result<HashMap<St
 }
 
 /// Apply parameter optimization to improve accuracy
-fn apply_parameter_optimization(data: &TimeSeriesData) -> std::result::Result<HashMap<String, ModelResult>, Box<dyn std::error::Error>> {
+fn apply_parameter_optimization(
+    data: &TimeSeriesData,
+) -> std::result::Result<HashMap<String, ModelResult>, Box<dyn std::error::Error>> {
     let mut results = HashMap::new();
     let split_point = (data.len() as f64 * 0.8) as usize;
 
@@ -162,14 +166,14 @@ fn apply_parameter_optimization(data: &TimeSeriesData) -> std::result::Result<Ha
         let p = arima_opt.best_parameters["p"] as usize;
         let d = arima_opt.best_parameters["d"] as usize;
         let q = arima_opt.best_parameters["q"] as usize;
-        
+
         if let Ok(mut model) = ARIMAModel::new(p, d, q, true) {
             if let Ok(()) = model.fit(&train_data) {
                 if let Ok(forecast) = model.forecast(test_values.len()) {
                     let mae = calculate_mae(test_values, &forecast[..test_values.len()]);
                     results.insert(
                         format!("Optimized_ARIMA({},{},{})", p, d, q),
-                        ModelResult { mae, forecast }
+                        ModelResult { mae, forecast },
                     );
                 }
             }
@@ -179,14 +183,14 @@ fn apply_parameter_optimization(data: &TimeSeriesData) -> std::result::Result<Ha
     // Optimize ES parameters
     if let Ok(es_opt) = optimizer.optimize_exponential_smoothing(&train_data) {
         let alpha = es_opt.best_parameters["alpha"];
-        
+
         if let Ok(mut model) = SimpleESModel::new(alpha) {
             if let Ok(()) = model.fit(&train_data) {
                 if let Ok(forecast) = model.forecast(test_values.len()) {
                     let mae = calculate_mae(test_values, &forecast[..test_values.len()]);
                     results.insert(
                         format!("Optimized_ES(α={:.2})", alpha),
-                        ModelResult { mae, forecast }
+                        ModelResult { mae, forecast },
                     );
                 }
             }
@@ -196,14 +200,14 @@ fn apply_parameter_optimization(data: &TimeSeriesData) -> std::result::Result<Ha
     // Optimize MA parameters
     if let Ok(ma_opt) = optimizer.optimize_moving_average(&train_data, 15) {
         let window = ma_opt.best_parameters["window"] as usize;
-        
+
         if let Ok(mut model) = MAModel::new(window) {
             if let Ok(()) = model.fit(&train_data) {
                 if let Ok(forecast) = model.forecast(test_values.len()) {
                     let mae = calculate_mae(test_values, &forecast[..test_values.len()]);
                     results.insert(
                         format!("Optimized_MA({})", window),
-                        ModelResult { mae, forecast }
+                        ModelResult { mae, forecast },
                     );
                 }
             }
@@ -225,55 +229,68 @@ fn create_ensemble_forecasts(
         // Simple Average Ensemble
         let simple_ensemble = EnsembleBuilder::new(EnsembleMethod::SimpleAverage);
         let mut builder = simple_ensemble;
-        
+
         for (name, result) in optimized_models {
             builder = builder.add_model_forecast(name.clone(), result.forecast.clone());
         }
-        
+
         if let Ok(ensemble) = builder.build() {
             if let Some(forecast) = ensemble.get_forecast() {
                 let mae = calculate_mae(test_values, &forecast[..test_values.len()]);
-                results.insert("Simple_Ensemble".to_string(), ModelResult {
-                    mae,
-                    forecast: forecast.clone(),
-                });
+                results.insert(
+                    "Simple_Ensemble".to_string(),
+                    ModelResult {
+                        mae,
+                        forecast: forecast.clone(),
+                    },
+                );
             }
         }
 
         // Weighted Ensemble (weight by inverse MAE)
         let weighted_ensemble = EnsembleBuilder::new(EnsembleMethod::WeightedAverage);
         let mut builder = weighted_ensemble;
-        
+
         for (name, result) in optimized_models {
-            let weight = if result.mae > 0.0 { 1.0 / result.mae } else { 1.0 };
+            let weight = if result.mae > 0.0 {
+                1.0 / result.mae
+            } else {
+                1.0
+            };
             builder = builder.add_weighted_forecast(name.clone(), result.forecast.clone(), weight);
         }
-        
+
         if let Ok(ensemble) = builder.build() {
             if let Some(forecast) = ensemble.get_forecast() {
                 let mae = calculate_mae(test_values, &forecast[..test_values.len()]);
-                results.insert("Weighted_Ensemble".to_string(), ModelResult {
-                    mae,
-                    forecast: forecast.clone(),
-                });
+                results.insert(
+                    "Weighted_Ensemble".to_string(),
+                    ModelResult {
+                        mae,
+                        forecast: forecast.clone(),
+                    },
+                );
             }
         }
 
         // Median Ensemble (robust to outliers)
         let median_ensemble = EnsembleBuilder::new(EnsembleMethod::Median);
         let mut builder = median_ensemble;
-        
+
         for (name, result) in optimized_models {
             builder = builder.add_model_forecast(name.clone(), result.forecast.clone());
         }
-        
+
         if let Ok(ensemble) = builder.build() {
             if let Some(forecast) = ensemble.get_forecast() {
                 let mae = calculate_mae(test_values, &forecast[..test_values.len()]);
-                results.insert("Median_Ensemble".to_string(), ModelResult {
-                    mae,
-                    forecast: forecast.clone(),
-                });
+                results.insert(
+                    "Median_Ensemble".to_string(),
+                    ModelResult {
+                        mae,
+                        forecast: forecast.clone(),
+                    },
+                );
             }
         }
     }
@@ -308,9 +325,18 @@ fn show_improvement_summary(
     optimized: &HashMap<String, ModelResult>,
     ensemble: &HashMap<String, ModelResult>,
 ) {
-    let best_baseline = baseline.values().map(|r| r.mae).fold(f64::INFINITY, f64::min);
-    let best_optimized = optimized.values().map(|r| r.mae).fold(f64::INFINITY, f64::min);
-    let best_ensemble = ensemble.values().map(|r| r.mae).fold(f64::INFINITY, f64::min);
+    let best_baseline = baseline
+        .values()
+        .map(|r| r.mae)
+        .fold(f64::INFINITY, f64::min);
+    let best_optimized = optimized
+        .values()
+        .map(|r| r.mae)
+        .fold(f64::INFINITY, f64::min);
+    let best_ensemble = ensemble
+        .values()
+        .map(|r| r.mae)
+        .fold(f64::INFINITY, f64::min);
 
     println!("   Best Baseline MAE: {:.4}", best_baseline);
     println!("   Best Optimized MAE: {:.4}", best_optimized);
@@ -319,7 +345,7 @@ fn show_improvement_summary(
     if best_baseline > 0.0 {
         let opt_improvement = (best_baseline - best_optimized) / best_baseline * 100.0;
         let ens_improvement = (best_baseline - best_ensemble) / best_baseline * 100.0;
-        
+
         println!("   💡 Optimization improvement: {:.1}%", opt_improvement);
         println!("   🤝 Ensemble improvement: {:.1}%", ens_improvement);
     }
@@ -375,4 +401,4 @@ fn calculate_mae(actual: &[f64], forecast: &[f64]) -> f64 {
         .map(|(a, f)| (a - f).abs())
         .sum();
     sum / len as f64
-} 
+}

@@ -72,8 +72,6 @@ pub struct HestonStochasticVolatilityModel {
     training_data: Vec<f64>,
     /// Estimated parameters from calibration
     estimated_params: Option<EstimatedParams>,
-    /// Log-likelihood of the fitted model
-    log_likelihood: Option<f64>,
     /// Model diagnostics
     diagnostics: Option<ModelDiagnostics>,
 }
@@ -212,7 +210,6 @@ impl HestonStochasticVolatilityModel {
             is_fitted: false,
             training_data: Vec::new(),
             estimated_params: None,
-            log_likelihood: None,
             diagnostics: None,
         })
     }
@@ -549,7 +546,7 @@ impl HestonStochasticVolatilityModel {
                     let intrinsic =
                         (spot_price - strike * (-risk_free_rate * expiry).exp()).max(0.0);
                     let time_value = option_price - intrinsic;
-                    
+
                     (time_value / (spot_price * time_factor)).clamp(0.01, 2.0)
                 } else {
                     0.01

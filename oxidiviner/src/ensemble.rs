@@ -57,8 +57,8 @@
 //! This module aims to provide a powerful yet easy-to-use interface for leveraging
 //! the benefits of ensemble forecasting in various time series analysis tasks.
 
-use crate::core::{OxiError, Result, TimeSeriesData};
-use crate::math::metrics::{mae, mse, rmse};
+use crate::core::{OxiError, Result};
+use crate::math::metrics::{mae, rmse};
 use std::collections::HashMap;
 
 /// Ensemble method types
@@ -139,7 +139,7 @@ impl EnsembleForecast {
         }
 
         let forecast_length = self.forecasts[0].forecast.len();
-        
+
         // Validate all forecasts have the same length
         for forecast in &self.forecasts {
             if forecast.forecast.len() != forecast_length {
@@ -166,9 +166,13 @@ impl EnsembleForecast {
         let forecast_length = self.forecasts[0].forecast.len();
         let mut combined = vec![0.0; forecast_length];
 
-        for i in 0..forecast_length {
-            let sum: f64 = self.forecasts.iter().map(|f| f.forecast[i]).sum();
-            combined[i] = sum / self.forecasts.len() as f64;
+        if !self.forecasts.is_empty() {
+            for (i, combined_val_ref) in combined.iter_mut().enumerate() {
+                let sum_at_i: f64 = self.forecasts.iter()
+                    .filter_map(|f| f.forecast.get(i).copied())
+                    .sum();
+                *combined_val_ref = sum_at_i / self.forecasts.len() as f64;
+            }
         }
 
         // Set equal weights
@@ -192,7 +196,11 @@ impl EnsembleForecast {
         let weight_sum: f64 = weights.values().sum();
 
         if weight_sum <= 0.0 {
-            return Err(OxiError::ModelError("Invalid weights for ensemble".into()));
+            // Fallback to simple average or error if weights are not sensible
+            // For now, let's use simple average as a robust fallback.
+            // Consider returning an error: OxiError::ModelError("Invalid weights for ensemble (sum is zero or negative)".into())
+            eprintln!("Warning: Sum of weights is zero or negative in weighted_average. Falling back to simple_average.");
+            return self.simple_average(); 
         }
 
         // Normalize weights
@@ -201,11 +209,15 @@ impl EnsembleForecast {
             .map(|(k, v)| (k.clone(), v / weight_sum))
             .collect();
 
-        for i in 0..forecast_length {
-            combined[i] = self.forecasts
-                .iter()
-                .map(|f| f.forecast[i] * normalized_weights[&f.name])
+        for (i, combined_val_ref) in combined.iter_mut().enumerate() {
+            let sum_val: f64 = self.forecasts.iter()
+                .map(|f_model| {
+                    let model_fc_val = f_model.forecast.get(i).copied().unwrap_or_default();
+                    let weight = normalized_weights.get(&f_model.name).copied().unwrap_or_default();
+                    model_fc_val * weight
+                })
                 .sum();
+            *combined_val_ref = sum_val;
         }
 
         self.model_weights = Some(normalized_weights);
@@ -217,15 +229,25 @@ impl EnsembleForecast {
         let forecast_length = self.forecasts[0].forecast.len();
         let mut combined = vec![0.0; forecast_length];
 
-        for i in 0..forecast_length {
-            let mut values: Vec<f64> = self.forecasts.iter().map(|f| f.forecast[i]).collect();
-            values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        for (i, combined_val_ref) in combined.iter_mut().enumerate() {
+            let mut values_at_i: Vec<f64> = self.forecasts.iter()
+                .filter_map(|f| f.forecast.get(i).copied()) // Safe access
+                .collect();
             
-            let n = values.len();
-            combined[i] = if n % 2 == 0 {
-                (values[n / 2 - 1] + values[n / 2]) / 2.0
+            if values_at_i.is_empty() {
+                // This case should ideally not be reached if forecasts list is not empty
+                // and all forecasts have forecast_length. Defaulting to 0.0 or handle as error.
+                *combined_val_ref = 0.0; 
+                continue;
+            }
+
+            values_at_i.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+            let n_models = values_at_i.len();
+            *combined_val_ref = if n_models % 2 == 0 {
+                (values_at_i[n_models / 2 - 1] + values_at_i[n_models / 2]) / 2.0
             } else {
-                values[n / 2]
+                values_at_i[n_models / 2]
             };
         }
 
@@ -235,7 +257,8 @@ impl EnsembleForecast {
     /// Select the best performing model
     fn best_model(&mut self) -> Result<Vec<f64>> {
         // Find the model with highest confidence or best weight
-        let best_forecast = self.forecasts
+        let best_forecast = self
+            .forecasts
             .iter()
             .max_by(|a, b| {
                 let a_score = a.confidence.or(a.weight).unwrap_or(0.0);
@@ -249,7 +272,11 @@ impl EnsembleForecast {
         for forecast in &self.forecasts {
             weights.insert(
                 forecast.name.clone(),
-                if forecast.name == best_forecast.name { 1.0 } else { 0.0 }
+                if forecast.name == best_forecast.name {
+                    1.0
+                } else {
+                    0.0
+                },
             );
         }
         self.model_weights = Some(weights);
@@ -261,22 +288,28 @@ impl EnsembleForecast {
     fn stacking_ensemble(&mut self) -> Result<Vec<f64>> {
         // For simplicity, use cross-validation based weighted average
         // In practice, this would train a meta-learner
-        
+
         // Calculate performance-based weights
         let weights = self.calculate_performance_weights()?;
         let weight_sum: f64 = weights.values().sum();
 
         if weight_sum <= 0.0 {
-            return self.simple_average(); // Fallback
+            // Fallback to simple average if performance weights are not usable
+            eprintln!("Warning: Sum of performance weights is zero or negative in stacking_ensemble. Falling back to simple_average.");
+            return self.simple_average();
         }
 
         let forecast_length = self.forecasts[0].forecast.len();
         let mut combined = vec![0.0; forecast_length];
 
-        for i in 0..forecast_length {
-            combined[i] = self.forecasts
-                .iter()
-                .map(|f| f.forecast[i] * weights[&f.name] / weight_sum)
+        for (i, combined_val_ref) in combined.iter_mut().enumerate() {
+            *combined_val_ref = self.forecasts.iter()
+                .map(|f_model| {
+                    let model_fc_val = f_model.forecast.get(i).copied().unwrap_or_default();
+                    let weight = weights.get(&f_model.name).copied().unwrap_or_default();
+                    // It's important that weight_sum is not zero here.
+                    model_fc_val * weight / weight_sum 
+                })
                 .sum();
         }
 
@@ -289,13 +322,7 @@ impl EnsembleForecast {
         let mut weights = HashMap::new();
 
         for forecast in &self.forecasts {
-            let weight = if let Some(w) = forecast.weight {
-                w
-            } else if let Some(c) = forecast.confidence {
-                c
-            } else {
-                1.0 // Default equal weight
-            };
+            let weight = forecast.weight.unwrap_or_else(|| forecast.confidence.unwrap_or(1.0));
             weights.insert(forecast.name.clone(), weight);
         }
 
@@ -310,7 +337,11 @@ impl EnsembleForecast {
         // In practice, this would use validation set performance
         for forecast in &self.forecasts {
             let performance_score = if let Some(conf) = forecast.confidence {
-                if conf > 0.0 { 1.0 / conf } else { 1.0 }
+                if conf > 0.0 {
+                    1.0 / conf
+                } else {
+                    1.0
+                }
             } else {
                 1.0
             };
@@ -376,12 +407,7 @@ impl EnsembleBuilder {
     /// * `name` - A unique name for the model.
     /// * `forecast` - A `Vec<f64>` representing the model's forecast values.
     /// * `weight` - The weight to assign to this model's forecast.
-    pub fn add_weighted_forecast(
-        mut self,
-        name: String,
-        forecast: Vec<f64>,
-        weight: f64,
-    ) -> Self {
+    pub fn add_weighted_forecast(mut self, name: String, forecast: Vec<f64>, weight: f64) -> Self {
         self.ensemble.add_forecast(ModelForecast {
             name,
             forecast,
@@ -450,7 +476,8 @@ impl EnsembleUtils {
         ensemble: &EnsembleForecast,
         actual: &[f64],
     ) -> Result<EnsemblePerformance> {
-        let forecast = ensemble.get_forecast()
+        let forecast = ensemble
+            .get_forecast()
             .ok_or_else(|| OxiError::ModelError("Ensemble not computed".into()))?;
 
         if forecast.len() != actual.len() {
@@ -468,7 +495,7 @@ impl EnsembleUtils {
         for model_forecast in &ensemble.forecasts {
             let model_mae = mae(actual, &model_forecast.forecast[..actual.len()]);
             let model_rmse = rmse(actual, &model_forecast.forecast[..actual.len()]);
-            
+
             model_performances.insert(
                 model_forecast.name.clone(),
                 ModelPerformance {
@@ -501,7 +528,7 @@ impl EnsembleUtils {
             .fold(f64::INFINITY, f64::min);
 
         if best_individual_mae > 0.0 {
-            let improvement_pct = 
+            let improvement_pct =
                 (best_individual_mae - performance.ensemble_mae) / best_individual_mae * 100.0;
             performance.improvement = Some(improvement_pct);
         }
@@ -539,14 +566,14 @@ mod tests {
     #[test]
     fn test_simple_average_ensemble() {
         let mut ensemble = EnsembleForecast::new(EnsembleMethod::SimpleAverage);
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "Model1".to_string(),
             forecast: vec![1.0, 2.0, 3.0],
             confidence: None,
             weight: None,
         });
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "Model2".to_string(),
             forecast: vec![2.0, 3.0, 4.0],
@@ -561,14 +588,14 @@ mod tests {
     #[test]
     fn test_weighted_average_ensemble() {
         let mut ensemble = EnsembleForecast::new(EnsembleMethod::WeightedAverage);
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "Model1".to_string(),
             forecast: vec![1.0, 2.0, 3.0],
             confidence: None,
             weight: Some(0.3),
         });
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "Model2".to_string(),
             forecast: vec![2.0, 3.0, 4.0],
@@ -586,14 +613,14 @@ mod tests {
     #[test]
     fn test_median_ensemble() {
         let mut ensemble = EnsembleForecast::new(EnsembleMethod::Median);
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "Model1".to_string(),
             forecast: vec![1.0, 2.0, 3.0],
             confidence: None,
             weight: None,
         });
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "Model2".to_string(),
             forecast: vec![3.0, 4.0, 5.0],
@@ -615,14 +642,14 @@ mod tests {
     #[test]
     fn test_best_model_ensemble() {
         let mut ensemble = EnsembleForecast::new(EnsembleMethod::BestModel);
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "Model1".to_string(),
             forecast: vec![1.0, 2.0, 3.0],
             confidence: Some(0.5),
             weight: None,
         });
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "Model2".to_string(),
             forecast: vec![4.0, 5.0, 6.0],
@@ -637,14 +664,14 @@ mod tests {
     #[test]
     fn test_confidence_based_weighting() {
         let mut ensemble = EnsembleForecast::new(EnsembleMethod::WeightedAverage);
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "Model1".to_string(),
             forecast: vec![1.0, 2.0, 3.0],
             confidence: Some(0.8),
             weight: None,
         });
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "Model2".to_string(),
             forecast: vec![2.0, 3.0, 4.0],
@@ -654,7 +681,7 @@ mod tests {
 
         let result = ensemble.combine().unwrap();
         // Should weight by confidence: 0.8 and 0.6, normalized to 0.571 and 0.429
-        let expected_0 = 1.0 * (0.8/1.4) + 2.0 * (0.6/1.4);
+        let expected_0 = 1.0 * (0.8 / 1.4) + 2.0 * (0.6 / 1.4);
         assert!((result[0] - expected_0).abs() < 0.01);
     }
 
@@ -680,14 +707,14 @@ mod tests {
     #[test]
     fn test_mismatched_forecast_lengths() {
         let mut ensemble = EnsembleForecast::new(EnsembleMethod::SimpleAverage);
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "Model1".to_string(),
             forecast: vec![1.0, 2.0, 3.0],
             confidence: None,
             weight: None,
         });
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "Model2".to_string(),
             forecast: vec![1.0, 2.0], // Different length
@@ -702,14 +729,14 @@ mod tests {
     #[test]
     fn test_ensemble_performance_evaluation() {
         let mut ensemble = EnsembleForecast::new(EnsembleMethod::SimpleAverage);
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "Model1".to_string(),
             forecast: vec![1.0, 2.0, 3.0],
             confidence: None,
             weight: None,
         });
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "Model2".to_string(),
             forecast: vec![1.1, 2.1, 3.1],
@@ -721,7 +748,7 @@ mod tests {
 
         let actual = vec![1.05, 2.05, 3.05];
         let mut performance = EnsembleUtils::evaluate_ensemble(&ensemble, &actual).unwrap();
-        
+
         assert!(performance.ensemble_mae < 0.1);
         assert_eq!(performance.model_performances.len(), 2);
 
@@ -732,14 +759,14 @@ mod tests {
     #[test]
     fn test_stacking_ensemble() {
         let mut ensemble = EnsembleForecast::new(EnsembleMethod::Stacking);
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "Model1".to_string(),
             forecast: vec![1.0, 2.0, 3.0],
             confidence: Some(0.2), // Lower confidence
             weight: None,
         });
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "Model2".to_string(),
             forecast: vec![2.0, 3.0, 4.0],
@@ -755,7 +782,7 @@ mod tests {
     #[test]
     fn test_single_model_ensemble() {
         let mut ensemble = EnsembleForecast::new(EnsembleMethod::SimpleAverage);
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "OnlyModel".to_string(),
             forecast: vec![1.0, 2.0, 3.0],
@@ -770,14 +797,14 @@ mod tests {
     #[test]
     fn test_zero_weights_error() {
         let mut ensemble = EnsembleForecast::new(EnsembleMethod::WeightedAverage);
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "Model1".to_string(),
             forecast: vec![1.0, 2.0, 3.0],
             confidence: None,
             weight: Some(0.0),
         });
-        
+
         ensemble.add_forecast(ModelForecast {
             name: "Model2".to_string(),
             forecast: vec![2.0, 3.0, 4.0],
@@ -788,4 +815,4 @@ mod tests {
         let result = ensemble.combine();
         assert!(result.is_err());
     }
-} 
+}

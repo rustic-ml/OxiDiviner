@@ -78,7 +78,7 @@ impl CopulaFactory {
     /// let clayton_model = CopulaFactory::clayton_copula().unwrap();
     /// ```
     pub fn clayton_copula() -> Result<ArchimedeanCopulaModel> {
-        ArchimedeanCopulaModel::new(ArchimedeanType::Clayton, 2)
+        ArchimedeanCopulaModel::new(ArchimedeanType::Clayton)
     }
 
     /// Create a Gumbel copula model
@@ -90,7 +90,7 @@ impl CopulaFactory {
     /// let gumbel_model = CopulaFactory::gumbel_copula().unwrap();
     /// ```
     pub fn gumbel_copula() -> Result<ArchimedeanCopulaModel> {
-        ArchimedeanCopulaModel::new(ArchimedeanType::Gumbel, 2)
+        ArchimedeanCopulaModel::new(ArchimedeanType::Gumbel)
     }
 
     /// Create a Frank copula model
@@ -102,7 +102,7 @@ impl CopulaFactory {
     /// let frank_model = CopulaFactory::frank_copula().unwrap();
     /// ```
     pub fn frank_copula() -> Result<ArchimedeanCopulaModel> {
-        ArchimedeanCopulaModel::new(ArchimedeanType::Frank, 2)
+        ArchimedeanCopulaModel::new(ArchimedeanType::Frank)
     }
 
     /// Create an Archimedean copula model of specified type
@@ -117,7 +117,7 @@ impl CopulaFactory {
     /// let copula_model = CopulaFactory::archimedean_copula(ArchimedeanType::Clayton).unwrap();
     /// ```
     pub fn archimedean_copula(copula_type: ArchimedeanType) -> Result<ArchimedeanCopulaModel> {
-        ArchimedeanCopulaModel::new(copula_type, 2)
+        ArchimedeanCopulaModel::new(copula_type)
     }
 }
 

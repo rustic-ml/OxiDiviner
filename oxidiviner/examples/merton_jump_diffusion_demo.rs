@@ -7,7 +7,6 @@
 //! - Options pricing with jump risk
 //! - Monte Carlo simulation for scenario analysis
 
-use chrono;
 use oxidiviner::core::{Forecaster, TimeSeriesData};
 use oxidiviner::models::financial::MertonJumpDiffusionModel;
 use std::collections::HashMap;
@@ -21,7 +20,7 @@ fn main() -> oxidiviner::Result<()> {
     println!("------------------------------------------");
 
     // Create model with typical equity market parameters
-    let mut model = MertonJumpDiffusionModel::new_equity_default()?;
+    let model = MertonJumpDiffusionModel::new_equity_default()?;
     println!("Created equity market model with default parameters:");
     println!("  • Drift (μ): {:.1}% annually", model.drift * 100.0);
     println!(
@@ -331,7 +330,7 @@ fn generate_realistic_market_data(n: usize, initial_price: f64) -> Result<Vec<f6
         current_vol = vol_persistence * current_vol
             + (1.0 - vol_persistence) * base_vol
             + vol_mean_reversion * vol_shock;
-        current_vol = current_vol.max(0.005).min(0.08); // Bounds
+        current_vol = current_vol.clamp(0.005, 0.08); // Bounds
 
         // Occasional jump events (simplified)
         let jump_prob = 0.02; // 2% chance per day

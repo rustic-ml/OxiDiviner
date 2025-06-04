@@ -16,10 +16,6 @@ pub struct STLModel {
     seasonal_period: usize,
     seasonal_smoother: usize,
     trend_smoother: usize,
-    low_pass_smoother: usize,
-    seasonal_jump: usize,
-    trend_jump: usize,
-    low_pass_jump: usize,
     max_iterations: usize,
 
     // Decomposition results
@@ -85,10 +81,6 @@ impl STLModel {
             seasonal_period,
             seasonal_smoother,
             trend_smoother,
-            low_pass_smoother: seasonal_period, // Default
-            seasonal_jump: (seasonal_smoother as f64 * 0.1).ceil() as usize,
-            trend_jump: (trend_smoother as f64 * 0.1).ceil() as usize,
-            low_pass_jump: (seasonal_period as f64 * 0.1).ceil() as usize,
             max_iterations: 2,
 
             trend: None,
@@ -266,8 +258,7 @@ impl STLModel {
         Ok((trend, seasonal, remainder))
     }
 
-    fn extract_seasonal_component(&self, detrended: &[f64], seasonal: &mut Vec<f64>) -> Result<()> {
-        let n = detrended.len();
+    fn extract_seasonal_component(&self, detrended: &[f64], seasonal: &mut [f64]) -> Result<()> {
         let period = self.seasonal_period;
 
         // Initialize seasonal component
@@ -293,51 +284,53 @@ impl STLModel {
         }
 
         let mean_seasonal = sum / period as f64;
-        for i in 0..period {
-            seasonal_cycle[i] -= mean_seasonal;
+        for s_cycle_val in seasonal_cycle.iter_mut() {
+            *s_cycle_val -= mean_seasonal;
         }
 
         // Apply seasonal pattern to full series
-        for i in 0..n {
-            seasonal[i] = seasonal_cycle[i % period];
+        for (i, s_val) in seasonal.iter_mut().enumerate() {
+            *s_val = seasonal_cycle[i % period];
         }
 
         // Smooth seasonal component
-        let seasonal_copy = seasonal.clone();
+        let seasonal_copy = seasonal.to_vec();
         self.loess_smooth(&seasonal_copy, seasonal, self.seasonal_smoother)?;
 
         Ok(())
     }
 
-    fn moving_average(&self, data: &[f64], trend: &mut Vec<f64>) -> Result<()> {
+    fn moving_average(&self, data: &[f64], trend: &mut [f64]) -> Result<()> {
         let n = data.len();
         let window = self.seasonal_period;
 
-        for i in 0..n {
+        for (i, trend_val) in trend.iter_mut().enumerate().take(n) {
             let start = i.saturating_sub(window / 2);
             let end = (i + window / 2 + 1).min(n);
 
             let sum: f64 = data[start..end].iter().sum();
-            trend[i] = sum / (end - start) as f64;
+            *trend_val = sum / (end - start) as f64;
         }
 
         Ok(())
     }
 
-    fn loess_smooth(&self, input: &[f64], output: &mut Vec<f64>, bandwidth: usize) -> Result<()> {
-        let n = input.len();
+    fn loess_smooth(&self, input: &[f64], output: &mut [f64], bandwidth: usize) -> Result<()> {
+        // Assuming input.len() == output.len()
 
-        for i in 0..n {
+        for (i, output_val) in output.iter_mut().enumerate() {
             // Simple local regression (simplified LOESS)
             let half_bandwidth = bandwidth / 2;
             let start = i.saturating_sub(half_bandwidth);
-            let end = (i + half_bandwidth + 1).min(n);
+            let end = (i + half_bandwidth + 1).min(input.len());
 
             // Weighted average with triangular weights
             let mut sum_weights = 0.0;
             let mut weighted_sum = 0.0;
 
-            for j in start..end {
+            // Iterate over the relevant sub-slice of input
+            for (offset, &val_at_input_j) in input[start..end].iter().enumerate() {
+                let j = start + offset; // Reconstruct original index j relative to input
                 let distance = (i as i32 - j as i32).abs() as f64;
                 let weight = if distance <= half_bandwidth as f64 {
                     1.0 - distance / (half_bandwidth as f64 + 1.0)
@@ -345,14 +338,14 @@ impl STLModel {
                     0.0
                 };
 
-                weighted_sum += weight * input[j];
+                weighted_sum += weight * val_at_input_j;
                 sum_weights += weight;
             }
 
-            output[i] = if sum_weights > 0.0 {
+            *output_val = if sum_weights > 0.0 {
                 weighted_sum / sum_weights
             } else {
-                input[i]
+                input[i] // Fallback to original input value if no weights sum up
             };
         }
 

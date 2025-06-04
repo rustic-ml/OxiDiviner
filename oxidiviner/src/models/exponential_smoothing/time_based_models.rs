@@ -152,7 +152,7 @@ impl DailyETSModel {
     /// * `Result<Self>` - A new DailyETSModel if parameters are valid
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        error_type: ETSComponent,
+        _error_type: ETSComponent,
         trend_type: ETSComponent,
         seasonal_type: ETSComponent,
         alpha: f64,
@@ -162,12 +162,10 @@ impl DailyETSModel {
         period: Option<usize>,
         target_column: Option<String>,
     ) -> std::result::Result<Self, ESError> {
-        let error_type_enum: ErrorType = error_type.into();
         let trend_type_enum: TrendType = trend_type.into();
         let seasonal_type_enum: SeasonalType = seasonal_type.into();
 
         let model = ETSModel::new(
-            error_type_enum,
             trend_type_enum,
             seasonal_type_enum,
             alpha,
@@ -418,7 +416,7 @@ impl MinuteETSModel {
     /// * `Result<Self>` - A new MinuteETSModel if parameters are valid
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        error_type: ETSComponent,
+        _error_type: ETSComponent,
         trend_type: ETSComponent,
         seasonal_type: ETSComponent,
         alpha: f64,
@@ -429,7 +427,6 @@ impl MinuteETSModel {
         target_column: Option<String>,
         aggregation_minutes: Option<usize>,
     ) -> std::result::Result<Self, ESError> {
-        let error_type_enum: ErrorType = error_type.into();
         let trend_type_enum: TrendType = trend_type.into();
         let seasonal_type_enum: SeasonalType = seasonal_type.into();
 
@@ -444,7 +441,6 @@ impl MinuteETSModel {
         }
 
         let model = ETSModel::new(
-            error_type_enum,
             trend_type_enum,
             seasonal_type_enum,
             alpha,

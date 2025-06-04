@@ -25,7 +25,31 @@
 use crate::core::{Forecaster, ModelEvaluation, OxiError, Result, TimeSeriesData};
 use crate::math::metrics::{mae, mape, mse, rmse, smape};
 use std::f64::consts::PI;
-use chrono::{DateTime, Duration, Utc};
+
+// Type Aliases for Kalman Filter Output
+pub type FilteredState = Vec<f64>;
+pub type FilteredCovariance = Vec<Vec<f64>>;
+pub type LogLikelihoodContribution = f64;
+pub type PredictionError = f64; // Or a more specific name if context provides
+pub type PredictionErrorVariance = f64; // Or a more specific name
+
+// New type alias for the return tuple of update_step
+pub type KFUpdateResultTuple = (
+    FilteredState,
+    FilteredCovariance,
+    PredictionError, // innovation
+    PredictionErrorVariance, // innovation_covariance
+    f64, // fitted_value
+);
+
+/// Combined type alias for the output of the Kalman filter step function.
+pub type KalmanFilterStepOutput = (
+    FilteredState,
+    FilteredCovariance,
+    LogLikelihoodContribution,
+    PredictionError,
+    PredictionErrorVariance,
+);
 
 /// Kalman Filter for dynamic time series forecasting
 ///
@@ -40,8 +64,6 @@ pub struct KalmanFilter {
     name: String,
     /// State dimension
     state_dim: usize,
-    /// Observation dimension
-    obs_dim: usize,
     /// State transition matrix F (state_dim x state_dim)
     state_transition: Vec<Vec<f64>>,
     /// Observation matrix H (obs_dim x state_dim)
@@ -87,7 +109,6 @@ impl KalmanFilter {
         Ok(Self {
             name: "Local Level Kalman Filter".to_string(),
             state_dim: 1,
-            obs_dim: 1,
             state_transition: vec![vec![1.0]], // Random walk
             observation: vec![vec![1.0]],      // Direct observation
             process_noise: vec![vec![process_variance]],
@@ -126,7 +147,6 @@ impl KalmanFilter {
         Ok(Self {
             name: "Local Linear Trend Kalman Filter".to_string(),
             state_dim: 2,
-            obs_dim: 1,
             state_transition: vec![
                 vec![1.0, 1.0], // level[t] = level[t-1] + trend[t-1]
                 vec![0.0, 1.0], // trend[t] = trend[t-1]
@@ -213,7 +233,6 @@ impl KalmanFilter {
         Ok(Self {
             name: format!("Seasonal Kalman Filter (period={})", seasonal_period),
             state_dim,
-            obs_dim: 1,
             state_transition,
             observation,
             process_noise,
@@ -443,8 +462,8 @@ impl KalmanFilter {
                     state[1] = 0.0; // Initial trend
                 }
                 // Initialize seasonal components (simplified)
-                for i in 2..self.state_dim {
-                    state[i] = 0.0;
+                for state_val in state.iter_mut().skip(2) {
+                    *state_val = 0.0;
                 }
             }
         }
@@ -456,8 +475,12 @@ impl KalmanFilter {
         let mut covariance = vec![vec![0.0; self.state_dim]; self.state_dim];
 
         // Initialize with large diagonal values for diffuse prior
-        for i in 0..self.state_dim {
-            covariance[i][i] = 1000.0;
+        for (i, row) in covariance.iter_mut().enumerate().take(self.state_dim) {
+            // Ensure that 'i' is a valid index for the row's columns, 
+            // though for a square matrix initialized as above, row.len() == self.state_dim.
+            if i < row.len() { 
+                row[i] = 1000.0;
+            }
         }
 
         Ok(covariance)
@@ -480,7 +503,7 @@ impl KalmanFilter {
         state: &[f64],
         covariance: &[Vec<f64>],
         observation: f64,
-    ) -> Result<(Vec<f64>, Vec<Vec<f64>>, f64, f64, f64)> {
+    ) -> Result<KFUpdateResultTuple> {
         // Innovation and its covariance
         let h_state = self.matrix_vector_multiply(&self.observation, state)?;
         let innovation = observation - h_state[0];
@@ -509,6 +532,14 @@ impl KalmanFilter {
             updated_state[i] += kalman_gain[i] * innovation;
         }
 
+        // If state_dim > 2, assume higher order components (velocity, acceleration) are zero
+        // This is a simplification; in a full model, these would be predicted.
+        if self.state_dim > 2 {
+            for state_val in updated_state.iter_mut().skip(2) {
+                *state_val = 0.0;
+            }
+        }
+
         // Updated covariance: P = (I - K*H) * P
         let mut kh = vec![vec![0.0; self.state_dim]; self.state_dim];
         for i in 0..self.state_dim {
@@ -518,8 +549,10 @@ impl KalmanFilter {
         }
 
         let mut identity = vec![vec![0.0; self.state_dim]; self.state_dim];
-        for i in 0..self.state_dim {
-            identity[i][i] = 1.0;
+        for (i, row) in identity.iter_mut().enumerate().take(self.state_dim) {
+            if i < row.len() { // Defensive check, should be square
+                row[i] = 1.0;
+            }
         }
 
         let ikh = self.matrix_subtract(&identity, &kh)?;
@@ -539,6 +572,9 @@ impl KalmanFilter {
     // Matrix operations
 
     fn matrix_vector_multiply(&self, matrix: &[Vec<f64>], vector: &[f64]) -> Result<Vec<f64>> {
+        if matrix.is_empty() {
+            return Ok(Vec::new()); // Handle empty matrix
+        }
         if matrix[0].len() != vector.len() {
             return Err(OxiError::ModelError(
                 "Matrix-vector dimension mismatch".to_string(),
@@ -546,27 +582,43 @@ impl KalmanFilter {
         }
 
         let mut result = vec![0.0; matrix.len()];
-        for i in 0..matrix.len() {
-            for j in 0..vector.len() {
-                result[i] += matrix[i][j] * vector[j];
-            }
+        for (i, matrix_row) in matrix.iter().enumerate() {
+            result[i] = matrix_row.iter()
+                .zip(vector.iter())
+                .map(|(m_val, v_val)| m_val * v_val)
+                .sum();
         }
         Ok(result)
     }
 
     fn matrix_multiply(&self, a: &[Vec<f64>], b: &[Vec<f64>]) -> Result<Vec<Vec<f64>>> {
+        if a.is_empty() || b.is_empty() || b[0].is_empty() { // Basic check for empty matrices
+            // Decide behavior: error or return empty/specific result
+            // For now, assuming valid non-empty matrices based on typical usage or prior checks.
+            // If a is M_x_N and b is N_x_P, result is M_x_P
+            if a.is_empty() { return Ok(Vec::new()); }
+            if b.is_empty() || b[0].is_empty() { 
+                // If b has no columns, result has no columns
+                return Ok(vec![vec![0.0; 0]; a.len()]); 
+            }
+        }
+
         if a[0].len() != b.len() {
             return Err(OxiError::ModelError(
                 "Matrix multiplication dimension mismatch".to_string(),
             ));
         }
 
-        let mut result = vec![vec![0.0; b[0].len()]; a.len()];
-        for i in 0..a.len() {
-            for j in 0..b[0].len() {
-                for k in 0..b.len() {
-                    result[i][j] += a[i][k] * b[k][j];
-                }
+        let num_rows_a = a.len();
+        let num_cols_b = b[0].len();
+        let common_dim = b.len(); // num_cols_a or num_rows_b
+
+        let mut result = vec![vec![0.0; num_cols_b]; num_rows_a];
+        for i in 0..num_rows_a {
+            for j in 0..num_cols_b {
+                result[i][j] = (0..common_dim)
+                    .map(|k| a[i][k] * b[k][j])
+                    .sum();
             }
         }
         Ok(result)
@@ -632,16 +684,16 @@ impl KalmanFilter {
         let n = data.len();
         let mean = data.iter().sum::<f64>() / n as f64;
 
-        let mut numerator = 0.0;
-        let mut denominator = 0.0;
+        // Refactored loop for denominator
+        let denominator: f64 = data.iter().map(|&val| (val - mean).powi(2)).sum();
 
-        for i in 0..n {
-            denominator += (data[i] - mean).powi(2);
-        }
-
-        for i in lag..n {
-            numerator += (data[i] - mean) * (data[i - lag] - mean);
-        }
+        // Refactored loop for numerator
+        let numerator: f64 = data
+            .iter()
+            .skip(lag)
+            .zip(data.iter())
+            .map(|(&val_i, &val_i_minus_lag)| (val_i - mean) * (val_i_minus_lag - mean))
+            .sum();
 
         if denominator > 0.0 {
             Ok(numerator / denominator)
@@ -758,6 +810,9 @@ impl KalmanFilter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::TimeSeriesData;
+    
+    use chrono::{DateTime, Duration, Utc};
 
     fn create_test_data() -> TimeSeriesData {
         let start_time = Utc::now();

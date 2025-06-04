@@ -96,8 +96,6 @@ impl fmt::Display for SeasonalType {
 pub struct ETSModel {
     /// Model name
     name: String,
-    /// Type of error
-    error_type: ErrorType,
     /// Type of trend
     trend_type: TrendType,
     /// Type of seasonality
@@ -128,7 +126,6 @@ impl ETSModel {
     /// Creates a new ETS model with specified components.
     ///
     /// # Arguments
-    /// * `error_type` - Type of error component (A, M)
     /// * `trend_type` - Type of trend component (N, A, Ad, M, Md)
     /// * `seasonal_type` - Type of seasonal component (N, A, M)
     /// * `alpha` - Smoothing parameter for level (0 < α < 1)
@@ -141,7 +138,6 @@ impl ETSModel {
     /// * `Result<Self>` - A new ETS model if parameters are valid
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        error_type: ErrorType,
         trend_type: TrendType,
         seasonal_type: SeasonalType,
         alpha: f64,
@@ -198,7 +194,7 @@ impl ETSModel {
         }
 
         // Construct model name
-        let mut name = format!("ETS({},{},{})", error_type, trend_type, seasonal_type);
+        let mut name = format!("ETS({},{})", trend_type, seasonal_type);
 
         // Add parameters to name
         name.push_str(&format!(",α={:.3}", alpha));
@@ -221,7 +217,6 @@ impl ETSModel {
 
         Ok(ETSModel {
             name,
-            error_type,
             trend_type,
             seasonal_type,
             alpha,
@@ -240,7 +235,6 @@ impl ETSModel {
     /// Convenience method to create a Simple Exponential Smoothing model (ETS(A,N,N).
     pub fn simple(alpha: f64) -> std::result::Result<Self, ESError> {
         Self::new(
-            ErrorType::Additive,
             TrendType::None,
             SeasonalType::None,
             alpha,
@@ -254,7 +248,6 @@ impl ETSModel {
     /// Convenience method to create a Holt Linear model (ETS(A,A,N).
     pub fn holt(alpha: f64, beta: f64) -> std::result::Result<Self, ESError> {
         Self::new(
-            ErrorType::Additive,
             TrendType::Additive,
             SeasonalType::None,
             alpha,
@@ -268,7 +261,6 @@ impl ETSModel {
     /// Convenience method to create a Damped Trend model (ETS(A,Ad,N).
     pub fn damped_trend(alpha: f64, beta: f64, phi: f64) -> std::result::Result<Self, ESError> {
         Self::new(
-            ErrorType::Additive,
             TrendType::DampedAdditive,
             SeasonalType::None,
             alpha,
@@ -287,7 +279,6 @@ impl ETSModel {
         period: usize,
     ) -> std::result::Result<Self, ESError> {
         Self::new(
-            ErrorType::Additive,
             TrendType::Additive,
             SeasonalType::Additive,
             alpha,
@@ -306,7 +297,6 @@ impl ETSModel {
         period: usize,
     ) -> std::result::Result<Self, ESError> {
         Self::new(
-            ErrorType::Additive,
             TrendType::Additive,
             SeasonalType::Multiplicative,
             alpha,

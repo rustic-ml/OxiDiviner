@@ -430,10 +430,18 @@ fn correlation_regime_analysis_demo(
                         }
                         println!();
 
-                        for (i, row) in corr_matrix.iter().enumerate().take(assets.len()) {
-                            print!("{:>8} ", assets[i]);
-                            for j in (i + 1)..assets.len() {
-                                print!("{:>10.3}", row[j]);
+                        // Display matrix rows (strict upper triangle)
+                        for (i, row_elements) in corr_matrix.iter().enumerate().take(assets.len()) {
+                            print!("{:>8} ", assets[i]); // Row label, e.g., "stocks  "
+
+                            // Print spacing for columns before the (i+1)-th column
+                            for _j_col in 0..(i + 1) { // Skips i+1 columns (0 to i)
+                                print!("          "); // 10 spaces for each skipped column
+                            }
+
+                            // Print elements from (i+1)-th column to end
+                            for val_to_print in row_elements.iter().skip(i + 1) {
+                                print!("{:>10.3}", val_to_print);
                             }
                             println!();
                         }
@@ -442,12 +450,16 @@ fn correlation_regime_analysis_demo(
                         let mut total_corr = 0.0;
                         let mut count = 0;
                         for (i, row) in corr_matrix.iter().enumerate().take(assets.len()) {
-                            for j in (i + 1)..assets.len() {
-                                total_corr += row[j];
+                            for val_in_row in row.iter().skip(i + 1) {
+                                total_corr += val_in_row;
                                 count += 1;
                             }
                         }
-                        let avg_correlation = total_corr / count as f64;
+                        let avg_correlation = if count > 0 {
+                            total_corr / count as f64
+                        } else {
+                            0.0 // Avoid division by zero if no elements were summed
+                        };
                         println!("  Average Correlation: {:.3}", avg_correlation);
                     }
                 }

@@ -24,6 +24,17 @@ use crate::math::metrics::{mae, mape, mse, rmse, smape};
 use std::collections::HashMap;
 use std::f64::consts::PI;
 
+// Type aliases for multivariate regime parameters
+pub type RegimeMeans = Vec<Vec<f64>>;
+pub type RegimeCovariances = Vec<Vec<Vec<f64>>>;
+
+// Type aliases for complex types from e_step and m_step (if not already defined)
+// Assuming XiMatrix and GammaMatrix might also be used or defined here, 
+// similar to markov_switching.rs. If they are specific to univariate, 
+// these can be omitted or made specific to multivariate if needed.
+pub type MultivariateXiMatrix = Vec<Vec<Vec<f64>>>; // Placeholder if needed
+pub type MultivariateGammaMatrix = Vec<Vec<f64>>;    // Placeholder if needed
+
 /// Multivariate Markov Regime-Switching Model
 ///
 /// This model simultaneously analyzes multiple time series to detect
@@ -271,13 +282,13 @@ impl MultivariateMarkovSwitchingModel {
             }
 
             // Update regime probabilities
-            let mut new_probs = vec![0.0; self.num_regimes];
-            for j in 0..self.num_regimes {
-                for i in 0..self.num_regimes {
-                    new_probs[j] += current_probs[i] * transition_matrix[i][j];
+            let mut new_probs_vec = vec![0.0; self.num_regimes];
+            for (j_idx, new_prob_val_ref) in new_probs_vec.iter_mut().enumerate().take(self.num_regimes) {
+                for i_idx in 0..self.num_regimes {
+                    *new_prob_val_ref += current_probs[i_idx] * transition_matrix[i_idx][j_idx];
                 }
             }
-            current_probs = new_probs;
+            current_probs = new_probs_vec;
         }
 
         Ok(forecasts)
@@ -291,8 +302,7 @@ impl MultivariateMarkovSwitchingModel {
 
         let mut correlations_by_regime = Vec::new();
 
-        for regime in 0..self.num_regimes {
-            let cov_matrix = &covariances[regime];
+        for (regime_idx, cov_matrix) in covariances.iter().enumerate().take(self.num_regimes) {
             let mut corr_matrix = vec![vec![0.0; self.num_variables]; self.num_variables];
 
             // Convert covariance to correlation
@@ -310,7 +320,7 @@ impl MultivariateMarkovSwitchingModel {
             }
 
             correlations_by_regime.push(CrossCorrelationStats {
-                regime,
+                regime: regime_idx,
                 correlations: corr_matrix,
                 variable_names: self.variable_names.clone(),
             });
@@ -411,7 +421,7 @@ impl MultivariateMarkovSwitchingModel {
     }
 
     /// Get regime-specific parameters (means and covariances)
-    pub fn get_regime_parameters(&self) -> Option<(&Vec<Vec<f64>>, &Vec<Vec<Vec<f64>>>)> {
+    pub fn get_regime_parameters(&self) -> Option<(&RegimeMeans, &RegimeCovariances)> {
         if let (Some(means), Some(covariances)) = (&self.means, &self.covariances) {
             Some((means, covariances))
         } else {
@@ -508,12 +518,12 @@ impl MultivariateMarkovSwitchingModel {
         let persistence = 0.9;
         let off_diagonal = (1.0 - persistence) / (self.num_regimes - 1) as f64;
 
-        for i in 0..self.num_regimes {
-            for j in 0..self.num_regimes {
-                if i == j {
-                    transition_matrix[i][j] = persistence;
+        for (i_idx, row_ref) in transition_matrix.iter_mut().enumerate().take(self.num_regimes) {
+            for (j_idx_enum, val_in_row_ref) in row_ref.iter_mut().enumerate().take(self.num_regimes) {
+                if i_idx == j_idx_enum {
+                    *val_in_row_ref = persistence;
                 } else {
-                    transition_matrix[i][j] = off_diagonal;
+                    *val_in_row_ref = off_diagonal;
                 }
             }
         }
@@ -532,7 +542,7 @@ impl MultivariateMarkovSwitchingModel {
     fn multivariate_e_step(
         &mut self,
         data: &[Vec<f64>],
-    ) -> Result<(Vec<Vec<Vec<f64>>>, Vec<Vec<f64>>)> {
+    ) -> Result<(MultivariateXiMatrix, MultivariateGammaMatrix)> {
         let gamma = self.multivariate_forward_backward(data)?;
         let xi = self.calculate_xi_multivariate(data, &gamma)?;
         Ok((xi, gamma))
@@ -548,18 +558,18 @@ impl MultivariateMarkovSwitchingModel {
 
         // Update means
         let mut new_means = vec![vec![0.0; self.num_variables]; self.num_regimes];
-        for regime in 0..self.num_regimes {
+        for (regime_idx, mean_vec_ref) in new_means.iter_mut().enumerate().take(self.num_regimes) {
             let mut regime_weight = 0.0;
             for t in 0..n {
-                regime_weight += gamma[t][regime];
-                for var in 0..self.num_variables {
-                    new_means[regime][var] += gamma[t][regime] * data[t][var];
+                regime_weight += gamma[t][regime_idx];
+                for (var_idx_enum, val_in_mean_vec_ref) in mean_vec_ref.iter_mut().enumerate().take(self.num_variables) {
+                    *val_in_mean_vec_ref += gamma[t][regime_idx] * data[t][var_idx_enum];
                 }
             }
 
             if regime_weight > 1e-10 {
-                for var in 0..self.num_variables {
-                    new_means[regime][var] /= regime_weight;
+                for val_in_mean_vec_ref in mean_vec_ref.iter_mut().take(self.num_variables) {
+                    *val_in_mean_vec_ref /= regime_weight;
                 }
             }
         }
@@ -632,24 +642,24 @@ impl MultivariateMarkovSwitchingModel {
         let initial_probs = self.initial_probs.as_ref().unwrap();
 
         // Initialize
-        for regime in 0..self.num_regimes {
-            alpha[0][regime] = initial_probs[regime]
+        for regime_idx in 0..self.num_regimes {
+            alpha[0][regime_idx] = initial_probs[regime_idx]
                 * self.multivariate_normal_density(
                     &data[0],
-                    &means[regime],
-                    &covariances[regime],
+                    &means[regime_idx],
+                    &covariances[regime_idx],
                 )?;
         }
 
         // Forward pass
         for t in 1..n {
-            for j in 0..self.num_regimes {
+            for j_idx in 0..self.num_regimes {
                 let mut sum = 0.0;
-                for i in 0..self.num_regimes {
-                    sum += alpha[t - 1][i] * transition_matrix[i][j];
+                for (i_idx, transition_matrix_row_i) in transition_matrix.iter().enumerate().take(self.num_regimes) {
+                    sum += alpha[t - 1][i_idx] * transition_matrix_row_i[j_idx];
                 }
-                alpha[t][j] =
-                    sum * self.multivariate_normal_density(&data[t], &means[j], &covariances[j])?;
+                alpha[t][j_idx] =
+                    sum * self.multivariate_normal_density(&data[t], &means[j_idx], &covariances[j_idx])?;
             }
         }
 
@@ -671,18 +681,18 @@ impl MultivariateMarkovSwitchingModel {
 
         // Backward pass
         for t in (0..n - 1).rev() {
-            for i in 0..self.num_regimes {
+            for (i_idx, transition_matrix_row_i) in transition_matrix.iter().enumerate().take(self.num_regimes) {
                 let mut sum = 0.0;
-                for j in 0..self.num_regimes {
-                    sum += transition_matrix[i][j]
+                for j_idx in 0..self.num_regimes {
+                    sum += transition_matrix_row_i[j_idx]
                         * self.multivariate_normal_density(
                             &data[t + 1],
-                            &means[j],
-                            &covariances[j],
+                            &means[j_idx],
+                            &covariances[j_idx],
                         )?
-                        * beta[t + 1][j];
+                        * beta[t + 1][j_idx];
                 }
-                beta[t][i] = sum;
+                beta[t][i_idx] = sum;
             }
         }
 
@@ -705,25 +715,25 @@ impl MultivariateMarkovSwitchingModel {
 
         for t in 0..n - 1 {
             let mut normalizer = 0.0;
-            for i in 0..self.num_regimes {
-                for j in 0..self.num_regimes {
-                    let prob = alpha[t][i]
-                        * transition_matrix[i][j]
+            for (i_idx, transition_matrix_row_i) in transition_matrix.iter().enumerate().take(self.num_regimes) {
+                for j_idx in 0..self.num_regimes {
+                    let prob = alpha[t][i_idx]
+                        * transition_matrix_row_i[j_idx]
                         * self.multivariate_normal_density(
                             &data[t + 1],
-                            &means[j],
-                            &covariances[j],
+                            &means[j_idx],
+                            &covariances[j_idx],
                         )?
-                        * beta[t + 1][j];
-                    xi[t][i][j] = prob;
+                        * beta[t + 1][j_idx];
+                    xi[t][i_idx][j_idx] = prob;
                     normalizer += prob;
                 }
             }
 
             if normalizer > 1e-10 {
-                for i in 0..self.num_regimes {
-                    for j in 0..self.num_regimes {
-                        xi[t][i][j] /= normalizer;
+                for xi_row_at_t in xi[t].iter_mut().take(self.num_regimes) {
+                    for val_in_row in xi_row_at_t.iter_mut().take(self.num_regimes) {
+                        *val_in_row /= normalizer;
                     }
                 }
             }
@@ -752,23 +762,21 @@ impl MultivariateMarkovSwitchingModel {
 
         // Forward pass
         for t in 1..n {
-            for j in 0..self.num_regimes {
+            for j_idx in 0..self.num_regimes {
                 let mut max_val = f64::NEG_INFINITY;
                 let mut max_arg = 0;
 
-                for i in 0..self.num_regimes {
-                    let val = delta[t - 1][i] + transition_matrix[i][j].ln();
+                for (i_idx, transition_matrix_row_i) in transition_matrix.iter().enumerate().take(self.num_regimes) {
+                    let val = delta[t - 1][i_idx] + transition_matrix_row_i[j_idx].ln();
                     if val > max_val {
                         max_val = val;
-                        max_arg = i;
+                        max_arg = i_idx;
                     }
                 }
 
-                let log_density = self
-                    .multivariate_normal_density(&data[t], &means[j], &covariances[j])?
-                    .ln();
-                delta[t][j] = max_val + log_density;
-                psi[t][j] = max_arg;
+                delta[t][j_idx] = max_val
+                    + self.multivariate_normal_density(&data[t], &means[j_idx], &covariances[j_idx])?;
+                psi[t][j_idx] = max_arg;
             }
         }
 
@@ -867,32 +875,42 @@ impl MultivariateMarkovSwitchingModel {
     ) -> Result<()> {
         let gamma = self.regime_probabilities.as_ref().unwrap();
         let means = self.means.as_ref().unwrap();
-        let n = gamma.len();
+        let n = gamma.len(); // Number of time points
 
-        let mut fitted_values = HashMap::new();
-        let mut residuals = HashMap::new();
+        let mut fitted_values_map = HashMap::new();
+        let mut residuals_map = HashMap::new();
 
         for (var_idx, var_name) in self.variable_names.iter().enumerate() {
             let mut var_fitted = Vec::with_capacity(n);
             let mut var_residuals = Vec::with_capacity(n);
+            let actual_values_for_var = &data_map[var_name].values;
 
-            for t in 0..n {
-                let mut fitted = 0.0;
-                for regime in 0..self.num_regimes {
-                    fitted += gamma[t][regime] * means[regime][var_idx];
-                }
+            // Iterate over gamma (probabilities for each time t) and corresponding actual values
+            // gamma_t is Vec<f64> (probs for each regime at current time t)
+            // actual_val is the observed value for var_name at current time t
+            for (gamma_t, &actual_val) in gamma.iter().zip(actual_values_for_var.iter()) {
+                // Calculate fitted value for current variable (var_idx) at current time t
+                // This is the expected value of the variable, weighted by regime probabilities
+                let fitted: f64 = gamma_t.iter()
+                    .zip(means.iter()) // means.iter() gives &Vec<f64> for each regime
+                    .map(|(&gamma_val_for_regime, mean_vec_for_regime)| {
+                        // gamma_val_for_regime is P(S_t = regime)
+                        // mean_vec_for_regime is the mean vector for this regime
+                        // mean_vec_for_regime[var_idx] is the mean of the current variable in this regime
+                        gamma_val_for_regime * mean_vec_for_regime[var_idx]
+                    })
+                    .sum();
+                
                 var_fitted.push(fitted);
-
-                let actual = data_map[var_name].values[t];
-                var_residuals.push(actual - fitted);
+                var_residuals.push(actual_val - fitted);
             }
 
-            fitted_values.insert(var_name.clone(), var_fitted);
-            residuals.insert(var_name.clone(), var_residuals);
+            fitted_values_map.insert(var_name.clone(), var_fitted);
+            residuals_map.insert(var_name.clone(), var_residuals);
         }
 
-        self.fitted_values = Some(fitted_values);
-        self.residuals = Some(residuals);
+        self.fitted_values = Some(fitted_values_map);
+        self.residuals = Some(residuals_map);
 
         Ok(())
     }

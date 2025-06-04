@@ -143,12 +143,12 @@ pub mod prelude {
 
     // Re-export key components from ensemble and optimization modules
     pub use crate::ensemble::{
-        EnsembleBuilder, EnsembleForecast, EnsembleMethod, EnsemblePerformance,
-        EnsembleUtils, ModelForecast, ModelPerformance as EnsembleModelPerformance
+        EnsembleBuilder, EnsembleForecast, EnsembleMethod, EnsemblePerformance, EnsembleUtils,
+        ModelForecast, ModelPerformance as EnsembleModelPerformance,
     };
     pub use crate::optimization::{
-        OptimizerBuilder, ParameterOptimizer, OptimizationConfig, OptimizationMethod,
-        OptimizationMetric, OptimizationResult, ConvergenceInfo
+        ConvergenceInfo, OptimizationConfig, OptimizationMethod, OptimizationMetric,
+        OptimizationResult, OptimizerBuilder, ParameterOptimizer,
     };
 }
 

@@ -320,7 +320,7 @@ impl TCopulaModel {
         let mut forecasts = vec![Vec::new(); self.n_series];
 
         // For simplicity, generate point forecasts using expected values
-        for series_idx in 0..self.n_series {
+        for (series_idx, current_forecast_series) in forecasts.iter_mut().enumerate().take(self.n_series) {
             let [omega, alpha, beta] = self.garch_params[series_idx];
             let last_var = if !self.conditional_vars[series_idx].is_empty() {
                 *self.conditional_vars[series_idx].last().unwrap()
@@ -328,12 +328,12 @@ impl TCopulaModel {
                 omega
             };
 
-            let mut h_forecast = last_var;
+            let mut h_forecast_variance = last_var; // Renamed for clarity, as it's variance
 
             for _ in 0..horizon {
-                h_forecast = omega + (alpha + beta) * h_forecast;
+                h_forecast_variance = omega + (alpha + beta) * h_forecast_variance;
                 let point_forecast = 0.0; // Expected return for t-distribution
-                forecasts[series_idx].push(point_forecast);
+                current_forecast_series.push(point_forecast);
             }
         }
 

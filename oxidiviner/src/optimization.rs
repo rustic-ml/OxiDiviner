@@ -6,7 +6,7 @@
 //!
 //! ## Key Features
 //!
-//! - **Multiple Optimization Algorithms**: 
+//! - **Multiple Optimization Algorithms**:
 //!   - `GridSearch`: Exhaustively searches a predefined hyperparameter space.
 //!   - `RandomSearch`: Samples parameters randomly from a given space (often more efficient for larger spaces).
 //!   - `BayesianOptimization`: (Simplified) Uses past evaluations to make informed choices for the next set of parameters.
@@ -63,13 +63,13 @@
 //! This module helps users to systematically find better model configurations without
 //! manual trial-and-error, leading to more accurate and reliable forecasts.
 
-use crate::core::{OxiError, Result, TimeSeriesData, Forecaster};
 use crate::core::validation::ValidationUtils;
+use crate::core::{Result, TimeSeriesData};
+use crate::math::metrics::{mae, mse, rmse};
 use crate::models::autoregressive::ARIMAModel;
-use crate::models::exponential_smoothing::SimpleESModel;
 use crate::models::exponential_smoothing::HoltWintersModel;
+use crate::models::exponential_smoothing::SimpleESModel;
 use crate::models::moving_average::MAModel;
-use crate::math::metrics::{mae, rmse, mse};
 use std::collections::HashMap;
 
 /// Specifies the algorithm used for parameter optimization.
@@ -187,7 +187,7 @@ impl ParameterOptimizer {
     ) -> Result<OptimizationResult> {
         let parameter_space = self.generate_arima_parameter_space(max_p, max_d, max_q);
         let baseline_score = self.evaluate_baseline_arima(data)?;
-        
+
         let mut best_score = f64::INFINITY;
         let mut best_params = HashMap::new();
         let mut evaluation_count = 0;
@@ -247,7 +247,7 @@ impl ParameterOptimizer {
     ) -> Result<OptimizationResult> {
         let parameter_space = self.generate_es_parameter_space();
         let baseline_score = self.evaluate_baseline_es(data)?;
-        
+
         let mut best_score = f64::INFINITY;
         let mut best_params = HashMap::new();
         let mut evaluation_count = 0;
@@ -307,7 +307,7 @@ impl ParameterOptimizer {
     ) -> Result<OptimizationResult> {
         let parameter_space = self.generate_hw_parameter_space();
         let baseline_score = self.evaluate_baseline_hw(data, seasonal_period)?;
-        
+
         let mut best_score = f64::INFINITY;
         let mut best_params = HashMap::new();
         let mut evaluation_count = 0;
@@ -369,7 +369,7 @@ impl ParameterOptimizer {
     ) -> Result<OptimizationResult> {
         let parameter_space = self.generate_ma_parameter_space(max_window);
         let baseline_score = self.evaluate_baseline_ma(data)?;
-        
+
         let mut best_score = f64::INFINITY;
         let mut best_params = HashMap::new();
         let mut evaluation_count = 0;
@@ -413,16 +413,21 @@ impl ParameterOptimizer {
     }
 
     // Parameter space generation methods
-    fn generate_arima_parameter_space(&self, max_p: usize, max_d: usize, max_q: usize) -> Vec<HashMap<String, f64>> {
+    fn generate_arima_parameter_space(
+        &self,
+        max_p: usize,
+        max_d: usize,
+        max_q: usize,
+    ) -> Vec<HashMap<String, f64>> {
         let mut parameter_space = Vec::new();
-        
+
         for p in 0..=max_p {
             for d in 0..=max_d {
                 for q in 0..=max_q {
                     if p == 0 && d == 0 && q == 0 {
                         continue; // Skip invalid combination
                     }
-                    
+
                     let mut params = HashMap::new();
                     params.insert("p".to_string(), p as f64);
                     params.insert("d".to_string(), d as f64);
@@ -431,27 +436,27 @@ impl ParameterOptimizer {
                 }
             }
         }
-        
+
         parameter_space
     }
 
     fn generate_es_parameter_space(&self) -> Vec<HashMap<String, f64>> {
         let mut parameter_space = Vec::new();
         let alpha_values = vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9];
-        
+
         for alpha in alpha_values {
             let mut params = HashMap::new();
             params.insert("alpha".to_string(), alpha);
             parameter_space.push(params);
         }
-        
+
         parameter_space
     }
 
     fn generate_hw_parameter_space(&self) -> Vec<HashMap<String, f64>> {
         let mut parameter_space = Vec::new();
         let param_values = vec![0.1, 0.2, 0.3, 0.4, 0.5];
-        
+
         for alpha in &param_values {
             for beta in &param_values {
                 for gamma in &param_values {
@@ -463,68 +468,81 @@ impl ParameterOptimizer {
                 }
             }
         }
-        
+
         parameter_space
     }
 
     fn generate_ma_parameter_space(&self, max_window: usize) -> Vec<HashMap<String, f64>> {
         let mut parameter_space = Vec::new();
-        
+
         for window in 1..=max_window {
             let mut params = HashMap::new();
             params.insert("window".to_string(), window as f64);
             parameter_space.push(params);
         }
-        
+
         parameter_space
     }
 
     // Model evaluation methods
-    fn evaluate_arima_params(&self, data: &TimeSeriesData, p: usize, d: usize, q: usize) -> Result<f64> {
+    fn evaluate_arima_params(
+        &self,
+        data: &TimeSeriesData,
+        p: usize,
+        d: usize,
+        q: usize,
+    ) -> Result<f64> {
         let (train_data, test_data) = ValidationUtils::time_split(data, self.config.train_ratio)?;
-        
+
         let mut model = ARIMAModel::new(p, d, q, true)?;
         model.fit(&train_data)?;
-        
+
         let forecast = model.forecast(test_data.values.len())?;
         let score = self.calculate_score(&test_data.values, &forecast);
-        
+
         Ok(score)
     }
 
     fn evaluate_es_params(&self, data: &TimeSeriesData, alpha: f64) -> Result<f64> {
         let (train_data, test_data) = ValidationUtils::time_split(data, self.config.train_ratio)?;
-        
+
         let mut model = SimpleESModel::new(alpha)?;
         model.fit(&train_data)?;
-        
+
         let forecast = model.forecast(test_data.values.len())?;
         let score = self.calculate_score(&test_data.values, &forecast);
-        
+
         Ok(score)
     }
 
-    fn evaluate_hw_params(&self, data: &TimeSeriesData, alpha: f64, beta: f64, gamma: f64, period: usize) -> Result<f64> {
+    fn evaluate_hw_params(
+        &self,
+        data: &TimeSeriesData,
+        alpha: f64,
+        beta: f64,
+        gamma: f64,
+        period: usize,
+    ) -> Result<f64> {
         let (train_data, test_data) = ValidationUtils::time_split(data, self.config.train_ratio)?;
-        
+
         let mut model = HoltWintersModel::new(alpha, beta, gamma, period)?;
         model.fit(&train_data)?;
-        
+
         let forecast = model.forecast(test_data.values.len())?;
         let score = self.calculate_score(&test_data.values, &forecast);
-        
+
         Ok(score)
     }
 
     fn evaluate_ma_params(&self, data: &TimeSeriesData, window: usize) -> Result<f64> {
         let (train_data, test_data) = ValidationUtils::time_split(data, self.config.train_ratio)?;
-        
+
         let mut model = MAModel::new(window)?;
         model.fit(&train_data)?;
-        
+
         let forecast = model.forecast(test_data.values.len())?;
         let score = self.calculate_score(&test_data.values, &forecast);
-        
+
         Ok(score)
     }
 
@@ -559,7 +577,11 @@ impl ParameterOptimizer {
                         count += 1;
                     }
                 }
-                if count > 0 { sum / count as f64 * 100.0 } else { f64::INFINITY }
+                if count > 0 {
+                    sum / count as f64 * 100.0
+                } else {
+                    f64::INFINITY
+                }
             }
             OptimizationMetric::AIC | OptimizationMetric::BIC => {
                 // For simplicity, use MSE as proxy for likelihood-based metrics
@@ -634,16 +656,20 @@ mod tests {
     fn create_test_data() -> TimeSeriesData {
         let start_time = Utc::now();
         let timestamps: Vec<_> = (0..50).map(|i| start_time + Duration::days(i)).collect();
-        let values: Vec<f64> = (0..50).map(|i| 100.0 + i as f64 * 0.5 + (i as f64 * 0.1).sin()).collect();
+        let values: Vec<f64> = (0..50)
+            .map(|i| 100.0 + i as f64 * 0.5 + (i as f64 * 0.1).sin())
+            .collect();
         TimeSeriesData::new(timestamps, values, "test").unwrap()
     }
 
     fn create_seasonal_test_data() -> TimeSeriesData {
         let start_time = Utc::now();
         let timestamps: Vec<_> = (0..60).map(|i| start_time + Duration::days(i)).collect();
-        let values: Vec<f64> = (0..60).map(|i| {
-            100.0 + i as f64 * 0.2 + 10.0 * (i as f64 * 2.0 * std::f64::consts::PI / 12.0).sin()
-        }).collect();
+        let values: Vec<f64> = (0..60)
+            .map(|i| {
+                100.0 + i as f64 * 0.2 + 10.0 * (i as f64 * 2.0 * std::f64::consts::PI / 12.0).sin()
+            })
+            .collect();
         TimeSeriesData::new(timestamps, values, "seasonal_test").unwrap()
     }
 
@@ -656,7 +682,10 @@ mod tests {
             .build();
 
         assert_eq!(optimizer.config.max_evaluations, 10);
-        assert!(matches!(optimizer.config.method, OptimizationMethod::GridSearch));
+        assert!(matches!(
+            optimizer.config.method,
+            OptimizationMethod::GridSearch
+        ));
         assert!(matches!(optimizer.config.metric, OptimizationMetric::MAE));
     }
 
@@ -673,32 +702,28 @@ mod tests {
     #[test]
     fn test_arima_optimization() {
         let data = create_test_data();
-        let optimizer = OptimizerBuilder::new()
-            .max_evaluations(5)
-            .build();
+        let optimizer = OptimizerBuilder::new().max_evaluations(5).build();
 
         let result = optimizer.optimize_arima(&data, 2, 1, 2);
         assert!(result.is_ok());
-        
+
         let opt_result = result.unwrap();
         assert!(opt_result.evaluation_count > 0);
         assert!(opt_result.best_score >= 0.0);
         assert!(opt_result.best_parameters.contains_key("p"));
         assert!(opt_result.best_parameters.contains_key("d"));
         assert!(opt_result.best_parameters.contains_key("q"));
-        assert!(opt_result.convergence_info.score_history.len() > 0);
+        assert!(!opt_result.convergence_info.score_history.is_empty());
     }
 
     #[test]
     fn test_es_optimization() {
         let data = create_test_data();
-        let optimizer = OptimizerBuilder::new()
-            .max_evaluations(5)
-            .build();
+        let optimizer = OptimizerBuilder::new().max_evaluations(5).build();
 
         let result = optimizer.optimize_exponential_smoothing(&data);
         assert!(result.is_ok());
-        
+
         let opt_result = result.unwrap();
         assert!(opt_result.evaluation_count > 0);
         assert!(opt_result.best_parameters.contains_key("alpha"));
@@ -715,13 +740,13 @@ mod tests {
 
         let result = optimizer.optimize_holt_winters(&data, 12);
         assert!(result.is_ok());
-        
+
         let opt_result = result.unwrap();
         assert!(opt_result.evaluation_count > 0);
         assert!(opt_result.best_parameters.contains_key("alpha"));
         assert!(opt_result.best_parameters.contains_key("beta"));
         assert!(opt_result.best_parameters.contains_key("gamma"));
-        
+
         // Check parameter bounds
         for &param in opt_result.best_parameters.values() {
             assert!(param > 0.0 && param < 1.0);
@@ -731,24 +756,22 @@ mod tests {
     #[test]
     fn test_ma_optimization() {
         let data = create_test_data();
-        let optimizer = OptimizerBuilder::new()
-            .max_evaluations(10)
-            .build();
+        let optimizer = OptimizerBuilder::new().max_evaluations(10).build();
 
         let result = optimizer.optimize_moving_average(&data, 15);
         assert!(result.is_ok());
-        
+
         let opt_result = result.unwrap();
         assert!(opt_result.evaluation_count > 0);
         assert!(opt_result.best_parameters.contains_key("window"));
         let window = opt_result.best_parameters["window"] as usize;
-        assert!(window >= 1 && window <= 15);
+        assert!((1..=15).contains(&window));
     }
 
     #[test]
     fn test_optimization_metrics() {
         let data = create_test_data();
-        
+
         // Test different metrics
         let metrics = vec![
             OptimizationMetric::MAE,
@@ -757,7 +780,7 @@ mod tests {
             OptimizationMetric::AIC,
             OptimizationMetric::BIC,
         ];
-        
+
         for metric in metrics {
             let optimizer = OptimizerBuilder::new()
                 .metric(metric)
@@ -772,14 +795,14 @@ mod tests {
     #[test]
     fn test_optimization_methods() {
         let data = create_test_data();
-        
+
         // Test different optimization methods
         let methods = vec![
             OptimizationMethod::GridSearch,
             OptimizationMethod::RandomSearch,
             OptimizationMethod::BayesianOptimization,
         ];
-        
+
         for method in methods {
             let optimizer = OptimizerBuilder::new()
                 .method(method)
@@ -794,12 +817,10 @@ mod tests {
     #[test]
     fn test_improvement_calculation() {
         let data = create_test_data();
-        let optimizer = OptimizerBuilder::new()
-            .max_evaluations(5)
-            .build();
+        let optimizer = OptimizerBuilder::new().max_evaluations(5).build();
 
         let result = optimizer.optimize_arima(&data, 2, 1, 2).unwrap();
-        
+
         // Improvement percentage should be calculated
         assert!(result.improvement_percentage >= 0.0 || result.improvement_percentage.is_nan());
     }
@@ -807,27 +828,25 @@ mod tests {
     #[test]
     fn test_convergence_info() {
         let data = create_test_data();
-        let optimizer = OptimizerBuilder::new()
-            .max_evaluations(3)
-            .build();
+        let optimizer = OptimizerBuilder::new().max_evaluations(3).build();
 
         let result = optimizer.optimize_arima(&data, 1, 1, 1).unwrap();
-        
+
         assert!(result.convergence_info.converged);
         assert_eq!(result.convergence_info.final_score, result.best_score);
-        assert!(result.convergence_info.score_history.len() > 0);
+        assert!(!result.convergence_info.score_history.is_empty());
     }
 
     #[test]
     fn test_empty_data_error() {
         // Test that optimizer properly handles empty data
-        // Since TimeSeriesData::new itself fails with empty data, 
+        // Since TimeSeriesData::new itself fails with empty data,
         // we'll test with minimal data that would cause optimization to fail
         let start_time = Utc::now();
         let timestamps: Vec<_> = (0..2).map(|i| start_time + Duration::days(i)).collect();
         let values = vec![1.0, 1.0]; // Very small, constant data
         let minimal_data = TimeSeriesData::new(timestamps, values, "minimal").unwrap();
-        
+
         let optimizer = OptimizerBuilder::new().build();
 
         // Should fail for complex ARIMA models with insufficient data
@@ -841,7 +860,7 @@ mod tests {
         let timestamps: Vec<_> = (0..5).map(|i| start_time + Duration::days(i)).collect();
         let values = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let small_data = TimeSeriesData::new(timestamps, values, "small").unwrap();
-        
+
         let optimizer = OptimizerBuilder::new().build();
 
         // Should fail for complex ARIMA models with insufficient data
@@ -852,22 +871,22 @@ mod tests {
     #[test]
     fn test_parameter_space_generation() {
         let optimizer = OptimizerBuilder::new().build();
-        
+
         // Test ARIMA parameter space
         let arima_space = optimizer.generate_arima_parameter_space(2, 1, 2);
-        assert!(arima_space.len() > 0);
-        
+        assert!(!arima_space.is_empty());
+
         // Each parameter set should have p, d, q
         for params in &arima_space {
             assert!(params.contains_key("p"));
             assert!(params.contains_key("d"));
             assert!(params.contains_key("q"));
         }
-        
+
         // Test ES parameter space
         let es_space = optimizer.generate_es_parameter_space();
-        assert!(es_space.len() > 0);
-        
+        assert!(!es_space.is_empty());
+
         for params in &es_space {
             assert!(params.contains_key("alpha"));
             let alpha = params["alpha"];
@@ -879,9 +898,7 @@ mod tests {
     fn test_max_evaluations_limit() {
         let data = create_test_data();
         let max_evals = 3;
-        let optimizer = OptimizerBuilder::new()
-            .max_evaluations(max_evals)
-            .build();
+        let optimizer = OptimizerBuilder::new().max_evaluations(max_evals).build();
 
         let result = optimizer.optimize_arima(&data, 3, 2, 3).unwrap();
         assert!(result.evaluation_count <= max_evals);
@@ -904,7 +921,7 @@ mod tests {
         let optimizer = OptimizerBuilder::new()
             .metric(OptimizationMetric::MAPE)
             .build();
-        
+
         // Test MAPE with zero values (should handle gracefully)
         let actual = vec![0.0, 1.0, 2.0];
         let forecast = vec![0.1, 1.1, 2.1];
@@ -912,15 +929,15 @@ mod tests {
         assert!(score.is_finite());
     }
 
-    #[test] 
+    #[test]
     fn test_baseline_evaluation() {
         let data = create_test_data();
         let optimizer = OptimizerBuilder::new().build();
-        
+
         // Test baseline methods don't panic
         assert!(optimizer.evaluate_baseline_arima(&data).is_ok());
         assert!(optimizer.evaluate_baseline_es(&data).is_ok());
         assert!(optimizer.evaluate_baseline_ma(&data).is_ok());
         assert!(optimizer.evaluate_baseline_hw(&data, 12).is_ok());
     }
-} 
+}

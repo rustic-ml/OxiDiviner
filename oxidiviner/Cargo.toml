@@ -46,6 +46,7 @@ chrono = { workspace = true }
 nalgebra = { workspace = true }
 rand_distr = { workspace = true }
 criterion = "0.5"
+approx = "0.5"
 
 [features]
 default = []

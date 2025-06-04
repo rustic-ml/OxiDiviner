@@ -1,10 +1,12 @@
-//! Exponential Smoothing Models Example
+//! # Exponential Smoothing Models
 //!
-//! This example demonstrates the family of Exponential Smoothing models available in OxiDiviner:
+//! Implements various exponential smoothing models (ETS) for time series forecasting.
+//!   These models are particularly effective for business forecasting and demand planning.
+//!
+//! ## Features
 //! - Simple Exponential Smoothing (SES): For level-only data
 //! - Holt's Linear Method: For data with trend
 //! - Holt-Winters: For data with trend and seasonality
-//! These models are particularly effective for business forecasting and demand planning.
 
 use chrono::{DateTime, Duration, Utc};
 use oxidiviner::models::exponential_smoothing::{HoltLinearModel, HoltWintersModel, SimpleESModel};
@@ -291,7 +293,7 @@ fn main() -> oxidiviner::Result<()> {
             let growth = 20.0 * i as f64; // 20 units growth per month
             let seasonal_factor = match i % 12 {
                 11 | 0 | 1 => 1.4, // Holiday season boost
-                5 | 6 | 7 => 1.2,  // Summer boost
+                5..=7 => 1.2,  // Summer boost
                 2 | 3 | 9 => 0.9,  // Slower months
                 _ => 1.0,          // Normal months
             };

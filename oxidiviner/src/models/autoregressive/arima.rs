@@ -1,6 +1,5 @@
 use crate::core::{Forecaster, ModelEvaluation, ModelOutput, OxiError, Result, TimeSeriesData};
 use crate::math::metrics::{mae, mape, mse, rmse, smape};
-use crate::models::autoregressive::error::ARError;
 use crate::models::autoregressive::arma::ARMAModel;
 
 /// Autoregressive Integrated Moving Average (ARIMA) model for time series forecasting.
@@ -180,51 +179,60 @@ impl ARIMAModel {
         horizon: usize,
         confidence: f64,
     ) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>)> {
-        if confidence <= 0.0 || confidence >= 1.0 {
-            return Err(OxiError::InvalidParameter(
-                "Confidence level must be between 0 and 1".to_string(),
+        if horizon == 0 {
+            return Err(OxiError::ARInvalidHorizon(horizon));
+        }
+        let arma_model = self.arma_model.as_ref().ok_or(OxiError::ARNotFitted)?;
+
+        let point_forecasts = self.forecast(horizon)?;
+
+        let internal_residuals = arma_model.residuals().ok_or_else(|| {
+            OxiError::ModelError(
+                "ARMA model residuals not available for confidence intervals".to_string(),
+            )
+        })?;
+
+        if internal_residuals.is_empty() {
+            return Err(OxiError::ModelError(
+                "ARMA model residuals are empty, cannot calculate standard deviation".to_string(),
             ));
         }
 
-        if self.arma_model.is_none() || self.last_values.is_none() {
-            return Err(OxiError::ARNotFitted);
+        let n_residuals = internal_residuals.len() as f64;
+        let mean_residual = internal_residuals.iter().sum::<f64>() / n_residuals;
+        let variance = internal_residuals
+            .iter()
+            .map(|r| (r - mean_residual).powi(2))
+            .sum::<f64>()
+            / (n_residuals - 1.0).max(1.0); // Use n-1 for sample variance, ensure divisor > 0
+        
+        let residual_std = variance.sqrt();
+
+        if residual_std.is_nan() || residual_std < 1e-9 { // Check for problematic std dev
+            // If std_dev is essentially zero (e.g. perfect fit or constant residuals),
+            // confidence intervals would be zero width. This might be valid or indicate an issue.
+            // For now, we proceed, but this could be a point for specific error handling.
+            // Consider logging a warning if residual_std is very small.
         }
 
-        // Get point forecasts
-        let point_forecasts = self.forecast(horizon)?;
-
-        // Get residuals from the ARMA model for bootstrap
-        let arma = self.arma_model.as_ref().unwrap();
-        let residuals = arma.residuals().ok_or_else(|| {
-            OxiError::ModelError("No residuals available for confidence intervals".to_string())
-        })?;
-
-        // Calculate residual standard deviation
-        let residual_std = {
-            let mean_residual = residuals.iter().sum::<f64>() / residuals.len() as f64;
-            let variance = residuals
-                .iter()
-                .map(|r| (r - mean_residual).powi(2))
-                .sum::<f64>()
-                / (residuals.len() - 1) as f64;
-            variance.sqrt()
-        };
-
-        // For ARIMA models, we can use analytical approximation for confidence intervals
-        // The forecast error variance increases with horizon
         let alpha = 1.0 - confidence;
+        if !(alpha > 0.0 && alpha < 1.0) {
+            return Err(OxiError::InvalidParameter(format!(
+                "Confidence level {} results in invalid alpha {} for normal_quantile",
+                confidence, alpha
+            )));
+        }
         let z_score = Self::normal_quantile(1.0 - alpha / 2.0);
 
         let mut lower_bounds = Vec::with_capacity(horizon);
         let mut upper_bounds = Vec::with_capacity(horizon);
 
-        for h in 0..horizon {
-            // Forecast error variance increases with horizon for ARIMA models
-            // This is a simplified approximation - in practice, you'd calculate the exact MSE
-            let forecast_std = residual_std * (1.0 + h as f64 * 0.1).sqrt();
+        for (h, &current_forecast_value) in point_forecasts.iter().enumerate().take(horizon) {
+            // Simplified forecast error standard deviation that increases with horizon.
+            let forecast_error_std_dev_h = residual_std * (1.0 + (h as f64) * 0.1).sqrt();
 
-            lower_bounds.push(point_forecasts[h] - z_score * forecast_std);
-            upper_bounds.push(point_forecasts[h] + z_score * forecast_std);
+            lower_bounds.push(current_forecast_value - z_score * forecast_error_std_dev_h);
+            upper_bounds.push(current_forecast_value + z_score * forecast_error_std_dev_h);
         }
 
         Ok((point_forecasts, lower_bounds, upper_bounds))
@@ -295,206 +303,6 @@ impl ARIMAModel {
             -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5])
                 / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0)
         }
-    }
-
-    fn fit_ar_component(&self, diff_data: &[f64], ar_coeffs: &mut [f64]) -> Result<()> {
-        if self.p == 0 {
-            return Ok(());
-        }
-
-        let n = diff_data.len();
-
-        // Check for edge cases
-        if self.is_constant_data(diff_data) {
-            // For constant data, set minimal AR coefficients
-            for coeff in ar_coeffs.iter_mut() {
-                *coeff = 0.01; // Small positive value to avoid instability
-            }
-            return Ok(());
-        }
-
-        // Create Yule-Walker equations: R * phi = r
-        let mut autocorr_matrix = vec![vec![0.0; self.p]; self.p];
-        let mut autocorr_vector = vec![0.0; self.p];
-
-        // Calculate autocorrelations up to lag p
-        let autocorrelations = self.calculate_autocorrelations(diff_data, self.p)?;
-
-        // Build the Toeplitz matrix R and vector r
-        for i in 0..self.p {
-            autocorr_vector[i] = autocorrelations[i + 1];
-            for j in 0..self.p {
-                autocorr_matrix[i][j] = autocorrelations[i.abs_diff(j)];
-            }
-        }
-
-        // Add small regularization to diagonal to prevent singularity
-        for i in 0..self.p {
-            autocorr_matrix[i][i] += 1e-8;
-        }
-
-        // Solve the system with enhanced error checking
-        match self.solve_linear_system(&autocorr_matrix, &autocorr_vector) {
-            Ok(coeffs) => {
-                // Validate and clamp coefficients
-                for (i, &coeff) in coeffs.iter().enumerate() {
-                    if coeff.is_nan() || coeff.is_infinite() {
-                        // Fallback to small positive value
-                        ar_coeffs[i] = 0.01;
-                    } else {
-                        // Clamp to reasonable range to ensure stability
-                        ar_coeffs[i] = coeff.clamp(-0.99, 0.99);
-                    }
-                }
-
-                // Check stationarity condition
-                if !self.is_stationary_ar(&ar_coeffs) {
-                    // Force stationarity by scaling coefficients
-                    let sum: f64 = ar_coeffs.iter().sum();
-                    if sum.abs() >= 1.0 {
-                        let scale_factor = 0.95 / sum.abs();
-                        for coeff in ar_coeffs.iter_mut() {
-                            *coeff *= scale_factor;
-                        }
-                    }
-                }
-                Ok(())
-            }
-            Err(_) => {
-                // Fallback: use simple AR(1) with coefficient 0.5
-                ar_coeffs[0] = 0.5;
-                for i in 1..self.p {
-                    ar_coeffs[i] = 0.0;
-                }
-                Ok(())
-            }
-        }
-    }
-
-    /// Check if data is approximately constant
-    fn is_constant_data(&self, data: &[f64]) -> bool {
-        if data.len() < 2 {
-            return true;
-        }
-
-        let mean = data.iter().sum::<f64>() / data.len() as f64;
-        let variance = data.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / data.len() as f64;
-        
-        // Consider data constant if variance is very small
-        variance < 1e-10 || variance / mean.abs().max(1.0) < 1e-8
-    }
-
-    /// Check AR stationarity condition
-    fn is_stationary_ar(&self, coeffs: &[f64]) -> bool {
-        // Simple check: sum of coefficients should be < 1 for stationarity
-        // This is a sufficient but not necessary condition
-        coeffs.iter().sum::<f64>().abs() < 1.0
-    }
-
-    /// Enhanced autocorrelation calculation with validation
-    fn calculate_autocorrelations(&self, data: &[f64], max_lag: usize) -> Result<Vec<f64>> {
-        let n = data.len();
-        if n < max_lag + 1 {
-            return Err(OxiError::from(ARError::InsufficientData {
-                actual: n,
-                expected: max_lag + 1,
-            }));
-        }
-
-        let mean = data.iter().sum::<f64>() / n as f64;
-        let variance = data.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / n as f64;
-
-        if variance < 1e-15 {
-            // For constant data, return zero autocorrelations except at lag 0
-            let mut autocorr = vec![0.0; max_lag + 1];
-            autocorr[0] = 1.0;
-            return Ok(autocorr);
-        }
-
-        let mut autocorr = vec![0.0; max_lag + 1];
-        autocorr[0] = 1.0; // Autocorrelation at lag 0 is always 1
-
-        for lag in 1..=max_lag {
-            let mut sum = 0.0;
-            for i in lag..n {
-                sum += (data[i] - mean) * (data[i - lag] - mean);
-            }
-            autocorr[lag] = sum / ((n - lag) as f64 * variance);
-        }
-
-        Ok(autocorr)
-    }
-
-    /// Solve a linear system Ax = b using Gaussian elimination with partial pivoting.
-    fn solve_linear_system(&self, a: &[Vec<f64>], b: &[f64]) -> Result<Vec<f64>> {
-        let n = a.len();
-        if n == 0 || a[0].len() != n || b.len() != n {
-            return Err(OxiError::from(ARError::LinearSolveError(
-                "Invalid matrix dimensions".to_string(),
-            )));
-        }
-
-        // Create augmented matrix [A|b]
-        let mut aug = vec![vec![0.0; n + 1]; n];
-        for i in 0..n {
-            for j in 0..n {
-                aug[i][j] = a[i][j];
-            }
-            aug[i][n] = b[i];
-        }
-
-        // Gaussian elimination with partial pivoting
-        for i in 0..n {
-            // Find pivot
-            let mut max_idx = i;
-            let mut max_val = aug[i][i].abs();
-
-            for j in (i + 1)..n {
-                if aug[j][i].abs() > max_val {
-                    max_idx = j;
-                    max_val = aug[j][i].abs();
-                }
-            }
-
-            // Check if matrix is singular
-            if max_val.abs() < 1e-10 {
-                return Err(OxiError::from(ARError::LinearSolveError(
-                    "Singular matrix detected".to_string(),
-                )));
-            }
-
-            // Swap rows if needed
-            if max_idx != i {
-                aug.swap(i, max_idx);
-            }
-
-            // Eliminate below
-            for j in (i + 1)..n {
-                let factor = aug[j][i] / aug[i][i];
-                aug[j][i] = 0.0;
-
-                for k in (i + 1)..=n {
-                    aug[j][k] -= factor * aug[i][k];
-                }
-            }
-        }
-
-        // Back substitution
-        let mut x = vec![0.0; n];
-        for i in (0..n).rev() {
-            let mut sum = 0.0;
-            for j in (i + 1)..n {
-                sum += aug[i][j] * x[j];
-            }
-            x[i] = (aug[i][n] - sum) / aug[i][i];
-
-            // Check for invalid coefficients
-            if x[i].is_nan() || x[i].is_infinite() {
-                return Err(OxiError::from(ARError::InvalidCoefficient));
-            }
-        }
-
-        Ok(x)
     }
 }
 

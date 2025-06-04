@@ -8,9 +8,9 @@
 //! - Advanced options pricing with realistic jump distributions
 
 use chrono::{DateTime, Duration, Utc};
-use oxidiviner::prelude::*;
 use oxidiviner::core::{Forecaster, TimeSeriesData};
 use oxidiviner::models::financial::{KouJumpDiffusionModel, MertonJumpDiffusionModel};
+use oxidiviner::prelude::*;
 
 fn main() -> oxidiviner::Result<()> {
     println!("🚀 Kou Double-Exponential Jump-Diffusion Model Demo");
@@ -21,7 +21,7 @@ fn main() -> oxidiviner::Result<()> {
     println!("------------------------------------------------");
 
     // Create Kou model with asymmetric jump parameters
-    let mut kou_model = KouJumpDiffusionModel::new_equity_default()?;
+    let kou_model = KouJumpDiffusionModel::new_equity_default()?;
     println!("Created Kou equity market model with asymmetric parameters:");
     println!("  • Drift (μ): {:.1}% annually", kou_model.drift * 100.0);
     println!(
@@ -182,7 +182,7 @@ fn main() -> oxidiviner::Result<()> {
     println!("-----------------------------------------------------");
 
     // Create comparable Merton model
-    let mut merton_model = MertonJumpDiffusionModel::new_equity_default()?;
+    let merton_model = MertonJumpDiffusionModel::new_equity_default()?;
 
     println!("  🔄 Comparing models with same basic parameters...");
 
@@ -515,8 +515,10 @@ fn generate_asymmetric_market_data(n: usize, initial_price: f64) -> oxidiviner::
     // Asymmetric jump parameters
     let jump_prob = 0.025; // 2.5% chance per day
     let upward_jump_prob = 0.3; // 30% of jumps are upward
-    let upward_exp = Exp::new(12.0).map_err(|_| OxiError::ModelError("Failed to create upward exponential".to_string()))?;
-    let downward_exp = Exp::new(20.0).map_err(|_| OxiError::ModelError("Failed to create downward exponential".to_string()))?;
+    let upward_exp = Exp::new(12.0)
+        .map_err(|_| OxiError::ModelError("Failed to create upward exponential".to_string()))?;
+    let downward_exp = Exp::new(20.0)
+        .map_err(|_| OxiError::ModelError("Failed to create downward exponential".to_string()))?;
 
     let mut current_vol = base_vol;
 
@@ -526,11 +528,13 @@ fn generate_asymmetric_market_data(n: usize, initial_price: f64) -> oxidiviner::
         current_vol = vol_persistence * current_vol
             + (1.0 - vol_persistence) * base_vol
             + vol_mean_reversion * vol_shock;
-        current_vol = current_vol.max(0.008).min(0.12); // Bounds
+        current_vol = current_vol.clamp(0.008, 0.12); // Bounds
 
         // Normal return component
-        let mut return_val = rng
-            .sample(Normal::new(daily_drift, current_vol).map_err(|_| OxiError::ModelError("Failed to create normal".to_string()))?);
+        let mut return_val = rng.sample(
+            Normal::new(daily_drift, current_vol)
+                .map_err(|_| OxiError::ModelError("Failed to create normal".to_string()))?,
+        );
 
         // Asymmetric jump events
         if rng.gen::<f64>() < jump_prob {

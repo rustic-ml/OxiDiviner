@@ -26,6 +26,10 @@ use crate::core::{Forecaster, ModelEvaluation, OxiError, Result, TimeSeriesData}
 use crate::math::metrics::{mae, mape, mse, rmse, smape};
 use std::f64::consts::{E, PI};
 
+// Type aliases for complex types from e_step and m_step
+pub type XiMatrix = Vec<Vec<Vec<f64>>>; // P(S_{t-1}=i, S_t=j | Y_1, ..., Y_T)
+pub type GammaMatrix = Vec<Vec<f64>>;    // P(S_t=j | Y_1, ..., Y_T)
+
 /// Markov Regime-Switching Model
 ///
 /// This implementation supports:
@@ -197,12 +201,13 @@ impl MarkovSwitchingModel {
         let regime_probs = self.forward_backward(&data.values)?;
         let mut fitted_values = Vec::with_capacity(n);
         let mut residuals = Vec::with_capacity(n);
+        let means_vec = self.means.as_ref().unwrap();
 
-        for t in 0..n {
-            let mut fitted = 0.0;
-            for regime in 0..self.num_regimes {
-                fitted += regime_probs[t][regime] * self.means.as_ref().unwrap()[regime];
-            }
+        for (t, current_regime_prob_row) in regime_probs.iter().enumerate().take(n) {
+            let fitted: f64 = current_regime_prob_row.iter()
+                .zip(means_vec.iter())
+                .map(|(&prob, &mean_val)| prob * mean_val)
+                .sum();
             fitted_values.push(fitted);
             residuals.push(data.values[t] - fitted);
         }
@@ -257,13 +262,13 @@ impl MarkovSwitchingModel {
             forecasts.push(forecast);
 
             // Update regime probabilities using transition matrix
-            let mut new_probs = vec![0.0; self.num_regimes];
-            for j in 0..self.num_regimes {
-                for i in 0..self.num_regimes {
-                    new_probs[j] += current_probs[i] * transition_matrix[i][j];
+            let mut new_probs_vec = vec![0.0; self.num_regimes];
+            for (j_idx, new_prob_val_ref) in new_probs_vec.iter_mut().enumerate().take(self.num_regimes) {
+                for i_idx in 0..self.num_regimes {
+                    *new_prob_val_ref += current_probs[i_idx] * transition_matrix[i_idx][j_idx];
                 }
             }
-            current_probs = new_probs;
+            current_probs = new_probs_vec;
         }
 
         Ok(forecasts)
@@ -320,8 +325,8 @@ impl MarkovSwitchingModel {
 
         let mut expected_durations = Vec::with_capacity(self.num_regimes);
 
-        for regime in 0..self.num_regimes {
-            let persistence = transition_matrix[regime][regime];
+        for (regime_idx, transition_matrix_row) in transition_matrix.iter().enumerate().take(self.num_regimes) {
+            let persistence = transition_matrix_row[regime_idx];
             if persistence < 1.0 {
                 expected_durations.push(1.0 / (1.0 - persistence));
             } else {
@@ -373,12 +378,12 @@ impl MarkovSwitchingModel {
         let persistence = 0.9;
         let off_diagonal = (1.0 - persistence) / (self.num_regimes - 1) as f64;
 
-        for i in 0..self.num_regimes {
-            for j in 0..self.num_regimes {
-                if i == j {
-                    transition_matrix[i][j] = persistence;
+        for (i_idx, row) in transition_matrix.iter_mut().enumerate() {
+            for (j_idx, val_in_row_ref) in row.iter_mut().enumerate() {
+                if i_idx == j_idx {
+                    *val_in_row_ref = persistence;
                 } else {
-                    transition_matrix[i][j] = off_diagonal;
+                    *val_in_row_ref = off_diagonal;
                 }
             }
         }
@@ -394,7 +399,7 @@ impl MarkovSwitchingModel {
         Ok(())
     }
 
-    fn e_step(&self, data: &[f64]) -> Result<(Vec<Vec<Vec<f64>>>, Vec<Vec<f64>>)> {
+    fn e_step(&self, data: &[f64]) -> Result<(XiMatrix, GammaMatrix)> {
         let n = data.len();
 
         // Forward-backward algorithm to get regime probabilities
@@ -412,22 +417,22 @@ impl MarkovSwitchingModel {
         for t in 0..n - 1 {
             let mut normalizer = 0.0;
 
-            for i in 0..self.num_regimes {
-                for j in 0..self.num_regimes {
-                    let prob = alpha[t][i]
-                        * transition_matrix[i][j]
-                        * self.normal_density(data[t + 1], means[j], std_devs[j])
-                        * beta[t + 1][j];
-                    xi[t][i][j] = prob;
+            for (i_idx, transition_matrix_row_i) in transition_matrix.iter().enumerate().take(self.num_regimes) {
+                for j_idx in 0..self.num_regimes {
+                    let prob = alpha[t][i_idx]
+                        * transition_matrix_row_i[j_idx]
+                        * self.normal_density(data[t + 1], means[j_idx], std_devs[j_idx])
+                        * beta[t + 1][j_idx];
+                    xi[t][i_idx][j_idx] = prob;
                     normalizer += prob;
                 }
             }
 
             // Normalize
             if normalizer > 0.0 {
-                for i in 0..self.num_regimes {
-                    for j in 0..self.num_regimes {
-                        xi[t][i][j] /= normalizer;
+                for i_idx_norm in 0..self.num_regimes { // Renamed i to i_idx_norm for clarity
+                    for j_idx_norm in 0..self.num_regimes { // Renamed j to j_idx_norm for clarity
+                        xi[t][i_idx_norm][j_idx_norm] /= normalizer;
                     }
                 }
             }
@@ -444,69 +449,71 @@ impl MarkovSwitchingModel {
         let mut new_initial_probs = vec![0.0; self.num_regimes];
 
         // Update initial probabilities
-        new_initial_probs[..self.num_regimes].copy_from_slice(&gamma[0][..self.num_regimes]);
+        new_initial_probs.copy_from_slice(&gamma[0]);
 
         // Update means
-        for regime in 0..self.num_regimes {
+        let current_means = self.means.as_ref().unwrap();
+        for (regime_idx, new_mean_val_ref) in new_means.iter_mut().enumerate() {
             let mut numerator = 0.0;
             let mut denominator = 0.0;
 
             for t in 0..n {
-                numerator += gamma[t][regime] * data[t];
-                denominator += gamma[t][regime];
+                numerator += gamma[t][regime_idx] * data[t];
+                denominator += gamma[t][regime_idx];
             }
 
             if denominator > 0.0 {
-                new_means[regime] = numerator / denominator;
+                *new_mean_val_ref = numerator / denominator;
             } else {
-                new_means[regime] = self.means.as_ref().unwrap()[regime];
+                *new_mean_val_ref = current_means[regime_idx];
             }
         }
 
         // Update standard deviations
-        for regime in 0..self.num_regimes {
+        let current_std_devs = self.std_devs.as_ref().unwrap();
+        for (regime_idx, new_std_dev_val_ref) in new_std_devs.iter_mut().enumerate() {
             let mut numerator = 0.0;
             let mut denominator = 0.0;
 
             for t in 0..n {
-                let diff = data[t] - new_means[regime];
-                numerator += gamma[t][regime] * diff * diff;
-                denominator += gamma[t][regime];
+                let diff = data[t] - new_means[regime_idx]; // Use new_means here
+                numerator += gamma[t][regime_idx] * diff * diff;
+                denominator += gamma[t][regime_idx];
             }
 
             if denominator > 0.0 {
-                new_std_devs[regime] = (numerator / denominator).sqrt();
-                // Prevent standard deviation from becoming too small
-                new_std_devs[regime] = new_std_devs[regime].max(1e-6);
+                *new_std_dev_val_ref = (numerator / denominator).sqrt();
+                *new_std_dev_val_ref = new_std_dev_val_ref.max(1e-6);
             } else {
-                new_std_devs[regime] = self.std_devs.as_ref().unwrap()[regime];
+                *new_std_dev_val_ref = current_std_devs[regime_idx];
             }
         }
 
         // Update transition matrix
-        for i in 0..self.num_regimes {
+        let current_transition_matrix = self.transition_matrix.as_ref().unwrap();
+        for (i_idx, row_ref) in new_transition_matrix.iter_mut().enumerate() {
             let mut row_sum = 0.0;
-            for j in 0..self.num_regimes {
+            for (j_idx, val_ref) in row_ref.iter_mut().enumerate() {
                 let mut numerator = 0.0;
                 let mut denominator = 0.0;
 
-                for t in 0..n - 1 {
-                    numerator += xi[t][i][j];
-                    denominator += gamma[t][i];
+                for t_idx in 0..n - 1 {
+                    numerator += xi[t_idx][i_idx][j_idx];
+                    denominator += gamma[t_idx][i_idx];
                 }
 
                 if denominator > 0.0 {
-                    new_transition_matrix[i][j] = numerator / denominator;
+                    *val_ref = numerator / denominator;
                 } else {
-                    new_transition_matrix[i][j] = self.transition_matrix.as_ref().unwrap()[i][j];
+                    *val_ref = current_transition_matrix[i_idx][j_idx];
                 }
-                row_sum += new_transition_matrix[i][j];
+                row_sum += *val_ref;
             }
 
             // Normalize transition probabilities
             if row_sum > 0.0 {
-                for j in 0..self.num_regimes {
-                    new_transition_matrix[i][j] /= row_sum;
+                for val_in_row in row_ref.iter_mut() { // .take(self.num_regimes) is redundant
+                    *val_in_row /= row_sum;
                 }
             }
         }
@@ -562,12 +569,12 @@ impl MarkovSwitchingModel {
 
         // Forward pass
         for t in 1..n {
-            for j in 0..self.num_regimes {
+            for j_idx in 0..self.num_regimes {
                 let mut sum = 0.0;
-                for i in 0..self.num_regimes {
-                    sum += alpha[t - 1][i] * transition_matrix[i][j];
+                for (i_idx, transition_matrix_row_i) in transition_matrix.iter().enumerate().take(self.num_regimes) {
+                    sum += alpha[t - 1][i_idx] * transition_matrix_row_i[j_idx];
                 }
-                alpha[t][j] = sum * self.normal_density(data[t], means[j], std_devs[j]);
+                alpha[t][j_idx] = sum * self.normal_density(data[t], means[j_idx], std_devs[j_idx]);
             }
         }
 
@@ -578,26 +585,31 @@ impl MarkovSwitchingModel {
         let n = data.len();
         let mut beta = vec![vec![0.0; self.num_regimes]; n];
 
-        let means = self.means.as_ref().unwrap();
-        let std_devs = self.std_devs.as_ref().unwrap();
-        let transition_matrix = self.transition_matrix.as_ref().unwrap();
+        let means_vec = self.means.as_ref().unwrap();
+        let std_devs_vec = self.std_devs.as_ref().unwrap();
+        let transition_matrix_ref = self.transition_matrix.as_ref().unwrap();
+
+        if n == 0 {
+            return Ok(beta); // Return empty beta if data is empty
+        }
 
         // Initialize
-        for regime in 0..self.num_regimes {
-            beta[n - 1][regime] = 1.0;
+        for regime_probs_at_n_minus_1 in beta[n - 1].iter_mut() {
+            *regime_probs_at_n_minus_1 = 1.0;
         }
 
         // Backward pass
         for t in (0..n - 1).rev() {
-            for i in 0..self.num_regimes {
-                let mut sum = 0.0;
-                for j in 0..self.num_regimes {
-                    sum += transition_matrix[i][j]
-                        * self.normal_density(data[t + 1], means[j], std_devs[j])
-                        * beta[t + 1][j];
-                }
-                beta[t][i] = sum;
+            let mut next_beta_t_row = vec![0.0; self.num_regimes];
+            for i_idx in 0..self.num_regimes {
+                let sum_val: f64 = (0..self.num_regimes).map(|j_idx| {
+                    transition_matrix_ref[i_idx][j_idx]
+                        * self.normal_density(data[t + 1], means_vec[j_idx], std_devs_vec[j_idx])
+                        * beta[t + 1][j_idx] // Immutable borrow of beta[t+1]
+                }).sum();
+                next_beta_t_row[i_idx] = sum_val;
             }
+            beta[t] = next_beta_t_row;
         }
 
         Ok(beta)
@@ -623,20 +635,20 @@ impl MarkovSwitchingModel {
 
         // Forward pass
         for t in 1..n {
-            for j in 0..self.num_regimes {
+            for j_idx in 0..self.num_regimes {
                 let mut max_val = f64::NEG_INFINITY;
                 let mut max_arg = 0;
 
-                for i in 0..self.num_regimes {
-                    let val = delta[t - 1][i] + transition_matrix[i][j].ln();
+                for (i_idx, transition_matrix_row_i) in transition_matrix.iter().enumerate().take(self.num_regimes) {
+                    let val = delta[t - 1][i_idx] + transition_matrix_row_i[j_idx].ln();
                     if val > max_val {
                         max_val = val;
-                        max_arg = i;
+                        max_arg = i_idx;
                     }
                 }
 
-                delta[t][j] = max_val + self.normal_density(data[t], means[j], std_devs[j]).ln();
-                psi[t][j] = max_arg;
+                delta[t][j_idx] = max_val + self.normal_density(data[t], means[j_idx], std_devs[j_idx]).ln();
+                psi[t][j_idx] = max_arg;
             }
         }
 
