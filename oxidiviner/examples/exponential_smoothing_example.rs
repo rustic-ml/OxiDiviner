@@ -293,7 +293,7 @@ fn main() -> oxidiviner::Result<()> {
             let growth = 20.0 * i as f64; // 20 units growth per month
             let seasonal_factor = match i % 12 {
                 11 | 0 | 1 => 1.4, // Holiday season boost
-                5..=7 => 1.2,  // Summer boost
+                5..=7 => 1.2,      // Summer boost
                 2 | 3 | 9 => 0.9,  // Slower months
                 _ => 1.0,          // Normal months
             };

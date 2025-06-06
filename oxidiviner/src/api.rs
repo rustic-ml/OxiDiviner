@@ -18,7 +18,7 @@ pub struct Forecaster {
 }
 
 /// Configuration for forecasting
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ForecastConfig {
     /// The forecasting model to use
     pub model_type: ModelType,
@@ -29,7 +29,7 @@ pub struct ForecastConfig {
 }
 
 /// Available forecasting models
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ModelType {
     /// ARIMA model
     ARIMA,
@@ -46,7 +46,7 @@ pub enum ModelType {
 }
 
 /// Model-specific parameters
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ModelParameters {
     // ARIMA parameters
     pub arima_p: Option<usize>,

@@ -74,7 +74,8 @@ impl GaussianCopulaModel {
     /// Fit GARCH(1,1) model to a single time series
     fn fit_garch_marginal(&mut self, series_idx: usize, data: &[f64]) -> Result<()> {
         let n = data.len();
-        if n < 10 { // Needs at least 2 data points for one return, plus more for GARCH
+        if n < 10 {
+            // Needs at least 2 data points for one return, plus more for GARCH
             return Err(OxiError::DataError(
                 "Need at least 10 observations for GARCH fitting".to_string(),
             ));
@@ -89,7 +90,8 @@ impl GaussianCopulaModel {
             self.conditional_vars[series_idx] = Vec::new();
             return Ok(()); // Or an error
         }
-        let returns: Vec<f64> = data.windows(2)
+        let returns: Vec<f64> = data
+            .windows(2)
             .map(|window| (window[1] / window[0] - 1.0) * 100.0) // Convert to percentage returns
             .collect();
 
@@ -271,7 +273,9 @@ impl GaussianCopulaModel {
         // For simplicity, we'll generate point forecasts using the expected values
         // In practice, you'd want to simulate from the copula
 
-        for (series_idx, current_forecast_series) in forecasts.iter_mut().enumerate().take(self.n_series) {
+        for (series_idx, current_forecast_series) in
+            forecasts.iter_mut().enumerate().take(self.n_series)
+        {
             let [omega, alpha, beta] = self.garch_params[series_idx];
             let last_var = self.conditional_vars[series_idx].last().unwrap_or(&omega);
 
@@ -422,7 +426,7 @@ mod tests {
         // Simple deterministic pattern with some correlation
         for (t_idx, row_data) in data.iter_mut().enumerate().skip(1) {
             let t_f = (t_idx + 1) as f64; // t_idx is 0-based from enumerate().skip(1)
-            // Series 1: trending upward with sine wave
+                                          // Series 1: trending upward with sine wave
             row_data[0] = 100.0 + t_f * 0.1 + (t_f * 0.2).sin() * 2.0;
             // Series 2: correlated with series 1 but with different volatility
             row_data[1] = 200.0 + t_f * 0.05 + (t_f * 0.15).cos() * 3.0 + row_data[0] * 0.1;

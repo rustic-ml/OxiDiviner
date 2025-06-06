@@ -37,9 +37,9 @@ pub type PredictionErrorVariance = f64; // Or a more specific name
 pub type KFUpdateResultTuple = (
     FilteredState,
     FilteredCovariance,
-    PredictionError, // innovation
+    PredictionError,         // innovation
     PredictionErrorVariance, // innovation_covariance
-    f64, // fitted_value
+    f64,                     // fitted_value
 );
 
 /// Combined type alias for the output of the Kalman filter step function.
@@ -476,9 +476,9 @@ impl KalmanFilter {
 
         // Initialize with large diagonal values for diffuse prior
         for (i, row) in covariance.iter_mut().enumerate().take(self.state_dim) {
-            // Ensure that 'i' is a valid index for the row's columns, 
+            // Ensure that 'i' is a valid index for the row's columns,
             // though for a square matrix initialized as above, row.len() == self.state_dim.
-            if i < row.len() { 
+            if i < row.len() {
                 row[i] = 1000.0;
             }
         }
@@ -550,7 +550,8 @@ impl KalmanFilter {
 
         let mut identity = vec![vec![0.0; self.state_dim]; self.state_dim];
         for (i, row) in identity.iter_mut().enumerate().take(self.state_dim) {
-            if i < row.len() { // Defensive check, should be square
+            if i < row.len() {
+                // Defensive check, should be square
                 row[i] = 1.0;
             }
         }
@@ -583,7 +584,8 @@ impl KalmanFilter {
 
         let mut result = vec![0.0; matrix.len()];
         for (i, matrix_row) in matrix.iter().enumerate() {
-            result[i] = matrix_row.iter()
+            result[i] = matrix_row
+                .iter()
                 .zip(vector.iter())
                 .map(|(m_val, v_val)| m_val * v_val)
                 .sum();
@@ -592,14 +594,17 @@ impl KalmanFilter {
     }
 
     fn matrix_multiply(&self, a: &[Vec<f64>], b: &[Vec<f64>]) -> Result<Vec<Vec<f64>>> {
-        if a.is_empty() || b.is_empty() || b[0].is_empty() { // Basic check for empty matrices
+        if a.is_empty() || b.is_empty() || b[0].is_empty() {
+            // Basic check for empty matrices
             // Decide behavior: error or return empty/specific result
             // For now, assuming valid non-empty matrices based on typical usage or prior checks.
             // If a is M_x_N and b is N_x_P, result is M_x_P
-            if a.is_empty() { return Ok(Vec::new()); }
-            if b.is_empty() || b[0].is_empty() { 
+            if a.is_empty() {
+                return Ok(Vec::new());
+            }
+            if b.is_empty() || b[0].is_empty() {
                 // If b has no columns, result has no columns
-                return Ok(vec![vec![0.0; 0]; a.len()]); 
+                return Ok(vec![vec![0.0; 0]; a.len()]);
             }
         }
 
@@ -616,9 +621,7 @@ impl KalmanFilter {
         let mut result = vec![vec![0.0; num_cols_b]; num_rows_a];
         for i in 0..num_rows_a {
             for j in 0..num_cols_b {
-                result[i][j] = (0..common_dim)
-                    .map(|k| a[i][k] * b[k][j])
-                    .sum();
+                result[i][j] = (0..common_dim).map(|k| a[i][k] * b[k][j]).sum();
             }
         }
         Ok(result)
@@ -811,7 +814,7 @@ impl KalmanFilter {
 mod tests {
     use super::*;
     use crate::core::TimeSeriesData;
-    
+
     use chrono::{DateTime, Duration, Utc};
 
     fn create_test_data() -> TimeSeriesData {

@@ -28,7 +28,7 @@ use std::f64::consts::{E, PI};
 
 // Type aliases for complex types from e_step and m_step
 pub type XiMatrix = Vec<Vec<Vec<f64>>>; // P(S_{t-1}=i, S_t=j | Y_1, ..., Y_T)
-pub type GammaMatrix = Vec<Vec<f64>>;    // P(S_t=j | Y_1, ..., Y_T)
+pub type GammaMatrix = Vec<Vec<f64>>; // P(S_t=j | Y_1, ..., Y_T)
 
 /// Markov Regime-Switching Model
 ///
@@ -204,7 +204,8 @@ impl MarkovSwitchingModel {
         let means_vec = self.means.as_ref().unwrap();
 
         for (t, current_regime_prob_row) in regime_probs.iter().enumerate().take(n) {
-            let fitted: f64 = current_regime_prob_row.iter()
+            let fitted: f64 = current_regime_prob_row
+                .iter()
                 .zip(means_vec.iter())
                 .map(|(&prob, &mean_val)| prob * mean_val)
                 .sum();
@@ -263,7 +264,9 @@ impl MarkovSwitchingModel {
 
             // Update regime probabilities using transition matrix
             let mut new_probs_vec = vec![0.0; self.num_regimes];
-            for (j_idx, new_prob_val_ref) in new_probs_vec.iter_mut().enumerate().take(self.num_regimes) {
+            for (j_idx, new_prob_val_ref) in
+                new_probs_vec.iter_mut().enumerate().take(self.num_regimes)
+            {
                 for i_idx in 0..self.num_regimes {
                     *new_prob_val_ref += current_probs[i_idx] * transition_matrix[i_idx][j_idx];
                 }
@@ -325,7 +328,9 @@ impl MarkovSwitchingModel {
 
         let mut expected_durations = Vec::with_capacity(self.num_regimes);
 
-        for (regime_idx, transition_matrix_row) in transition_matrix.iter().enumerate().take(self.num_regimes) {
+        for (regime_idx, transition_matrix_row) in
+            transition_matrix.iter().enumerate().take(self.num_regimes)
+        {
             let persistence = transition_matrix_row[regime_idx];
             if persistence < 1.0 {
                 expected_durations.push(1.0 / (1.0 - persistence));
@@ -417,7 +422,9 @@ impl MarkovSwitchingModel {
         for t in 0..n - 1 {
             let mut normalizer = 0.0;
 
-            for (i_idx, transition_matrix_row_i) in transition_matrix.iter().enumerate().take(self.num_regimes) {
+            for (i_idx, transition_matrix_row_i) in
+                transition_matrix.iter().enumerate().take(self.num_regimes)
+            {
                 for j_idx in 0..self.num_regimes {
                     let prob = alpha[t][i_idx]
                         * transition_matrix_row_i[j_idx]
@@ -430,8 +437,10 @@ impl MarkovSwitchingModel {
 
             // Normalize
             if normalizer > 0.0 {
-                for i_idx_norm in 0..self.num_regimes { // Renamed i to i_idx_norm for clarity
-                    for j_idx_norm in 0..self.num_regimes { // Renamed j to j_idx_norm for clarity
+                for i_idx_norm in 0..self.num_regimes {
+                    // Renamed i to i_idx_norm for clarity
+                    for j_idx_norm in 0..self.num_regimes {
+                        // Renamed j to j_idx_norm for clarity
                         xi[t][i_idx_norm][j_idx_norm] /= normalizer;
                     }
                 }
@@ -512,7 +521,8 @@ impl MarkovSwitchingModel {
 
             // Normalize transition probabilities
             if row_sum > 0.0 {
-                for val_in_row in row_ref.iter_mut() { // .take(self.num_regimes) is redundant
+                for val_in_row in row_ref.iter_mut() {
+                    // .take(self.num_regimes) is redundant
                     *val_in_row /= row_sum;
                 }
             }
@@ -571,7 +581,9 @@ impl MarkovSwitchingModel {
         for t in 1..n {
             for j_idx in 0..self.num_regimes {
                 let mut sum = 0.0;
-                for (i_idx, transition_matrix_row_i) in transition_matrix.iter().enumerate().take(self.num_regimes) {
+                for (i_idx, transition_matrix_row_i) in
+                    transition_matrix.iter().enumerate().take(self.num_regimes)
+                {
                     sum += alpha[t - 1][i_idx] * transition_matrix_row_i[j_idx];
                 }
                 alpha[t][j_idx] = sum * self.normal_density(data[t], means[j_idx], std_devs[j_idx]);
@@ -602,11 +614,17 @@ impl MarkovSwitchingModel {
         for t in (0..n - 1).rev() {
             let mut next_beta_t_row = vec![0.0; self.num_regimes];
             for i_idx in 0..self.num_regimes {
-                let sum_val: f64 = (0..self.num_regimes).map(|j_idx| {
-                    transition_matrix_ref[i_idx][j_idx]
-                        * self.normal_density(data[t + 1], means_vec[j_idx], std_devs_vec[j_idx])
-                        * beta[t + 1][j_idx] // Immutable borrow of beta[t+1]
-                }).sum();
+                let sum_val: f64 = (0..self.num_regimes)
+                    .map(|j_idx| {
+                        transition_matrix_ref[i_idx][j_idx]
+                            * self.normal_density(
+                                data[t + 1],
+                                means_vec[j_idx],
+                                std_devs_vec[j_idx],
+                            )
+                            * beta[t + 1][j_idx] // Immutable borrow of beta[t+1]
+                    })
+                    .sum();
                 next_beta_t_row[i_idx] = sum_val;
             }
             beta[t] = next_beta_t_row;
@@ -639,7 +657,9 @@ impl MarkovSwitchingModel {
                 let mut max_val = f64::NEG_INFINITY;
                 let mut max_arg = 0;
 
-                for (i_idx, transition_matrix_row_i) in transition_matrix.iter().enumerate().take(self.num_regimes) {
+                for (i_idx, transition_matrix_row_i) in
+                    transition_matrix.iter().enumerate().take(self.num_regimes)
+                {
                     let val = delta[t - 1][i_idx] + transition_matrix_row_i[j_idx].ln();
                     if val > max_val {
                         max_val = val;
@@ -647,7 +667,10 @@ impl MarkovSwitchingModel {
                     }
                 }
 
-                delta[t][j_idx] = max_val + self.normal_density(data[t], means[j_idx], std_devs[j_idx]).ln();
+                delta[t][j_idx] = max_val
+                    + self
+                        .normal_density(data[t], means[j_idx], std_devs[j_idx])
+                        .ln();
                 psi[t][j_idx] = max_arg;
             }
         }

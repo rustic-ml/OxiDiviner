@@ -71,7 +71,7 @@ pub struct SABRVolatilityModel {
     training_data: Vec<f64>,
     /// Estimated parameters from calibration
     estimated_params: Option<EstimatedParams>,
-    
+
     /// Model diagnostics
     diagnostics: Option<ModelDiagnostics>,
 }
@@ -210,7 +210,7 @@ impl SABRVolatilityModel {
             is_fitted: false,
             training_data: Vec::new(),
             estimated_params: None,
-            
+
             diagnostics: None,
         })
     }

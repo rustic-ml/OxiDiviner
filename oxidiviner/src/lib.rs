@@ -49,6 +49,17 @@ pub mod batch;
 pub mod financial;
 pub mod quick;
 
+/// # Adaptive Forecasting System
+///
+/// Provides real-time adaptive forecasting capabilities that build upon
+/// the existing OxiDiviner models. Includes regime detection, parameter
+/// adaptation, and quality-driven optimization.
+///
+/// For detailed usage, see the [`adaptive`] module documentation.
+///
+/// [`adaptive`]: adaptive
+pub mod adaptive;
+
 /// # Ensemble Forecasting Methods
 ///
 /// Provides tools for combining multiple forecasting models to improve
@@ -83,6 +94,11 @@ pub use api::{
 };
 pub use batch::{BatchConfig, BatchForecastResult, BatchModelType, BatchTimeSeries};
 pub use financial::{FinancialTimeSeries, ModelComparison, ModelResult};
+
+// Re-export adaptive forecasting system (STEPS 1-3)
+pub use adaptive::{
+    AdaptiveBuilder, AdaptiveConfig, MarketRegime, RealTimeQualitySystem, RegimeDetector,
+};
 
 // Direct re-exports of all model types for maximum convenience
 pub use models::autoregressive::{ARIMAModel, ARMAModel, ARModel, SARIMAModel, VARModel};
@@ -149,6 +165,31 @@ pub mod prelude {
     pub use crate::optimization::{
         ConvergenceInfo, OptimizationConfig, OptimizationMethod, OptimizationMetric,
         OptimizationResult, OptimizerBuilder, ParameterOptimizer,
+    };
+
+    // Re-export adaptive forecasting components (STEPS 1-4)
+    pub use crate::adaptive::{
+        // STEP 4: Unified Adaptive Forecaster (temporarily disabled)
+        AdaptiveBuilder,
+        // STEP 1: Enhanced Configuration System
+        AdaptiveConfig,
+        AdaptiveParameters,
+        // STEP 2: Regime Detection
+        MarketRegime,
+        ModelSelectionStrategy,
+        // STEP 3: Quality Monitoring
+        PerformanceMetrics,
+        QualityEvaluationResult,
+        QualitySystemConfig,
+        RealTimeQualitySystem,
+        RegimeConfig,
+
+        RegimeDetectionMetrics,
+        RegimeDetectionResult,
+        RegimeDetector,
+        RegimeDetectorBuilder,
+
+        TrendDirection,
     };
 }
 

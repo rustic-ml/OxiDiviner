@@ -170,7 +170,10 @@ impl HigherOrderMarkovModel {
             ));
         }
 
-        let name = format!("HigherOrderMarkov(k={}, order={})", num_regimes, markov_order);
+        let name = format!(
+            "HigherOrderMarkov(k={}, order={})",
+            num_regimes, markov_order
+        );
         let max_iterations = max_iterations_opt.unwrap_or(100);
         let tolerance = tolerance_opt.unwrap_or(1e-6);
 
@@ -525,13 +528,19 @@ impl HigherOrderMarkovModel {
 
         for t in 0..n {
             // Find the regime that maximizes the likelihood for data[t]
-            let (best_regime_for_t, _max_likelihood) = means_vec.iter()
+            let (best_regime_for_t, _max_likelihood) = means_vec
+                .iter()
                 .zip(std_devs_vec.iter())
                 .enumerate()
                 .map(|(idx, (&mean_val, &std_dev_val))| {
-                    (idx, self.normal_density(data[t], mean_val, std_dev_val).ln())
+                    (
+                        idx,
+                        self.normal_density(data[t], mean_val, std_dev_val).ln(),
+                    )
                 })
-                .max_by(|(_, lik1), (_, lik2)| lik1.partial_cmp(lik2).unwrap_or(std::cmp::Ordering::Equal))
+                .max_by(|(_, lik1), (_, lik2)| {
+                    lik1.partial_cmp(lik2).unwrap_or(std::cmp::Ordering::Equal)
+                })
                 .unwrap_or((0, f64::NEG_INFINITY)); // Fallback for safety
 
             path[t] = best_regime_for_t;
@@ -865,8 +874,7 @@ mod tests {
     #[test]
     fn test_higher_order_markov_model() {
         let data = create_higher_order_regime_data();
-        let mut model =
-            HigherOrderMarkovModel::new(2, 1, Some(50), Some(1e-4)).unwrap();
+        let mut model = HigherOrderMarkovModel::new(2, 1, Some(50), Some(1e-4)).unwrap();
 
         assert!(model.fit(&data).is_ok());
         assert!(model.forecast(10).is_ok());
@@ -875,16 +883,14 @@ mod tests {
 
     #[test]
     fn test_duration_dependent_model() {
-        let model =
-            DurationDependentMarkovModel::new(2, 5, Some(50), Some(1e-4)).unwrap(); // Adjusted
-        // Test fitting and other methods if applicable
+        let model = DurationDependentMarkovModel::new(2, 5, Some(50), Some(1e-4)).unwrap(); // Adjusted
+                                                                                            // Test fitting and other methods if applicable
         assert_eq!(model.num_regimes, 2);
     }
 
     #[test]
     fn test_regime_switching_ar_model() {
-        let model =
-            RegimeSwitchingARModel::new(2, vec![1, 1], Some(50), Some(1e-4)).unwrap(); 
+        let model = RegimeSwitchingARModel::new(2, vec![1, 1], Some(50), Some(1e-4)).unwrap();
         // Test fitting and other methods if applicable
         assert!(model.get_ar_coefficients().is_none()); // Initially None
         assert_eq!(model.num_regimes, 2);

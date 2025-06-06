@@ -168,7 +168,9 @@ impl EnsembleForecast {
 
         if !self.forecasts.is_empty() {
             for (i, combined_val_ref) in combined.iter_mut().enumerate() {
-                let sum_at_i: f64 = self.forecasts.iter()
+                let sum_at_i: f64 = self
+                    .forecasts
+                    .iter()
                     .filter_map(|f| f.forecast.get(i).copied())
                     .sum();
                 *combined_val_ref = sum_at_i / self.forecasts.len() as f64;
@@ -200,7 +202,7 @@ impl EnsembleForecast {
             // For now, let's use simple average as a robust fallback.
             // Consider returning an error: OxiError::ModelError("Invalid weights for ensemble (sum is zero or negative)".into())
             eprintln!("Warning: Sum of weights is zero or negative in weighted_average. Falling back to simple_average.");
-            return self.simple_average(); 
+            return self.simple_average();
         }
 
         // Normalize weights
@@ -210,10 +212,15 @@ impl EnsembleForecast {
             .collect();
 
         for (i, combined_val_ref) in combined.iter_mut().enumerate() {
-            let sum_val: f64 = self.forecasts.iter()
+            let sum_val: f64 = self
+                .forecasts
+                .iter()
                 .map(|f_model| {
                     let model_fc_val = f_model.forecast.get(i).copied().unwrap_or_default();
-                    let weight = normalized_weights.get(&f_model.name).copied().unwrap_or_default();
+                    let weight = normalized_weights
+                        .get(&f_model.name)
+                        .copied()
+                        .unwrap_or_default();
                     model_fc_val * weight
                 })
                 .sum();
@@ -230,14 +237,16 @@ impl EnsembleForecast {
         let mut combined = vec![0.0; forecast_length];
 
         for (i, combined_val_ref) in combined.iter_mut().enumerate() {
-            let mut values_at_i: Vec<f64> = self.forecasts.iter()
+            let mut values_at_i: Vec<f64> = self
+                .forecasts
+                .iter()
                 .filter_map(|f| f.forecast.get(i).copied()) // Safe access
                 .collect();
-            
+
             if values_at_i.is_empty() {
                 // This case should ideally not be reached if forecasts list is not empty
                 // and all forecasts have forecast_length. Defaulting to 0.0 or handle as error.
-                *combined_val_ref = 0.0; 
+                *combined_val_ref = 0.0;
                 continue;
             }
 
@@ -303,12 +312,14 @@ impl EnsembleForecast {
         let mut combined = vec![0.0; forecast_length];
 
         for (i, combined_val_ref) in combined.iter_mut().enumerate() {
-            *combined_val_ref = self.forecasts.iter()
+            *combined_val_ref = self
+                .forecasts
+                .iter()
                 .map(|f_model| {
                     let model_fc_val = f_model.forecast.get(i).copied().unwrap_or_default();
                     let weight = weights.get(&f_model.name).copied().unwrap_or_default();
                     // It's important that weight_sum is not zero here.
-                    model_fc_val * weight / weight_sum 
+                    model_fc_val * weight / weight_sum
                 })
                 .sum();
         }
@@ -322,7 +333,9 @@ impl EnsembleForecast {
         let mut weights = HashMap::new();
 
         for forecast in &self.forecasts {
-            let weight = forecast.weight.unwrap_or_else(|| forecast.confidence.unwrap_or(1.0));
+            let weight = forecast
+                .weight
+                .unwrap_or_else(|| forecast.confidence.unwrap_or(1.0));
             weights.insert(forecast.name.clone(), weight);
         }
 

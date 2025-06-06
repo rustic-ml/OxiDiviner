@@ -24,6 +24,10 @@ pub enum OxiError {
     #[error("Validation Error: {0}")]
     ValidationError(String),
 
+    /// Error related to configuration validation
+    #[error("Configuration Error: {0}")]
+    ConfigError(String),
+
     /// Error when a feature is not enabled
     #[error("Feature not enabled: {0}")]
     FeatureNotEnabled(String),

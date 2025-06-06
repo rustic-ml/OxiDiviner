@@ -64,7 +64,7 @@ impl ArchimedeanCopulaModel {
         // Currently only supports bivariate case, n_variables was removed.
         Ok(Self {
             copula_type,
-            theta: 1.0, // Default parameter
+            theta: 1.0,                        // Default parameter
             uniform_data: vec![Vec::new(); 2], // Hardcoded to 2 for bivariate
             is_fitted: false,
             n_obs: 0,

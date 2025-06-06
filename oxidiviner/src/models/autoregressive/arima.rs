@@ -205,14 +205,14 @@ impl ARIMAModel {
             .map(|r| (r - mean_residual).powi(2))
             .sum::<f64>()
             / (n_residuals - 1.0).max(1.0); // Use n-1 for sample variance, ensure divisor > 0
-        
+
         let residual_std = variance.sqrt();
 
         if residual_std.is_nan() || residual_std < 1e-9 { // Check for problematic std dev
-            // If std_dev is essentially zero (e.g. perfect fit or constant residuals),
-            // confidence intervals would be zero width. This might be valid or indicate an issue.
-            // For now, we proceed, but this could be a point for specific error handling.
-            // Consider logging a warning if residual_std is very small.
+             // If std_dev is essentially zero (e.g. perfect fit or constant residuals),
+             // confidence intervals would be zero width. This might be valid or indicate an issue.
+             // For now, we proceed, but this could be a point for specific error handling.
+             // Consider logging a warning if residual_std is very small.
         }
 
         let alpha = 1.0 - confidence;

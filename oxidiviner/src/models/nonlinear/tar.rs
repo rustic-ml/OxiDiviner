@@ -116,7 +116,9 @@ impl TARModel {
             let ar_order = self.ar_orders[regime];
             let ar_coeffs_for_regime = &self.ar_coefficients.as_ref().unwrap()[regime];
 
-            for (lag_zero_indexed, coeff_val) in ar_coeffs_for_regime.iter().enumerate().take(ar_order) {
+            for (lag_zero_indexed, coeff_val) in
+                ar_coeffs_for_regime.iter().enumerate().take(ar_order)
+            {
                 let lag_actual = lag_zero_indexed + 1;
                 if current_n >= lag_actual {
                     forecast_val += *coeff_val * extended_series[current_n - lag_actual];
@@ -155,7 +157,8 @@ impl TARModel {
         let mut best_log_likelihood = f64::NEG_INFINITY;
 
         // Grid search over potential thresholds
-        if start_idx < end_idx { // Ensure the range is valid
+        if start_idx < end_idx {
+            // Ensure the range is valid
             for &threshold in &sorted_data[start_idx..end_idx] {
                 if let Ok(ll) = self.calculate_log_likelihood_for_threshold(data, threshold) {
                     if ll > best_log_likelihood {
@@ -416,7 +419,11 @@ impl TARModel {
         // Calculate residual variance
         let mut ss_res = 0.0;
         for i in 0..n {
-            let fitted: f64 = x[i].iter().zip(coeffs.iter()).map(|(val_x, val_coeff)| val_x * val_coeff).sum();
+            let fitted: f64 = x[i]
+                .iter()
+                .zip(coeffs.iter())
+                .map(|(val_x, val_coeff)| val_x * val_coeff)
+                .sum();
             let residual = y[i] - fitted;
             ss_res += residual * residual;
         }
