@@ -250,4 +250,4 @@ Building successful strategies with OxiDiviner requires:
 
 Remember that no strategy works forever, and continuous monitoring and adaptation are essential for long-term success.
 
-For more detailed examples and implementations, check the `examples/` directory in the repository. 
+For more detailed examples and implementations, check the `examples/` directory in the repository.

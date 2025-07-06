@@ -284,7 +284,7 @@ println!("Seasonal type: {:?}", model.seasonal_type());
 
 ### GARCH Models
 
-#### Basic GARCH
+#### GARCH
 
 ```rust
 use oxidiviner::models::garch::GARCHModel;
@@ -591,4 +591,4 @@ println!("Log-likelihood: {}", diag.log_likelihood());
 3. Set up monitoring for model drift
 4. Plan for regular model retraining
 
-For more detailed examples and advanced usage patterns, check the `examples/` directory in the repository. 
+For more detailed examples and advanced usage patterns, check the `examples/` directory in the repository.
