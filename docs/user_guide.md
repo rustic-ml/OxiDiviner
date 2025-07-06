@@ -8,12 +8,12 @@ Welcome to the comprehensive user guide for OxiDiviner! This guide will walk you
 2. [Core Concepts](#core-concepts)
 3. [Data Structures](#data-structures)
 4. [Quick API](#quick-api)
-5. [Forecasting Models](#forecasting-models)
+5. [Time Series Models](#time-series-models)
 6. [Financial Models](#financial-models)
-7. [Model Validation](#model-validation)
-8. [Batch Processing](#batch-processing)
-9. [Financial Applications](#financial-applications)
-10. [Advanced Usage](#advanced-usage)
+7. [Regime Detection](#regime-detection)
+8. [Dependency Modeling](#dependency-modeling)
+9. [State Space Models](#state-space-models)
+10. [Model Validation](#model-validation)
 11. [Best Practices](#best-practices)
 
 ## Installation and Setup
@@ -24,7 +24,7 @@ Add OxiDiviner to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-oxidiviner = "0.4.2"
+oxidiviner = "1.0.0"
 ```
 
 ### Import Patterns
@@ -166,17 +166,17 @@ for (model_name, forecast) in comparisons {
 }
 ```
 
-## Forecasting Models
+## Time Series Models
 
-### ARIMA Models
+### ARIMA Family
 
-ARIMA (AutoRegressive Integrated Moving Average) models:
+#### Basic AR Model
 
 ```rust
-use oxidiviner::models::autoregressive::ARIMAModel;
+use oxidiviner::models::autoregressive::ARModel;
 
-// Create ARIMA(p, d, q) model
-let mut model = ARIMAModel::new(2, 1, 1, true)?; // p=2, d=1, q=1, with_intercept=true
+// Create AR(p) model
+let mut model = ARModel::new(2, true)?; // p=2, with_intercept=true
 model.fit(&data)?;
 
 let forecasts = model.forecast(10)?;
@@ -186,6 +186,51 @@ let evaluation = model.evaluate(&test_data)?;
 if let Some(ar_coef) = model.ar_coefficients() {
     println!("AR coefficients: {:?}", ar_coef);
 }
+```
+
+#### ARMA Model
+
+```rust
+use oxidiviner::models::autoregressive::ARMAModel;
+
+// Create ARMA(p,q) model
+let mut model = ARMAModel::new(2, 1, true)?; // p=2, q=1, with_intercept=true
+model.fit(&data)?;
+let forecast = model.forecast(10)?;
+```
+
+#### ARIMA Model
+
+```rust
+use oxidiviner::models::autoregressive::ARIMAModel;
+
+// Create ARIMA(p,d,q) model
+let mut model = ARIMAModel::new(2, 1, 1, true)?; // p=2, d=1, q=1, with_intercept=true
+model.fit(&data)?;
+let forecast = model.forecast(10)?;
+```
+
+#### SARIMA Model
+
+```rust
+use oxidiviner::models::autoregressive::SARIMAModel;
+
+// Create SARIMA(p,d,q)(P,D,Q)s model
+let mut model = SARIMAModel::new(1, 1, 1, 1, 1, 1, 12, true)?; // Yearly seasonality
+model.fit(&data)?;
+let forecast = model.forecast(24)?; // Forecast 2 years ahead
+```
+
+#### VAR Model
+
+```rust
+use oxidiviner::models::autoregressive::VARModel;
+
+// Create VAR model with 2 variables
+let variable_names = vec!["gdp".to_string(), "inflation".to_string()];
+let mut model = VARModel::new(2, variable_names, true)?; // lag=2, with_intercept=true
+model.fit(&multivariate_data)?;
+let forecast = model.forecast(10)?;
 ```
 
 ### Exponential Smoothing
@@ -210,553 +255,243 @@ model.fit(&data)?;
 let forecast = model.forecast(10)?;
 ```
 
-#### Holt-Winters Seasonal
+#### Holt-Winters Method
 
 ```rust
 use oxidiviner::models::exponential_smoothing::HoltWintersModel;
 
-// For seasonal data (e.g., monthly data with yearly seasonality)
-let mut model = HoltWintersModel::new(0.3, 0.1, 0.1, 12)?; // period = 12
+let mut model = HoltWintersModel::new(0.3, 0.1, 0.1, 12)?; // alpha, beta, gamma, seasonal_period
 model.fit(&data)?;
-let forecast = model.forecast(24)?; // Forecast 2 years
+let forecast = model.forecast(24)?; // Forecast 2 seasonal periods ahead
+```
+
+#### ETS Model
+
+```rust
+use oxidiviner::models::exponential_smoothing::ETSModel;
+
+let mut model = ETSModel::new()?;
+model.fit(&data)?;
+let forecast = model.forecast(10)?;
 ```
 
 ### GARCH Models
 
-For volatility modeling:
+#### Basic GARCH
 
 ```rust
 use oxidiviner::models::garch::GARCHModel;
 
-// GARCH(1,1) model
-let mut model = GARCHModel::new(1, 1, None)?;
-model.fit(&returns_data)?; // Use returns, not prices
-
+let mut model = GARCHModel::new(1, 1, None)?; // p=1, q=1, no mean model
+model.fit(&returns)?;
 let volatility_forecast = model.forecast(10)?;
 ```
 
-### VAR Models
-
-For multivariate time series:
+#### EGARCH
 
 ```rust
-use oxidiviner::models::autoregressive::VARModel;
-use std::collections::HashMap;
+use oxidiviner::models::garch::EGARCHModel;
 
-// Create VAR model with 2 variables
-let variable_names = vec!["gdp".to_string(), "inflation".to_string()];
-let mut model = VARModel::new(2, variable_names, true)?; // lag=2, with_intercept=true
-
-// Prepare data
-let mut data_map = HashMap::new();
-data_map.insert("gdp".to_string(), gdp_data);
-data_map.insert("inflation".to_string(), inflation_data);
-
-// Fit and forecast
-model.fit_multiple(&data_map)?;
-let forecasts = model.forecast_multiple(10)?; // Returns HashMap<String, Vec<f64>>
+let mut model = EGARCHModel::new(1, 1, None)?;
+model.fit(&returns)?;
+let volatility_forecast = model.forecast(10)?;
 ```
 
 ## Financial Models
 
-OxiDiviner provides industry-standard financial models for quantitative finance applications, including jump-diffusion models and stochastic volatility models.
+### Jump Diffusion
 
-### Jump-Diffusion Models
-
-#### Merton Jump-Diffusion Model
-
-The Merton model extends the Black-Scholes framework by adding jump discontinuities to model sudden market crashes or extraordinary events.
+#### Merton Jump Diffusion
 
 ```rust
 use oxidiviner::models::financial::MertonJumpDiffusionModel;
 
-// Create model with equity parameters
-let model = MertonJumpDiffusionModel::new(
-    100.0,    // S₀: Initial stock price
-    0.05,     // μ: Drift rate (5% annually)
-    0.20,     // σ: Diffusion volatility (20%)
-    0.10,     // λ: Jump intensity (10% annual probability)
-    -0.05,    // μⱼ: Average jump size (-5% crash)
-    0.15,     // σⱼ: Jump volatility (15%)
-    1.0/252.0 // Δt: Daily time step
+let mut model = MertonJumpDiffusionModel::new(
+    0.05,  // drift
+    0.2,   // diffusion volatility
+    2.0,   // jump intensity
+    -0.01, // jump mean
+    0.05   // jump volatility
 )?;
-
-// Monte Carlo simulation
-let paths = model.simulate_paths(252, 1000, Some(42))?;
-println!("Simulated {} price paths over 1 year", paths.len());
-
-// Calculate Value-at-Risk with jump risk
-let var_95 = model.calculate_var(1_000_000.0, 0.95, 1.0/252.0, 10000)?;
-println!("Daily 95% VaR: ${:.0}", var_95);
-
-// Options pricing with jump risk
-let call_price = model.option_price(100.0, 105.0, 0.25, 0.98, true)?;
-println!("3M call option (K=105): ${:.2}", call_price);
-
-// Jump event detection
-let simulation = model.simulate_with_jumps(252, Some(42))?;
-for event in &simulation.jump_events {
-    println!("Jump at day {}: {:.1}% size", event.time_index, event.jump_size * 100.0);
-}
+model.fit(&returns)?;
+let forecast = model.forecast(10)?;
 ```
 
-#### Kou Jump-Diffusion Model
-
-The Kou model uses asymmetric double-exponential jump distributions, providing more realistic modeling of upward rallies vs. downward crashes.
+#### Kou Jump Diffusion
 
 ```rust
 use oxidiviner::models::financial::KouJumpDiffusionModel;
 
-// Create model with asymmetric jumps
-let model = KouJumpDiffusionModel::new(
-    100.0,    // S₀: Initial price
-    0.08,     // μ: Drift rate
-    0.25,     // σ: Diffusion volatility
-    0.15,     // λ: Jump intensity
-    0.6,      // p: Upward jump probability (60%)
-    20.0,     // η₁: Upward jump decay (smaller = larger jumps)
-    10.0,     // η₂: Downward jump decay (larger crashes)
-    1.0/252.0 // Δt: Time step
+let mut model = KouJumpDiffusionModel::new(
+    0.05,  // drift
+    0.2,   // diffusion volatility
+    2.0,   // jump intensity
+    0.3,   // up probability
+    1.5,   // up magnitude
+    2.0    // down magnitude
 )?;
-
-// Analyze asymmetric jump behavior
-let simulation = model.simulate_with_jumps(252, Some(42))?;
-let upward_jumps = simulation.jump_events.iter()
-    .filter(|e| e.jump_direction == "upward").count();
-let downward_jumps = simulation.jump_events.len() - upward_jumps;
-
-println!("Asymmetric jump analysis:");
-println!("  Upward jumps: {} ({:.1}%)", upward_jumps, 
-         upward_jumps as f64 / simulation.jump_events.len() as f64 * 100.0);
-println!("  Downward jumps: {} ({:.1}%)", downward_jumps,
-         downward_jumps as f64 / simulation.jump_events.len() as f64 * 100.0);
-
-// Compare tail risk with Merton model
-let kou_var = model.calculate_var(1_000_000.0, 0.99, 1.0/252.0, 10000)?;
-println!("Kou 99% VaR: ${:.0} (captures asymmetric tail risk)", kou_var);
+model.fit(&returns)?;
+let forecast = model.forecast(10)?;
 ```
 
-### Stochastic Volatility Models
+### Stochastic Volatility
 
-#### Heston Stochastic Volatility Model
-
-The Heston model is the gold standard for volatility modeling, featuring mean-reverting stochastic volatility with correlation to price movements.
+#### Heston Model
 
 ```rust
 use oxidiviner::models::financial::HestonStochasticVolatilityModel;
 
-// Create model with typical equity parameters
-let model = HestonStochasticVolatilityModel::new(
-    100.0,    // S₀: Initial stock price
-    0.04,     // V₀: Initial variance (20% volatility)
-    0.05,     // μ: Risk-neutral drift
-    2.0,      // κ: Mean reversion speed
-    0.04,     // θ: Long-run variance (20% long-run volatility)
-    0.3,      // σᵥ: Volatility of volatility
-    -0.7,     // ρ: Correlation (leverage effect)
-    1.0/252.0 // Δt: Time step
+let mut model = HestonStochasticVolatilityModel::new(
+    0.04,  // long-run variance
+    2.0,   // mean reversion speed
+    0.3,   // vol of vol
+    -0.5,  // correlation
+    0.04   // initial variance
 )?;
-
-// Validate model stability (Feller condition)
-if model.feller_condition() {
-    println!("✓ Feller condition satisfied: variance process stays positive");
-} else {
-    println!("⚠ Feller condition violated: variance may become negative");
-}
-
-// Simulate correlated price and volatility paths
-let paths = model.simulate_paths(252, 3000, Some(42))?;
-
-// Analyze volatility clustering
-let vol_path = &paths[0].volatilities;
-let final_vol = vol_path.last().unwrap().sqrt() * 100.0; // Convert to percentage
-println!("Final volatility: {:.1}%", final_vol);
-
-// Generate implied volatility surface
-let strikes = vec![80.0, 90.0, 100.0, 110.0, 120.0];
-let expiries = vec![0.25, 0.5, 1.0]; // 3M, 6M, 1Y
-let surface = model.volatility_surface(100.0, &strikes, &expiries)?;
-
-println!("Heston Implied Volatility Surface:");
-println!("Strike  3M     6M     1Y");
-for strike in &strikes {
-    print!("{:>6.0}", strike);
-    for expiry in &expiries {
-        let point = surface.iter()
-            .find(|p| (p.strike - strike).abs() < 0.01 && (p.expiry - expiry).abs() < 0.01)
-            .unwrap();
-        print!("   {:>5.1}", point.implied_volatility * 100.0);
-    }
-    println!();
-}
+model.fit(&returns)?;
+let forecast = model.forecast(10)?;
 ```
 
-#### SABR Volatility Model
-
-The SABR (Stochastic Alpha Beta Rho) model is the industry standard for FX and interest rate derivatives, featuring flexible forward price dynamics.
+#### SABR Model
 
 ```rust
 use oxidiviner::models::financial::SABRVolatilityModel;
 
-// Create FX model (EUR/USD)
-let fx_model = SABRVolatilityModel::new(
-    1.20,     // F₀: Forward rate
-    0.10,     // σ₀: Initial volatility (10%)
-    0.30,     // α: Volatility of volatility (30%)
-    0.5,      // β: Backbone parameter (0.5 = square-root model)
-    -0.3,     // ρ: Correlation (-30%)
-    1.0/252.0 // Δt: Time step
+let mut model = SABRVolatilityModel::new(
+    forward,
+    0.2,   // alpha (initial vol)
+    0.4,   // beta (CEV parameter)
+    0.6,   // nu (vol of vol)
+    -0.3,  // rho (correlation)
+    1.0/252.0 // dt (time step)
+)?;
+model.fit(&returns)?;
+let implied_vol = model.implied_volatility(strike, expiry)?;
+```
+
+## Regime Detection
+
+### Markov Switching
+
+```rust
+use oxidiviner::models::regime_switching::MarkovSwitchingModel;
+
+let mut model = MarkovSwitchingModel::new(2)?; // 2 regimes
+model.fit(&returns)?;
+let regime = model.most_likely_regime()?;
+let regime_probs = model.regime_probabilities()?;
+```
+
+### Multivariate Markov Switching
+
+```rust
+use oxidiviner::models::regime_switching::MultivariateMarkovSwitchingModel;
+
+let mut model = MultivariateMarkovSwitchingModel::new(2, asset_names)?;
+model.fit(&returns)?;
+let regimes = model.most_likely_regimes()?;
+let transition_matrix = model.transition_matrix()?;
+```
+
+## Dependency Modeling
+
+### Copulas
+
+#### Gaussian Copula
+
+```rust
+use oxidiviner::models::copula::GaussianCopulaModel;
+
+let mut model = GaussianCopulaModel::new(2)?; // 2 variables
+model.fit(&returns)?;
+let correlation = model.correlation_matrix()?;
+let simulated = model.simulate(1000)?;
+```
+
+#### Student's t Copula
+
+```rust
+use oxidiviner::models::copula::TCopulaModel;
+
+let mut model = TCopulaModel::new(2, 5.0)?; // 2 variables, 5 degrees of freedom
+model.fit(&returns)?;
+let tail_dependence = model.tail_dependence_coefficient(0, 1)?;
+```
+
+## State Space Models
+
+### Kalman Filter
+
+```rust
+use oxidiviner::models::state_space::KalmanFilter;
+
+let mut kf = KalmanFilter::new(
+    state_dim,
+    obs_dim,
+    initial_state,
+    initial_covariance,
+    transition_matrix,
+    observation_matrix,
+    process_noise,
+    observation_noise
 )?;
 
-println!("Model type: {}", fx_model.get_model_type());
+// Update with new observation
+kf.update(&observation)?;
 
-// SABR implied volatility using Hagan's approximation
-let forward = 1.20;
-let strikes = vec![1.15, 1.175, 1.20, 1.225, 1.25];
-let expiry = 1.0; // 1 year
-
-println!("SABR Implied Volatilities (1Y EUR/USD):");
-for &strike in &strikes {
-    let vol = fx_model.sabr_implied_volatility(forward, strike, expiry)?;
-    let moneyness = (strike / forward).ln() * 100.0;
-    println!("K={:.3} (ln(K/F)={:+.1}%): {:.1}%", 
-             strike, moneyness, vol * 100.0);
-}
-
-// European option pricing
-let call_price = fx_model.option_price(1.20, 1.25, 0.5, 0.97, true)?;
-println!("6M EUR/USD call (K=1.25): ${:.4}", call_price);
-
-// Multi-market applications
-let rates_model = SABRVolatilityModel::new(0.05, 0.30, 0.50, 0.2, -0.4, 1.0/252.0)?;
-let equity_model = SABRVolatilityModel::new_equity_default()?;
-
-println!("Market-specific models:");
-println!("  FX (β=0.5): {}", fx_model.get_model_type());
-println!("  Rates (β=0.2): {}", rates_model.get_model_type());
-println!("  Equity (β=0.7): {}", equity_model.get_model_type());
-```
-
-### Risk Management Applications
-
-Financial models can be used for comprehensive risk management:
-
-```rust
-// Portfolio VaR comparison across models
-let portfolio_value = 10_000_000.0; // $10M portfolio
-
-// Compare VaR across different models
-let merton_var = merton_model.calculate_var(portfolio_value, 0.95, 1.0/252.0, 10000)?;
-let kou_var = kou_model.calculate_var(portfolio_value, 0.95, 1.0/252.0, 10000)?;
-let heston_var = heston_model.calculate_var(portfolio_value, 0.95, 1.0/252.0, 10000)?;
-let sabr_var = sabr_model.calculate_var(portfolio_value, 0.95, 1.0/252.0, 10000)?;
-
-println!("Daily 95% VaR Comparison:");
-println!("  Merton (symmetric jumps):     ${:.0}", merton_var);
-println!("  Kou (asymmetric jumps):       ${:.0}", kou_var);  
-println!("  Heston (stochastic volatility): ${:.0}", heston_var);
-println!("  SABR (CEV dynamics):          ${:.0}", sabr_var);
-
-// Multi-horizon stress testing
-let stress_horizons = vec![1.0/252.0, 5.0/252.0, 21.0/252.0]; // 1D, 1W, 1M
-println!("\nStress Testing (99% VaR):");
-for &horizon in &stress_horizons {
-    let stress_var = heston_model.calculate_var(portfolio_value, 0.99, horizon, 5000)?;
-    let days = (horizon * 252.0).round() as i32;
-    println!("  {}-day horizon: ${:.0}", days, stress_var);
-}
-
-// Options portfolio risk
-let atm_call = heston_model.option_price(100.0, 100.0, 0.25, 0.97, true)?;
-let otm_call = heston_model.option_price(100.0, 110.0, 0.25, 0.97, true)?;
-println!("\nOptions Pricing:");
-println!("  ATM call (K=100): ${:.3}", atm_call);
-println!("  OTM call (K=110): ${:.3}", otm_call);
-```
-
-### Model Selection Guidelines
-
-Choose the appropriate financial model based on your use case:
-
-- **Merton Jump-Diffusion**: Best for modeling sudden market crashes and computing jump risk premiums
-- **Kou Jump-Diffusion**: Superior for realistic tail risk modeling with asymmetric jumps
-- **Heston Stochastic Volatility**: Gold standard for volatility derivatives and clustering effects
-- **SABR Model**: Industry standard for FX options and interest rate derivatives
-
-```rust
-// Model comparison framework
-use oxidiviner::models::financial::*;
-
-fn compare_financial_models(price_data: &TimeSeriesData) -> Result<()> {
-    // Initialize models with market-calibrated parameters
-    let mut merton = MertonJumpDiffusionModel::new_equity_default()?;
-    let mut kou = KouJumpDiffusionModel::new_equity_default()?;
-    let mut heston = HestonStochasticVolatilityModel::new_equity_default()?;
-    let mut sabr = SABRVolatilityModel::new_equity_default()?;
-    
-    // In practice, calibrate to market data using maximum likelihood
-    // let _ = merton.fit(price_data)?;
-    // let _ = kou.fit(price_data)?;
-    // let _ = heston.fit(price_data)?;
-    // let _ = sabr.fit(price_data)?;
-    
-    println!("Financial Model Characteristics:");
-    println!("  Merton: Handles crash risk with symmetric normal jumps");
-    println!("  Kou: Asymmetric jumps - realistic upward vs downward moves");
-    println!("  Heston: Stochastic volatility with leverage effects");
-    println!("  SABR: Flexible CEV dynamics for derivatives pricing");
-    
-    Ok(())
-}
+// Get current state estimate
+let state = kf.state_estimate()?;
+let covariance = kf.state_covariance()?;
 ```
 
 ## Model Validation
 
-### Time Series Split
+### Cross Validation
 
 ```rust
-use oxidiviner::core::validation::ValidationUtils;
+use oxidiviner::validation::cross_validate;
 
-// Split data into train/test (80/20)
-let (train, test) = ValidationUtils::time_split(&data, 0.8)?;
+let cv_results = cross_validate(&model, &data, 5, 10)?;
+println!("CV MSE: {}", cv_results.mse);
+println!("CV MAE: {}", cv_results.mae);
+println!("CV MAPE: {}", cv_results.mape);
 ```
 
-### Cross-Validation
+### Backtesting
 
 ```rust
-// Time series cross-validation with 5 folds, minimum 50 observations per fold
-let cv_splits = ValidationUtils::time_series_cv(&data, 5, Some(50))?;
+use oxidiviner::validation::backtest;
 
-let mut mae_scores = Vec::new();
-for (train, test) in cv_splits {
-    let mut model = ARIMAModel::new(1, 1, 1, true)?;
-    model.fit(&train)?;
-    let forecast = model.forecast(test.len())?;
-    
-    let metrics = ValidationUtils::accuracy_metrics(&test.values, &forecast, None)?;
-    mae_scores.push(metrics.mae);
-}
-
-let avg_mae = mae_scores.iter().sum::<f64>() / mae_scores.len() as f64;
-println!("Average CV MAE: {:.3}", avg_mae);
-```
-
-### Accuracy Metrics
-
-```rust
-// Calculate comprehensive accuracy metrics
-let metrics = ValidationUtils::accuracy_metrics(&actual, &predicted, Some(&baseline))?;
-
-println!("MAE:  {:.3}", metrics.mae);
-println!("RMSE: {:.3}", metrics.rmse);
-println!("MAPE: {:.3}%", metrics.mape);
-println!("SMAPE: {:.3}%", metrics.smape);
-println!("R²:   {:.3}", metrics.r_squared);
-if let Some(mase) = metrics.mase {
-    println!("MASE: {:.3}", mase);
-}
-```
-
-## Batch Processing
-
-Process multiple time series simultaneously:
-
-```rust
-use oxidiviner::batch::BatchProcessor;
-use std::collections::HashMap;
-
-// Create batch processor
-let processor = BatchProcessor::new();
-
-// Prepare multiple time series
-let mut series_map = HashMap::new();
-series_map.insert("sales_region_1".to_string(), sales_data_1);
-series_map.insert("sales_region_2".to_string(), sales_data_2);
-series_map.insert("inventory".to_string(), inventory_data);
-
-// Auto forecast all series
-let results = processor.auto_forecast_multiple(series_map, 30)?;
-
-// Process results
-for (name, result) in &results.forecasts {
-    println!("Series {}: {} using {}", 
-        name, 
-        result.len(), 
-        results.models_used.get(name).unwrap_or(&"Unknown".to_string())
-    );
-}
-
-// Export results
-let exported = processor.export_results(&results)?;
-```
-
-## Financial Applications
-
-### Stock Price Forecasting
-
-```rust
-use oxidiviner::prelude::*;
-
-// Load daily stock prices
-let stock_data = OHLCVData { /* ... */ };
-let price_series = stock_data.to_time_series(false); // Use close prices
-
-// Forecast prices
-let mut model = ARIMAModel::new(1, 1, 1, true)?;
-model.fit(&price_series)?;
-let price_forecast = model.forecast(30)?; // 30-day forecast
-```
-
-### Volatility Modeling
-
-```rust
-use oxidiviner::models::garch::GARCHModel;
-
-// Calculate returns from prices
-let returns = financial::calculate_returns(&prices, false)?; // Simple returns
-let returns_ts = TimeSeriesData::new(timestamps[1..].to_vec(), returns, "returns")?;
-
-// Fit GARCH model for volatility
-let mut garch = GARCHModel::new(1, 1, None)?;
-garch.fit(&returns_ts)?;
-let volatility = garch.forecast(30)?;
-```
-
-### Portfolio Analysis
-
-```rust
-use std::collections::HashMap;
-
-// Multiple asset data
-let mut assets = HashMap::new();
-assets.insert("AAPL".to_string(), aapl_data);
-assets.insert("GOOGL".to_string(), googl_data);
-assets.insert("MSFT".to_string(), msft_data);
-
-// Batch forecast all assets
-let processor = BatchProcessor::new();
-let results = processor.auto_forecast_multiple(assets, 30)?;
-
-// Analyze results
-for (symbol, forecast) in &results.forecasts {
-    let expected_return = forecast.iter().sum::<f64>() / forecast.len() as f64;
-    println!("{}: Expected 30-day average: {:.2}", symbol, expected_return);
-}
-```
-
-## Advanced Usage
-
-### Custom Model Configuration
-
-```rust
-use oxidiviner::ModelBuilder;
-
-// Build complex model configurations
-let config = ModelBuilder::arima()
-    .with_ar(3)
-    .with_differencing(2)
-    .with_ma(2)
-    .build_config();
-
-let forecast = quick::forecast_with_config(data, 10, config)?;
-```
-
-### Model Selection with Custom Criteria
-
-```rust
-use oxidiviner::{AutoSelector, SelectionCriteria};
-
-// Create auto selector with cross-validation
-let selector = AutoSelector::with_cross_validation(5);
-
-// Add custom candidates
-let custom_config = ModelBuilder::arima()
-    .with_ar(5)
-    .with_differencing(1)
-    .with_ma(3)
-    .build_config();
-
-let selector = selector.add_candidate(custom_config);
-
-// Select best model (requires implementing the selection logic)
-// This functionality would be expanded in future versions
-```
-
-### Parallel Processing
-
-```rust
-use rayon::prelude::*;
-
-// Parallel batch processing (if using rayon)
-let results: Vec<_> = series_map
-    .par_iter()
-    .map(|(name, data)| {
-        let forecast = quick::auto_select(data.clone(), 30).unwrap();
-        (name.clone(), forecast)
-    })
-    .collect();
+let bt_results = backtest(&model, &data, 252, 10)?;
+println!("Hit Rate: {}%", bt_results.hit_rate * 100.0);
+println!("Profit Factor: {}", bt_results.profit_factor);
 ```
 
 ## Best Practices
 
-### Data Preparation
+1. **Data Preprocessing**
+   - Always check for missing values
+   - Consider scaling/normalization
+   - Handle outliers appropriately
+   - Check for stationarity
 
-1. **Check for missing values**: Handle NaN or infinite values before fitting
-2. **Stationarity**: Use differencing for non-stationary data
-3. **Outliers**: Consider outlier detection and treatment
-4. **Frequency**: Ensure consistent time intervals
+2. **Model Selection**
+   - Start with simple models
+   - Use information criteria (AIC, BIC)
+   - Consider ensemble methods
+   - Validate out-of-sample
 
-```rust
-// Check for missing values
-let has_nan = data.values.iter().any(|&x| x.is_nan() || x.is_infinite());
-if has_nan {
-    // Handle missing values
-    println!("Warning: Data contains NaN or infinite values");
-}
-```
+3. **Performance Optimization**
+   - Use appropriate batch sizes
+   - Consider parallel processing
+   - Monitor memory usage
+   - Profile critical sections
 
-### Model Selection
-
-1. **Start simple**: Begin with simple models (MA, SES) before complex ones
-2. **Use cross-validation**: Don't rely on in-sample fit alone
-3. **Consider domain knowledge**: Financial data often needs volatility models
-4. **Ensemble methods**: Combine multiple models for robustness
-
-```rust
-// Ensemble example
-let ma_forecast = quick::moving_average(data.clone(), 10, Some(5))?;
-let es_forecast = quick::es_forecast(timestamps.clone(), values.clone(), 10)?;
-let arima_forecast = quick::arima(data, 10)?;
-
-// Simple average ensemble
-let ensemble: Vec<f64> = (0..10)
-    .map(|i| (ma_forecast[i] + es_forecast[i] + arima_forecast[i]) / 3.0)
-    .collect();
-```
-
-### Performance Tips
-
-1. **Batch processing**: Use BatchProcessor for multiple series
-2. **Model reuse**: Fit once, forecast multiple horizons
-3. **Appropriate model complexity**: Don't overfit with too many parameters
-
-### Error Handling
-
-```rust
-use oxidiviner::core::OxiError;
-
-fn safe_forecast(data: TimeSeriesData) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
-    match quick::arima(data.clone(), 10) {
-        Ok(forecast) => Ok(forecast),
-        Err(OxiError::ARInsufficientData { actual, expected }) => {
-            println!("Not enough data: need {}, got {}", expected, actual);
-            // Fallback to simpler model
-            quick::moving_average(data, 10, Some(3)).map_err(|e| e.into())
-        }
-        Err(e) => Err(e.into()),
-    }
-}
-```
+4. **Production Deployment**
+   - Implement proper error handling
+   - Set up monitoring and logging
+   - Plan for model updates
+   - Consider scaling requirements
 
 ## Conclusion
 
